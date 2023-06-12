@@ -1,0 +1,96 @@
+/*
+
+This CSS file will be included with your plugin, and
+available in the app when your plugin is enabled.
+
+If your plugin does not need CSS, delete this file.
+
+*/
+
+.full-width{ width: 100% }
+
+.meta-values .faded-value-list-item {
+     color: var(--color-base-50); display: inline-block; margin-right: 5px; margin-left: 0px}
+.meta-values .faded-value-list-item:hover { color: var(--color-base-70) }
+.meta-values .meta-key{
+    display: inline-block; font-weight: 600; margin-right: 5px
+}
+
+.meta-data-view .nav-folder{ padding-left: 5px; }
+.meta-data-view .nav-folder-children{ padding-left: 5px }
+.meta-data-view .nav-file-title, .meta-data-view .nav-folder-title{
+    margin-bottom: var(--size-2-1);
+    display: flex;
+    border-radius: var(--radius-s);
+    cursor: var(--cursor);
+    color: var(--nav-item-color);
+    font-size: var(--nav-item-size);
+    font-weight: var(--nav-item-weight);
+    line-height: var(--line-height-tight);
+}
+
+.meta-history-links { margin-top: 5px; margin-bottom: 5px; display: inline-block; }
+.meta-history-link {
+    display: inline-block; margin-bottom: 5px;
+    border-radius: var(--radius-s); border: 1px solid var(--color-base-40); margin-right: 5px;
+}
+.meta-history-link .title{
+    padding: 2px 5px 2px 5px; display: inline-block; color: var(--color-base-60)
+}
+.meta-history-link .title:hover{background: var(--color-base-35);}
+.meta-history-link .remove-button {
+    display: inline-block;
+    border-top-right-radius: var(--radius-s); border-bottom-right-radius: var(--radius-s);
+}
+
+.meta-history-link .remove-button svg { stroke: var(--color-base-30); vertical-align: middle; }
+.meta-history-link .remove-button:hover svg{ stroke: var(--color-base-50) }
+
+
+.nav-folder-collapse-indicator { width: 16px; flex-shrink: 0; }
+
+.collapse-icon { display: flex; align-items: center; }
+
+.nav-file-title-content, .nav-folder-title-content {
+    display: inline-block;
+    overflow-wrap: anywhere;
+    overflow: hidden;
+    white-space: var(--nav-item-white-space);
+    text-overflow: ellipsis;
+}
+
+.nav-folder > .nav-folder-children {
+    padding-left: var(--nav-item-children-padding-left);
+    /* margin: 0 0 0 var(--nav-item-children-margin-left); */
+    border-left: var(--nav-indentation-guide-width) solid var(--nav-indentation-guide-color);
+    overflow: hidden;
+}
+
+.nav-file.has-focus > .nav-file-title {
+    border-radius: var(--radius-s);
+    box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+}
+
+.nav-file { border-radius: var(--radius-s); }
+
+/* Horizontal scrolling */
+.meta-data-view-table-container{overflow-x: auto;}
+.data-view-meta-key { overflow: hidden; text-overflow: ellipsis; max-height: 32px; white-space: nowrap }
+.data-view-meta-key.undefined {background: var(--color-base-05)}
+tr:hover .data-view-meta-key.undefined {background: var(--text-selection); opacity: 0.1}
+.data-view-meta-key.boolean {text-align: center;}
+.data-view-meta-key input {vertical-align: middle;}
+
+.table-sub-header{ background: var(--color-base-10) }
+.table-sub-header .nav-folder-title { padding: 0; line-height: 24px; padding-top: 5px; margin: 0}
+
+tr:hover .reveal-eye{ visibility: visible; }
+.reveal-eye{ display: inline-block;  visibility: hidden; margin-left: 10px; margin-top: 3px; }
+.reveal-eye:hover{ color: white; }
+
+
+.meta-search-wrapper{position: relative;}
+.meta-search-wrapper .remove-history-item {position: absolute; top: 2px; right: 4px}
+
+
+.top-right-button-conainer{ float: right; }
