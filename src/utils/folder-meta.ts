@@ -1,6 +1,7 @@
 import { FullIndex } from "obsidian-dataview";
 import { dirname } from "path";
 import _ from "underscore";
+import { ExportMap, ExportProperties } from "./create-path-map";
 
 const MAX_ENUM_LENGTH = 50;
 
@@ -40,10 +41,38 @@ export class FolderMeta {
  * @param index
  * @returns
  */
-export function createMetaIndex(listOfFiles: Array<any>, index: FullIndex) {
+export function getMetaFieldsAndValues(listOfFiles: Array<any>, index: FullIndex) {
     // const startTime = new Date();
     const resultsMap: { [key: string]: Array<string>} = {};
     listOfFiles.forEach(file => {
+        Object.keys(file.frontmatter).map(attributeKey => {
+            const value = file.frontmatter[attributeKey];
+            const existingValues = resultsMap[attributeKey] || [];
+
+            appendIfQualify(existingValues, value);
+
+            if (_.isArray(value)) {
+                value.forEach((subValue: any) => {
+                    appendIfQualify(existingValues, subValue);
+                });
+            }
+            resultsMap[attributeKey] = _.uniq(existingValues);
+        });
+    });
+    return resultsMap
+}
+
+export type PropertyMap = { [key: string]: Array<string>}
+
+/**
+ * @param mapOfFiles
+ * @param index
+ * @returns
+ */
+export function getMetaFields(mapOfFiles: ExportMap) {
+    const resultsMap: PropertyMap = {};
+    Object.keys(mapOfFiles).forEach((filePath: string)  => {
+        const file = mapOfFiles[filePath].file
         Object.keys(file.frontmatter).map(attributeKey => {
             const value = file.frontmatter[attributeKey];
             const existingValues = resultsMap[attributeKey] || [];

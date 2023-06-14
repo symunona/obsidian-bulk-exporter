@@ -93,4 +93,5 @@ tr:hover .reveal-eye{ visibility: visible; }
 .meta-search-wrapper .remove-history-item {position: absolute; top: 2px; right: 4px}
 
 
-.top-right-button-conainer{ float: right; }
+.top-right-button-container{ float: right; }
+.top-right-button-container button{ vertical-align: top; }

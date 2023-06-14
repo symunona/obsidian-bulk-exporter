@@ -7,28 +7,114 @@ import { rmSync } from "fs";
 
 import { log } from "src/utils/log";
 
+import {  getAPI as getDataViewApi } from "obsidian-dataview";
+import { FileListItemWrapper } from "src/utils/file-list-export-indicator";
+import { normalizeQuery } from "src/utils/normalize-query";
+import { ExportGroupMap, ExportMap, ExportProperties, createPathMap } from "src/utils/create-path-map";
+import BulkExporterPlugin from "src/main";
+
+// import {TableResult}  from "node_modules/obsidian-dataview/lib/api/plugin-api"
+
 // TODO: Create a PR when this is exposed
 type CopyMarkdownOptions = {
-	file: TAbstractFile;
-	outputSubPath: string;
+    file: TAbstractFile;
+    outputSubPath: string;
 };
 
+let exporter: Exporter
+
+export function getSingletonExporter(plugin?: BulkExporterPlugin) {
+    if (exporter) return exporter
+    if (!plugin) {
+        throw new Error('Exporter can only init with the plugin first')
+    }
+    return exporter = new Exporter(plugin)
+}
+
+export class Exporter {
+    plugin: BulkExporterPlugin
+
+    dataViewApi = getDataViewApi();
+
+
+    constructor(plugin: BulkExporterPlugin) {
+        this.plugin = plugin
+    }
+
+    async searchFilesToExport(): Promise<ExportMap> {
+        if (this.dataViewApi) {
+            const initialQuery = normalizeQuery(this.plugin.settings.exportQuery)
+            // console.warn('[Bulk-Exporter] initial query results', initialQuery)
+            const data = await this.dataViewApi.query(initialQuery);
+
+            if (data.successful) {
+                // new HeaderTabs
+                console.log(`
+[Bulk-Exporter]
+found ${data.value.values.length} files for
+filter: ${this.plugin.settings.exportQuery}
+groupped by: ${this.plugin.settings.groupBy}`)
+
+                const exportFileMap = createPathMap(data.value.values, this.plugin.settings)
+                console.log(exportFileMap)
+
+                // new FileListItemWrapper(this.plugin, exportFileMap)
+                if (data.value && data.value.type === 'table') {
+                    return exportFileMap
+                }
+                else {
+                    throw new Error('TypeError: return type error')
+                }
+            }
+            throw new Error('Query Error')
+        } else {
+            new Notice(
+                "Meta-Dataview needs Dataview plugin to be installed."
+            );
+            throw new Error("Meta-Dataview needs Dataview plugin to be installed.")
+        }
+    }
+    async searchAndExport(){
+        const results = await this.searchFilesToExport()
+        exportSelection(results)
+    }
+}
 
 export const DEFAULT_EXPORT_PATH = "~/obsidian-output"
+
+export function getGroups(fileList: ExportMap): ExportGroupMap{
+    const settings = exporter.plugin.settings
+    const groupBy = settings.groupBy || false
+
+    if (groupBy){
+        const groups: {[id: string]: Array<ExportProperties>} = {}
+        if (Object.keys(fileList).filter((filePath) => {
+            const file = fileList[filePath]
+            groups[file.group] = groups[file.group] || []
+            groups[file.group].push(file)
+        }).length) {
+            new Notice("!!! Warning. Some files are missing the groupBy property from their front matter! They will be added to the root.")
+        }
+        return groups
+    }
+    throw new Error('Flat export is not supported yet.')
+}
+
 
 /**
  * Takes the currently viewed elements, and exports them.
  * TODO:
  * - saves a dump of their MD5 hash, so we can later compare whether they've been modified.
  */
-export async function exportSelection(fileList: Array<TAbstractFile>): Promise<void> {
+export async function exportSelection(fileList: ExportMap): Promise<void> {
+    const settings = exporter.plugin.settings
     // Check if target directory exists
-    const outputFolder = this.app.plugins.plugins['meta-dataview'].settings.outputFolder || DEFAULT_EXPORT_PATH
+    const outputFolder = settings.outputFolder || DEFAULT_EXPORT_PATH
     log("=============================");
     log("Export to " + outputFolder);
-    const groupBy = this.app.plugins.plugins['meta-dataview'].settings.groupBy || false
+    const groupBy = settings.groupBy || false
 
-    if (this.app.plugins.plugins['meta-dataview'].settings.emptyTargetFolder) {
+    if (settings.emptyTargetFolder) {
         log('Cleaning up target folder (per settings): ' + outputFolder)
         if (existsSync(outputFolder)) {
             rmSync(outputFolder, { recursive: true, force: true });
@@ -54,7 +140,7 @@ export async function exportSelection(fileList: Array<TAbstractFile>): Promise<v
         }
     }
 
-    for (const fileIndex in fileList){
+    for (const fileIndex in fileList) {
         const file = fileList[fileIndex]
         const targetFileName = await convertAndCopy(outputFolder, groupBy, file)
         log('Exported ' + targetFileName)
@@ -97,15 +183,16 @@ export async function convertAndCopy(rootPath: string, groupBy: string, fileDesc
     console.log('from', fileDescriptor.path)
     console.log('to', targetFileName)
 
-    const outputOptions : CopyMarkdownOptions = {
+    const outputOptions: CopyMarkdownOptions = {
         file: fileDescriptor,
         outputSubPath: targetFileName
     }
 
-    tryCopyMarkdownByRead(this.app.plugins.plugins['meta-dataview'], outputOptions)
+    tryCopyMarkdownByRead(settings, outputOptions)
 
     return targetFileName
 
 
     // tryCopyMarkdownByRead()
 }
+
