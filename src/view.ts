@@ -4,13 +4,12 @@ import { ItemView, Notice, WorkspaceLeaf } from "obsidian";
 import { getAPI as getDataViewApi } from "obsidian-dataview";
 import { SearchInputWithHistory } from "./ui/search-history";
 import { setLogOutput } from "./utils/log";
-import { Exporter, exportSelection, getGroups, getSingletonExporter } from "./export/exporter";
-import { MetaDataViewTableRender } from "./ui/render-table";
-import { getMetaFieldsAndValues } from "./utils/folder-meta";
-import { createTreeFromFileMap } from "utils";
+import { Exporter } from "./export/exporter";
 import { ExportMap } from "./utils/create-path-map";
 import { ExportTableRender } from "./ui/render-export";
 import { getIcon } from "./obsidian-api-helpers/get-icon";
+import openSettingsPage from "./obsidian-api-helpers/open-settings-page";
+import BulkExporterPlugin from "./main";
 
 export const META_DATA_VIEW_TYPE = "bulk-exporter-preview";
 
@@ -30,11 +29,15 @@ export class BulkExporterView extends ItemView {
 	lastFoundFileList: ExportMap;
 	exporter: Exporter
 	settingsButton: HTMLButtonElement;
+	settingsHeader: HTMLDivElement;
+	plugin: BulkExporterPlugin;
 
-	constructor(leaf: WorkspaceLeaf) {
+	constructor(leaf: WorkspaceLeaf, plugin: BulkExporterPlugin) {
 		super(leaf);
+		this.plugin = plugin
+
 		// Exporter already initialized
-		this.exporter = getSingletonExporter()
+		this.exporter = this.plugin.exporter
 	}
 
 	getIcon() {
@@ -54,6 +57,8 @@ export class BulkExporterView extends ItemView {
 		container.empty();
 		container.classList.add('meta-data-view')
 		this.header = container.createDiv();
+		this.settingsHeader = container.createDiv();
+		this.renderSettings(this.settingsHeader)
 		this.error = container.createDiv();
 		this.results = container.createDiv();
 
@@ -68,43 +73,49 @@ export class BulkExporterView extends ItemView {
 		this.settingsButton.append(getIcon('settings'))
 		this.exportButton.append(getIcon('folder-input'))
 		this.header.createEl("h4", { text: "Bulk Exporter Preview" });
-
-		this.exportButton.addEventListener('click', async() => {
-			if (this.lastFoundFileList && this.lastFoundFileList.length) {
-				await exportSelection(this.lastFoundFileList)
+		this.exportButton.addEventListener('click', async () => {
+			if (this.lastFoundFileList && Object.keys(this.lastFoundFileList).length) {
+				await this.exporter.searchAndExport()
 				this.log.scrollIntoView();
 			} else {
 				new Notice('Hmmm... Nothing to export.')
 			}
 		})
 
-		this.settingsButton.addEventListener('click', ()=>{
-			console.warn('this.app', this.exporter.plugin)
-			// this.plugin
-			// this.app.internalPlugins.plugins['your-plugin-id'].openSettings();
+		this.settingsButton.addEventListener('click', () => {
+			openSettingsPage('bulk-exporter')
 		})
 
-		// @ts-ignore
-		console.warn('onOpen, exporter view', this.plugin)
-
 		const results = await this.exporter.searchFilesToExport()
+		this.lastFoundFileList = results;
 
 		this.renderPreviewTable(results)
-
 	}
 
 	/**
 	 * Group by the exported folder and order by one of the fields
 	 * @param results
 	 */
-	renderPreviewTable(results: ExportMap){
+	renderPreviewTable(results: ExportMap) {
 		const resultListEl = this.results.createEl("div", { cls: 'nav-files-container meta-data-view-table-container' });
 
 		new ExportTableRender(
-				resultListEl,
-				results,
-				this.exporter.plugin.settings
-				)
+			resultListEl,
+			results,
+			this.exporter.plugin.settings
+		)
+	}
+
+	renderSettings(root: HTMLElement) {
+		const settingsRoot = root.createEl('table')
+		Object.keys(this.plugin.settings).forEach((settingKey: keyof typeof this.plugin.settings) => {
+			const tr = settingsRoot.createEl('tr')
+			const value = this.plugin.settings[settingKey] as string;
+			// const keyE =
+			tr.createEl('td', { text: settingKey + ': ' })
+			// const valueE =
+			tr.createEl('td', { text: value })
+		})
 	}
 
 	async onClose() {

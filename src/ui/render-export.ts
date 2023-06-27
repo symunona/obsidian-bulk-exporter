@@ -4,7 +4,6 @@
  */
 
 import { Notice } from "obsidian";
-import Folder from "../models/folder";
 import { revealInFolder } from "../obsidian-api-helpers/file-explorer";
 import { getIcon } from "../obsidian-api-helpers/get-icon";
 import { createLink, isHttpUrl } from "../utils/url";
@@ -37,7 +36,7 @@ export class ExportTableRender {
 	) {
 		this.leaf = leaf;
 		this.exportMap = exportMap
-		this.groupMap = getGroups(exportMap)
+		this.groupMap = getGroups(exportMap, settings)
 		this.metaKeysToShow = getMetaFields(exportMap)
 		this.metaFields = without(['fileName'].concat(Object.keys(this.metaKeysToShow)), settings.groupBy)
 		this.metaFieldsNoExtras = without(Object.keys(this.metaKeysToShow), settings.groupBy)
@@ -80,7 +79,7 @@ export class ExportTableRender {
 
 		const title = fileItemRow.createEl('td', {
 			cls: 'nav-file-title is-clickable tree-item-self',
-			text: item.fileName
+			text: item.newFileName
 		})
 
 		// title.createDiv({ cls: 'nav-file-title-content', text: fileName })
@@ -126,7 +125,7 @@ export class ExportTableRender {
 
 			const elements = tableBodyRoot.querySelectorAll(`.meta-data-table-file-row[data-path="${group}"]`)
 			if (elements) {
-				elements.forEach((el) => el.style.display = isOpen ? 'table-row' : 'none')
+				elements.forEach((el: HTMLElement) => el.style.display = isOpen ? 'table-row' : 'none')
 			}
 
 		})

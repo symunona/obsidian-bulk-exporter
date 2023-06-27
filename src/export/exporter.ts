@@ -1,35 +1,19 @@
-import { existsSync, mkdirSync } from "fs";
-import { Notice, TAbstractFile } from "obsidian";
+import { existsSync, mkdirSync, writeFileSync } from "fs";
+import { Notice } from "obsidian";
 import path from "path";
-import { tryCopyMarkdownByRead } from "node_modules/obsidian-markdown-export/src/utils"
-// import { unlinkSync } from "fs";
 import { rmSync } from "fs";
 
 import { log } from "src/utils/log";
 
-import {  getAPI as getDataViewApi } from "obsidian-dataview";
-import { FileListItemWrapper } from "src/utils/file-list-export-indicator";
+import { getAPI as getDataViewApi } from "obsidian-dataview";
 import { normalizeQuery } from "src/utils/normalize-query";
 import { ExportGroupMap, ExportMap, ExportProperties, createPathMap } from "src/utils/create-path-map";
 import BulkExporterPlugin from "src/main";
+import { BulkExportSettings } from "src/utils/bulk-export-settings";
+import { Md5 } from "ts-md5";
+import { replaceImageLinks, replaceLocalLinks } from "./get-markdown-attachments";
 
-// import {TableResult}  from "node_modules/obsidian-dataview/lib/api/plugin-api"
 
-// TODO: Create a PR when this is exposed
-type CopyMarkdownOptions = {
-    file: TAbstractFile;
-    outputSubPath: string;
-};
-
-let exporter: Exporter
-
-export function getSingletonExporter(plugin?: BulkExporterPlugin) {
-    if (exporter) return exporter
-    if (!plugin) {
-        throw new Error('Exporter can only init with the plugin first')
-    }
-    return exporter = new Exporter(plugin)
-}
 
 export class Exporter {
     plugin: BulkExporterPlugin
@@ -44,21 +28,18 @@ export class Exporter {
     async searchFilesToExport(): Promise<ExportMap> {
         if (this.dataViewApi) {
             const initialQuery = normalizeQuery(this.plugin.settings.exportQuery)
-            // console.warn('[Bulk-Exporter] initial query results', initialQuery)
+            // console.warn('[Bulk-Exporter] initial queryresults', initialQuery)
             const data = await this.dataViewApi.query(initialQuery);
 
             if (data.successful) {
-                // new HeaderTabs
+                const exportFileMap = createPathMap(data.value.values, this.plugin.settings)
                 console.log(`
 [Bulk-Exporter]
 found ${data.value.values.length} files for
 filter: ${this.plugin.settings.exportQuery}
-groupped by: ${this.plugin.settings.groupBy}`)
+groupped by: ${this.plugin.settings.groupBy}`, exportFileMap)
 
-                const exportFileMap = createPathMap(data.value.values, this.plugin.settings)
-                console.log(exportFileMap)
 
-                // new FileListItemWrapper(this.plugin, exportFileMap)
                 if (data.value && data.value.type === 'table') {
                     return exportFileMap
                 }
@@ -74,22 +55,20 @@ groupped by: ${this.plugin.settings.groupBy}`)
             throw new Error("Meta-Dataview needs Dataview plugin to be installed.")
         }
     }
-    async searchAndExport(){
+    async searchAndExport() {
         const results = await this.searchFilesToExport()
-        exportSelection(results)
+        console.warn('Found files to export: ', results)
+        exportSelection(results, this.plugin.settings)
     }
 }
 
-export const DEFAULT_EXPORT_PATH = "~/obsidian-output"
-
-export function getGroups(fileList: ExportMap): ExportGroupMap{
-    const settings = exporter.plugin.settings
+export function getGroups(fileMap: ExportMap, settings: BulkExportSettings): ExportGroupMap {
     const groupBy = settings.groupBy || false
 
-    if (groupBy){
-        const groups: {[id: string]: Array<ExportProperties>} = {}
-        if (Object.keys(fileList).filter((filePath) => {
-            const file = fileList[filePath]
+    if (groupBy) {
+        const groups: { [id: string]: Array<ExportProperties> } = {}
+        if (Object.keys(fileMap).filter((filePath) => {
+            const file = fileMap[filePath]
             groups[file.group] = groups[file.group] || []
             groups[file.group].push(file)
         }).length) {
@@ -100,14 +79,15 @@ export function getGroups(fileList: ExportMap): ExportGroupMap{
     throw new Error('Flat export is not supported yet.')
 }
 
+export const DEFAULT_EXPORT_PATH = "~/obsidian-output"
+
 
 /**
  * Takes the currently viewed elements, and exports them.
  * TODO:
  * - saves a dump of their MD5 hash, so we can later compare whether they've been modified.
  */
-export async function exportSelection(fileList: ExportMap): Promise<void> {
-    const settings = exporter.plugin.settings
+export async function exportSelection(fileList: ExportMap, settings: BulkExportSettings): Promise<void> {
     // Check if target directory exists
     const outputFolder = settings.outputFolder || DEFAULT_EXPORT_PATH
     log("=============================");
@@ -130,19 +110,25 @@ export async function exportSelection(fileList: ExportMap): Promise<void> {
     // Preliminary checks
     // Do all the exporting files have the groupBy value?
     if (groupBy) {
-        if (fileList.filter((file) => {
-            if (!file.frontmatter[groupBy]) {
-                log(`[Warn] Missing front matter property ${groupBy} in file ${file.path}\n`)
+        if (Object.keys(fileList).filter((fileId: string) => {
+            const file = fileList[fileId]
+            if (!file.file.frontmatter[groupBy]) {
+                log(`[Warn] Missing front matter property ${groupBy} in file ${file.from}\n`)
             }
-            return !file.frontmatter[groupBy]
+            return !file.file.frontmatter[groupBy]
         }).length) {
             new Notice("!!! Warning. Some files are missing the groupBy property from their front matter! They will be added to the root.")
         }
     }
 
+    // DEBUG: JUST THE FIRST FILE!
+    // const file = fileList[Object.keys(fileList)[0]];
+    // await convertAndCopy(outputFolder, groupBy, file, fileList, settings)
+    // return;
+
     for (const fileIndex in fileList) {
-        const file = fileList[fileIndex]
-        const targetFileName = await convertAndCopy(outputFolder, groupBy, file)
+        const file = fileList[fileIndex] as ExportProperties
+        const targetFileName = await convertAndCopy(outputFolder, groupBy, file, fileList, settings)
         log('Exported ' + targetFileName)
     }
 
@@ -150,8 +136,15 @@ export async function exportSelection(fileList: ExportMap): Promise<void> {
     log("Exported to " + outputFolder);
 }
 
-export async function convertAndCopy(rootPath: string, groupBy: string, fileDescriptor: TAbstractFile) {
+export async function convertAndCopy(
+    rootPath: string,
+    groupBy: string | false,
+    fileExportProperties: ExportProperties,
+    allFileListMap: ExportMap,
+    settings: BulkExportSettings) {
+
     let targetDir = path.normalize(rootPath);
+    const fileDescriptor = fileExportProperties.file;
     if (groupBy) {
         const groupByValue = fileDescriptor.frontmatter && fileDescriptor.frontmatter[groupBy] || '';
         if (groupByValue) {
@@ -163,36 +156,31 @@ export async function convertAndCopy(rootPath: string, groupBy: string, fileDesc
         }
 
     }
-    const targetFileName = path.join(targetDir, fileDescriptor.name + '.' + fileDescriptor.ext)
 
-    // const fileContent = await this.app.vault.adapter.read(fileDescriptor.path)
+    const fileContent = await this.app.vault.adapter.read(fileDescriptor.path)
+    fileExportProperties.content = fileContent;
 
-    // TODO: Get the linked images out
-    // TODO: copy the images to the target assets folder
-    /**
-     * TODO
-     * - check the links
-     * - if they are pointing to another post within: replace them
-     * - if they are not, erase link.
-     */
+    fileExportProperties.md5 = Md5.hashStr(fileContent)
+
+    // console.warn('file', fileExportProperties.md5)
+
+    await collectAssets(fileExportProperties, settings)
+
+    replaceLocalLinks(fileExportProperties, allFileListMap)
+
+    // console.warn('assets', assets)
+
+    writeFileSync(fileExportProperties.to, fileExportProperties.content, 'utf-8')
 
     // TODO: save MD5 hash of the file into a last exported json e.g. in the target dir
     // AND persist it into LS, or plugin data
-    console.log('--------')
-    console.log('group by', groupBy)
-    console.log('from', fileDescriptor.path)
-    console.log('to', targetFileName)
-
-    const outputOptions: CopyMarkdownOptions = {
-        file: fileDescriptor,
-        outputSubPath: targetFileName
-    }
-
-    tryCopyMarkdownByRead(settings, outputOptions)
-
-    return targetFileName
+}
 
 
-    // tryCopyMarkdownByRead()
+async function collectAssets(fileExportProperties: ExportProperties, settings: BulkExportSettings) {
+    // Look for images!
+    const resolve = replaceImageLinks(fileExportProperties, settings.assetPath, settings.autoImportFromWeb);
+
+    return resolve
 }
 

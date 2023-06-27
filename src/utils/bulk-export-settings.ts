@@ -4,5 +4,7 @@ export interface BulkExportSettings {
 	groupBy: string;
 	outputFolder: string;
 	exportQuery: string;
-	emptyTargetFolder: boolean
+	emptyTargetFolder: boolean,
+	assetPath: string,
+	autoImportFromWeb: boolean
 }
