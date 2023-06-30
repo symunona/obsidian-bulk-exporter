@@ -4,7 +4,7 @@ import { BulkExporterView, META_DATA_VIEW_TYPE } from "src/view";
 import { getAPI as getDataViewApi } from "obsidian-dataview";
 import { FolderMeta } from "./utils/folder-meta";
 import { Exporter } from "./export/exporter";
-import { BulkExportSettings } from "./utils/bulk-export-settings";
+import { BulkExportSettings } from "./models/bulk-export-settings";
 import { OutputSettingTab } from "./settings/export-settings-tab";
 
 const DEFAULT_SETTINGS: BulkExportSettings = {
@@ -15,7 +15,8 @@ const DEFAULT_SETTINGS: BulkExportSettings = {
 	groupBy: '',
 	emptyTargetFolder: false,
 	assetPath: 'assets',
-	autoImportFromWeb: false
+	autoImportFromWeb: false,
+	lastExport: {}
 };
 
 export default class BulkExporterPlugin extends Plugin {
@@ -25,6 +26,8 @@ export default class BulkExporterPlugin extends Plugin {
 
 	dataViewApi = getDataViewApi();
 	exporter: Exporter;
+
+	inited = false;
 
 	async onload() {
 		await this.loadSettings();
@@ -66,10 +69,13 @@ export default class BulkExporterPlugin extends Plugin {
 
 		this.registerEvent(
 			this.app.metadataCache.on("resolved", async () => {
-				// console.warn("dataview ready!");
-				// this.searchThenExportFiles()
-				// TODO: if the dataview plugin was not loaded when this inited,
+				// If the dataview plugin was not loaded when this inited,
 				// let's create the initial search!
+				if (!this.inited){
+					console.warn("dataview ready!");
+					this.exporter.searchFilesToExport()
+					this.inited = true
+				}
 			})
 		);
 	}

@@ -1,22 +1,9 @@
 import { TAbstractFile } from "obsidian";
-import { BulkExportSettings } from "./bulk-export-settings";
+import { BulkExportSettings } from "../models/bulk-export-settings";
 import { join } from "path";
 import normalizeFileName from "./normalize-file-name";
+import { ExportMap, ExportProperties } from "src/models/export-properties";
 
-export type ExportProperties = {
-    content: string;
-    md5: string;
-    file: TAbstractFile,
-    newFileName: string,
-    from: string,
-    to: string,
-    toRelative: string,
-    group: string
-
-}
-
-export type ExportMap = { [key: string]: ExportProperties }
-export type ExportGroupMap = {[group: string]: Array<ExportProperties>}
 
 export function createPathMap(queryResults: Array<any>, settings: BulkExportSettings): ExportMap {
     const foundFileMap: { [key: string]: ExportProperties } = {}

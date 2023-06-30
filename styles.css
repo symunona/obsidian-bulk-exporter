@@ -97,3 +97,7 @@ tr:hover .reveal-eye{ visibility: visible; }
 .top-right-button-container button{ vertical-align: top; }
 
 .log{ font-family: monospace;}
+
+.export-plugin-icon.green{ color: var(--color-green) }
+.export-plugin-icon.orange{ color: var(--color-orange) }
+.export-plugin-icon.yellow{ color: var(--color-yellow) }

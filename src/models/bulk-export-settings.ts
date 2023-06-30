@@ -1,3 +1,5 @@
+import { ExportMap } from "./export-properties";
+
 export interface BulkExportSettings {
 	slug: string;
 	smartSlug: boolean;
@@ -6,5 +8,6 @@ export interface BulkExportSettings {
 	exportQuery: string;
 	emptyTargetFolder: boolean,
 	assetPath: string,
-	autoImportFromWeb: boolean
+	autoImportFromWeb: boolean,
+	lastExport: ExportMap
 }
