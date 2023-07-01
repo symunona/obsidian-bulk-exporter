@@ -96,8 +96,9 @@ tr:hover .reveal-eye{ visibility: visible; }
 .top-right-button-container{ float: right; }
 .top-right-button-container button{ vertical-align: top; }
 
-.log{ font-family: monospace;}
+.log{ font-family: monospace; margin-top: 20px; margin-bottom: 20px}
 
+.export-plugin-icon{ display: inline-block; margin-right: 4px; }
 .export-plugin-icon.green{ color: var(--color-green) }
 .export-plugin-icon.orange{ color: var(--color-orange) }
-.export-plugin-icon.yellow{ color: var(--color-yellow) }
+.export-plugin-icon.lime{ color: lime }

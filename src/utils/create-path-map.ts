@@ -42,7 +42,8 @@ export function createPathMap(queryResults: Array<any>, settings: BulkExportSett
             toRelative: join(groupByValue, newFileName + '.' + fileDescriptor.ext),
             group: groupByValue,
             md5: '',
-            content: ''
+            content: '',
+            lastExportDate: 0
         }
         foundFileMap[item[1].path] = newExportPropertyItem
     });

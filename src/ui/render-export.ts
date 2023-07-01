@@ -9,11 +9,11 @@ import { getIcon } from "../obsidian-api-helpers/get-icon";
 import { createLink, isHttpUrl } from "../utils/url";
 import { openFileByPath } from "src/obsidian-api-helpers/file-by-path";
 import { URL } from "url";
-import { ExportGroupMap, ExportMap, ExportProperties } from "src/utils/create-path-map";
-import { PropertyMap, getMetaFields } from "src/utils/folder-meta";
 import { getGroups } from "src/export/exporter";
 import { without } from "underscore";
-import { BulkExportSettings } from "src/utils/bulk-export-settings";
+import { ExportGroupMap, ExportMap, ExportProperties } from "src/models/export-properties";
+import { BulkExportSettings } from "src/models/bulk-export-settings";
+import { getMetaFields } from "src/utils/folder-meta";
 
 const OVERWRITE_LOCALE = 'hu-HU'
 

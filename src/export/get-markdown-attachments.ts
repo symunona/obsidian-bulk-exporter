@@ -5,11 +5,10 @@
 import { log } from "console";
 import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "fs";
 import path, { dirname } from "path";
-import { ExportMap, ExportProperties } from "src/utils/create-path-map";
+import { ExportMap, ExportProperties } from "src/models/export-properties";
 import { error, warn } from "src/utils/log";
 import replaceAll from "src/utils/replace-all";
 import { Md5 } from "ts-md5";
-// import { Md5 } from "ts-md5";
 
 export const ATTACHMENT_URL_REGEXP = /!\[\[((.*?)\.(\w+))\]\]/g;
 export const MARKDOWN_ATTACHMENT_URL_REGEXP = /!\[(.*?)\]\(((.*?)\.(\w+))\)/g;
@@ -28,12 +27,15 @@ export function getImageLinks(markdown: string) {
 	return Array.from(imageLinks).concat(Array.from(markdownImageLinks));
 }
 
-
 export function getLinks(markdown: string) {
 	return Array.from(markdown.matchAll(LINK_URL_REGEXP))
 }
 
-
+/**
+ * Supports obsidian: formatted links, replaces exportProperties' content.
+ * @param exportProperties
+ * @param allFileListMap
+ */
 export function replaceLocalLinks(exportProperties: ExportProperties, allFileListMap: ExportMap) {
 	const links = getLinks(exportProperties.content)
 
@@ -45,7 +47,7 @@ export function replaceLocalLinks(exportProperties: ExportProperties, allFileLis
 		const title = links[index][1]
 
 		if (link.startsWith('http')) {
-			console.log('Skipping URL', title, link)
+			log('Skipping URL', title, link)
 			continue
 		}
 
@@ -79,7 +81,12 @@ export function replaceLocalLinks(exportProperties: ExportProperties, allFileLis
 	}
 }
 
-
+/**
+ * Does not yet support pulling external images in, it just leaves them in place.
+ * @param exportProperties
+ * @param assetPath
+ * @param autoImportFromWeb
+ */
 export async function replaceImageLinks(
 	exportProperties: ExportProperties,
 	assetPath: string,
@@ -111,9 +118,8 @@ export async function replaceImageLinks(
 		if (urlEncodedImageLink.startsWith("http")) {
 			if (autoImportFromWeb) {
 				filePath = await importImageFromWeb(urlEncodedImageLink)
-				// TODO: asset is still null!
 			} else {
-				error('Skipping Web Resource: ', urlEncodedImageLink)
+				log('Skipping Web Resource: ', urlEncodedImageLink)
 				continue;
 			}
 		}
@@ -132,12 +138,6 @@ export async function replaceImageLinks(
 			mkdirSync(absoluteTargetDir)
 			log('Created new group-by asset folder')
 		}
-
-		// console.group(filePath)
-		// console.warn(vaultRoot)
-		// console.warn(documentLink)
-		// console.warn(assetAbsoluteTarget)
-		// console.groupEnd()
 
 		if (!asset) {
 			error('could not find asset', filePath)
@@ -161,7 +161,7 @@ export async function replaceImageLinks(
 }
 
 async function importImageFromWeb(url: string) {
-	console.warn('AUTO_IMPORT_FROM_WEB: not implemented yet!')
+	warn('AUTO_IMPORT_FROM_WEB: not implemented yet!')
 	return 'dummy.png'
 }
 

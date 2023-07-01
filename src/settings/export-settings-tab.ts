@@ -1,6 +1,6 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
-import { DEFAULT_EXPORT_PATH } from "src/export/exporter";
-import BulkExporterPlugin from "src/main";
+
+import BulkExporterPlugin, { DEFAULT_SETTINGS } from "src/main";
 
 export class OutputSettingTab extends PluginSettingTab {
 	plugin: BulkExporterPlugin;
@@ -22,7 +22,7 @@ export class OutputSettingTab extends PluginSettingTab {
 			.setDesc("Which folder do you want to export converted markdown files with their assets?")
 			.addText((text) =>
 				text
-					.setPlaceholder(DEFAULT_EXPORT_PATH)
+					.setPlaceholder(DEFAULT_SETTINGS.outputFolder)
 					.setValue(this.plugin.settings.outputFolder)
 					.onChange(async (value) => {
 						this.plugin.settings.outputFolder = value;
@@ -83,7 +83,7 @@ export class OutputSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("Empty target folder on each export")
-			.setDesc("if true, contents will be erased every time!")
+			.setDesc("if true, contents will be erased every time. This can be good for getting rid of deleted blog posts, as by default the plugin does not track the ones that were deleted.")
 			.addToggle((text) =>
 				text
 					.setValue(this.plugin.settings.emptyTargetFolder)

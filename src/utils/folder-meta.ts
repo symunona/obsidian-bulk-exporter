@@ -1,7 +1,8 @@
 import { FullIndex } from "obsidian-dataview";
 import { dirname } from "path";
+import { ExportMap } from "src/models/export-properties";
 import _ from "underscore";
-import { ExportMap, ExportProperties } from "./create-path-map";
+
 
 const MAX_ENUM_LENGTH = 50;
 
@@ -73,8 +74,14 @@ export function getMetaFields(mapOfFiles: ExportMap) {
     const resultsMap: PropertyMap = {};
     Object.keys(mapOfFiles).forEach((filePath: string)  => {
         const file = mapOfFiles[filePath].file
-        Object.keys(file.frontmatter).map(attributeKey => {
-            const value = file.frontmatter[attributeKey];
+
+        // @ts-ignore
+        const frontMatter = file.frontmatter as {
+            [key: string]: string;
+        };
+
+        Object.keys(frontMatter).map(attributeKey => {
+            const value = frontMatter[attributeKey];
             const existingValues = resultsMap[attributeKey] || [];
 
             appendIfQualify(existingValues, value);

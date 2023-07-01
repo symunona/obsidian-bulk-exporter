@@ -1,28 +1,25 @@
-import {Plugin } from "obsidian";
+import { Plugin } from "obsidian";
 import { BulkExporterView, META_DATA_VIEW_TYPE } from "src/view";
 
 import { getAPI as getDataViewApi } from "obsidian-dataview";
-import { FolderMeta } from "./utils/folder-meta";
 import { Exporter } from "./export/exporter";
 import { BulkExportSettings } from "./models/bulk-export-settings";
 import { OutputSettingTab } from "./settings/export-settings-tab";
 
-const DEFAULT_SETTINGS: BulkExportSettings = {
+export const DEFAULT_SETTINGS: BulkExportSettings = {
 	outputFolder: "output",
 	exportQuery: "blog",
-	slug: '',
+	slug: "",
 	smartSlug: true,
-	groupBy: '',
+	groupBy: "",
 	emptyTargetFolder: false,
-	assetPath: 'assets',
+	assetPath: "assets",
 	autoImportFromWeb: false,
-	lastExport: {}
+	lastExport: {},
 };
 
 export default class BulkExporterPlugin extends Plugin {
 	settings: BulkExportSettings;
-
-	folderMeta: FolderMeta;
 
 	dataViewApi = getDataViewApi();
 	exporter: Exporter;
@@ -31,7 +28,7 @@ export default class BulkExporterPlugin extends Plugin {
 
 	async onload() {
 		await this.loadSettings();
-		this.exporter = new Exporter(this)
+		this.exporter = new Exporter(this);
 
 		this.registerView(
 			META_DATA_VIEW_TYPE,
@@ -43,7 +40,7 @@ export default class BulkExporterPlugin extends Plugin {
 			"folder-input",
 			"Bulk Exporter",
 			(evt: MouseEvent) => {
-				this.exporter.searchAndExport()
+				this.exporter.searchAndExport();
 			}
 		);
 
@@ -51,7 +48,7 @@ export default class BulkExporterPlugin extends Plugin {
 			"view",
 			"Bulk Exporter Preview",
 			(evt: MouseEvent) => {
-				this.activateView()
+				this.activateView();
 			}
 		);
 
@@ -60,8 +57,8 @@ export default class BulkExporterPlugin extends Plugin {
 			id: "bulk-export",
 			name: "Bulk Export",
 			callback: () => {
-				this.exporter.searchAndExport()
-				this.activateView()
+				this.exporter.searchAndExport();
+				this.activateView();
 			},
 		});
 
@@ -71,16 +68,18 @@ export default class BulkExporterPlugin extends Plugin {
 			this.app.metadataCache.on("resolved", async () => {
 				// If the dataview plugin was not loaded when this inited,
 				// let's create the initial search!
-				if (!this.inited){
-					console.warn("dataview ready!");
-					this.exporter.searchFilesToExport()
-					this.inited = true
+				if (!this.inited) {
+					this.exporter.searchFilesToExport();
+					this.inited = true;
+				} else {
+					// Check files
+					// This seems to run on index updates.
 				}
 			})
 		);
 	}
 
-	onunload() { }
+	onunload() {}
 
 	async loadSettings() {
 		this.settings = Object.assign(
@@ -107,4 +106,3 @@ export default class BulkExporterPlugin extends Plugin {
 		);
 	}
 }
-

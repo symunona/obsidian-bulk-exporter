@@ -1,15 +1,13 @@
 import { ItemView, Notice, WorkspaceLeaf } from "obsidian";
 
-
 import { getAPI as getDataViewApi } from "obsidian-dataview";
-import { SearchInputWithHistory } from "./ui/search-history";
-import { setLogOutput } from "./utils/log";
+import { log, setLogOutput } from "./utils/log";
 import { Exporter } from "./export/exporter";
-import { ExportMap } from "./utils/create-path-map";
 import { ExportTableRender } from "./ui/render-export";
 import { getIcon } from "./obsidian-api-helpers/get-icon";
 import openSettingsPage from "./obsidian-api-helpers/open-settings-page";
 import BulkExporterPlugin from "./main";
+import { ExportMap } from "./models/export-properties";
 
 export const META_DATA_VIEW_TYPE = "bulk-exporter-preview";
 
@@ -22,22 +20,23 @@ export class BulkExporterView extends ItemView {
 	header: HTMLElement;
 	error: HTMLElement;
 	results: HTMLElement;
-	searchInput: SearchInputWithHistory
 	exportButton: HTMLButtonElement;
 	topRightMenuContainer: HTMLDivElement;
 	log: HTMLDivElement;
 	lastFoundFileList: ExportMap;
-	exporter: Exporter
+	exporter: Exporter;
 	settingsButton: HTMLButtonElement;
 	settingsHeader: HTMLDivElement;
 	plugin: BulkExporterPlugin;
+	refreshButton: HTMLButtonElement;
+	logButton: HTMLButtonElement;
 
 	constructor(leaf: WorkspaceLeaf, plugin: BulkExporterPlugin) {
 		super(leaf);
-		this.plugin = plugin
+		this.plugin = plugin;
 
 		// Exporter already initialized
-		this.exporter = this.plugin.exporter
+		this.exporter = this.plugin.exporter;
 	}
 
 	getIcon() {
@@ -55,41 +54,75 @@ export class BulkExporterView extends ItemView {
 	async onOpen() {
 		const container = this.containerEl.children[1];
 		container.empty();
-		container.classList.add('meta-data-view')
+		container.classList.add("meta-data-view");
+
 		this.header = container.createDiv();
+
 		this.settingsHeader = container.createDiv();
-		this.renderSettings(this.settingsHeader)
+		this.settingsHeader.style.display = "none";
+
+		this.renderSettings(this.settingsHeader);
 		this.error = container.createDiv();
 		this.results = container.createDiv();
 
 		// Logging
-		this.log = container.createDiv();
-		this.log.style.whiteSpace = "pre-wrap"
-		setLogOutput(this.log)
+		this.log = this.settingsHeader.createDiv();
+		this.log.style.whiteSpace = "pre-wrap";
+		setLogOutput(this.log);
+		log('Hey! Single click on the file name to reveal it in the sidebar, double click to open it!')
 
-		this.topRightMenuContainer = this.header.createDiv({ cls: 'top-right-button-container' })
-		this.settingsButton = this.topRightMenuContainer.createEl('button')
-		this.exportButton = this.topRightMenuContainer.createEl('button', { text: "Export ..." })
-		this.settingsButton.append(getIcon('settings'))
-		this.exportButton.append(getIcon('folder-input'))
-		this.header.createEl("h4", { text: "Bulk Exporter Preview" });
-		this.exportButton.addEventListener('click', async () => {
-			if (this.lastFoundFileList && Object.keys(this.lastFoundFileList).length) {
-				await this.exporter.searchAndExport()
+		this.topRightMenuContainer = this.header.createDiv({
+			cls: "top-right-button-container",
+		});
+
+		this.refreshButton = this.topRightMenuContainer.createEl("button", {title: 'Refresh'});
+		this.refreshButton.append(getIcon("refresh-cw"));
+		this.refreshButton.addEventListener("click", () => {
+			this.refresh();
+		});
+
+		this.logButton = this.topRightMenuContainer.createEl("button", {title: 'Show Log'});
+		this.logButton.append(getIcon("bug"));
+		this.logButton.addEventListener("click", () => {
+			this.settingsHeader.style.display =
+				this.settingsHeader.style.display === "none" ? "block" : "none";
+		});
+
+		this.settingsButton = this.topRightMenuContainer.createEl("button", {title: 'Open Plugin Settings'});
+		this.settingsButton.append(getIcon("settings"));
+		this.settingsButton.addEventListener("click", () => {
+			openSettingsPage("bulk-exporter");
+		});
+
+		this.exportButton = this.topRightMenuContainer.createEl("button", {
+			text: "Export ...",
+		});
+		this.exportButton.append(getIcon("folder-input"));
+		this.exportButton.addEventListener("click", async () => {
+			if (
+				this.lastFoundFileList &&
+				Object.keys(this.lastFoundFileList).length
+			) {
+				await this.exporter.searchAndExport();
 				this.log.scrollIntoView();
 			} else {
-				new Notice('Hmmm... Nothing to export.')
+				new Notice("Hmmm... Nothing to export.");
 			}
-		})
+		});
 
-		this.settingsButton.addEventListener('click', () => {
-			openSettingsPage('bulk-exporter')
-		})
+		this.header.createEl("h4", { text: "Bulk Exporter Preview" });
 
-		const results = await this.exporter.searchFilesToExport()
-		this.lastFoundFileList = results;
+		this.refresh();
+	}
 
-		this.renderPreviewTable(results)
+	async refresh() {
+		try {
+			const results = await this.exporter.searchFilesToExport();
+			this.lastFoundFileList = results;
+			this.renderPreviewTable(results);
+		} catch (e) {
+			this.settingsHeader.style.display = "block";
+		}
 	}
 
 	/**
@@ -97,29 +130,38 @@ export class BulkExporterView extends ItemView {
 	 * @param results
 	 */
 	renderPreviewTable(results: ExportMap) {
-		const resultListEl = this.results.createEl("div", { cls: 'nav-files-container meta-data-view-table-container' });
+		const resultListEl = this.results.createEl("div", {
+			cls: "nav-files-container meta-data-view-table-container",
+		});
 
 		new ExportTableRender(
 			resultListEl,
 			results,
 			this.exporter.plugin.settings
-		)
+		);
 	}
 
 	renderSettings(root: HTMLElement) {
-		const settingsRoot = root.createEl('table')
-		Object.keys(this.plugin.settings).forEach((settingKey: keyof typeof this.plugin.settings) => {
-			const tr = settingsRoot.createEl('tr')
-			const value = this.plugin.settings[settingKey] as string;
-			// const keyE =
-			tr.createEl('td', { text: settingKey + ': ' })
-			// const valueE =
-			tr.createEl('td', { text: value })
-		})
+		const settingsRoot = root.createEl("table");
+		Object.keys(this.plugin.settings).forEach(
+			(settingKey: keyof typeof this.plugin.settings) => {
+				// Do not render everyt propery.
+				if (
+					["lastExport", "autoImportFromWeb"].indexOf(settingKey) > -1
+				) {
+					return;
+				}
+				const tr = settingsRoot.createEl("tr");
+				const value = this.plugin.settings[settingKey] as string;
+				// const keyE =
+				tr.createEl("td", { text: settingKey + ": " });
+				// const valueE =
+				tr.createEl("td", { text: value });
+			}
+		);
 	}
 
 	async onClose() {
 		// Nothing to clean up.
 	}
 }
-
