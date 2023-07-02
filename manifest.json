@@ -1,11 +1,11 @@
 {
 	"id": "bulk-exporter",
 	"name": "Bulk Exporter",
-	"version": "1.0.1",
+	"version": "1.0.3",
 	"minAppVersion": "0.15.0",
 	"description": "Use Dataview queries to export a set of notes with assets",
 	"author": "symunona",
 	"authorUrl": "https://github.com/symunona",
-	"fundingUrl": "https://obsidian.md/pricing",
-	"isDesktopOnly": false
+	"fundingUrl": "https://bmc.link/symunona",
+	"isDesktopOnly": true
 }

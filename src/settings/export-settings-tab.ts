@@ -43,58 +43,26 @@ export class OutputSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					})
 			);
-		new Setting(containerEl)
-			.setName("Group By Folder")
-			.setDesc("if you specify a value, the exporter will create sub-directories based on this field")
-			.addText((text) =>
-				text
-					.setPlaceholder("any metadata field")
-					.setValue(this.plugin.settings.groupBy)
-					.onChange(async (value) => {
-						this.plugin.settings.groupBy = value;
-						await this.plugin.saveSettings();
-					})
-			);
 
+		const linkToDocs = createEl('a', {href: 'https://github.com/symunona/obsidian-bulk-exporter', text: 'Docs'})
+		const filenameInfo = createSpan({text: 'You can define the output path with the following JS expression. Example: ${blog}/${created.date} - see '})
+		filenameInfo.append(linkToDocs)
+		const fragment = document.createDocumentFragment()
+		fragment.append(filenameInfo)
 		new Setting(containerEl)
-			.setName("Output Name and Path")
-			.setDesc("JS expression to how to generate path variables: Example: ${blog}/${index?'index':'posts/' + cYYY + '-' + cMM + '-' + cDD + '-' + slug}")
+			.setName("Output Filename and Path")
+			.setDesc(fragment)
 			.addText((text) =>
 				text
 					.setPlaceholder("${blog}/${slug}")
 					.setValue(this.plugin.settings.outputFormat)
 					.onChange(async (value) => {
 						this.plugin.settings.outputFormat = value;
-						// TODO: validate!
+						// TODO: validate! Can I validate?
 						await this.plugin.saveSettings();
 					})
 			);
 
-
-		new Setting(containerEl)
-			.setName("Metadata To Filename")
-			.setDesc("if you specify a value, the exporter will rename your file to this front-matter value - this is useful e.g. if you are using a static site generator, and want to use a field as the filename to make it more web-accessible. (If it does not have a value, it falls back to the original filename) - WARN: if multiple files have the same property values the last one will be written!")
-			.addText((text) =>
-				text
-					.setPlaceholder("any metadata field")
-					.setValue(this.plugin.settings.slug)
-					.onChange(async (value) => {
-						this.plugin.settings.slug = value;
-						await this.plugin.saveSettings();
-					})
-			);
-
-		new Setting(containerEl)
-			.setName("Smart Slug")
-			.setDesc("translate page titles to web-friendly, escaped values like: 'Some Note Title' => 'some-note-title'")
-			.addToggle((text) =>
-				text
-					.setValue(this.plugin.settings.smartSlug)
-					.onChange(async (value) => {
-						this.plugin.settings.smartSlug = value;
-						await this.plugin.saveSettings();
-					})
-			);
 
 		new Setting(containerEl)
 			.setName("Empty target folder on each export")

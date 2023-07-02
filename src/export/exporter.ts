@@ -6,7 +6,7 @@ import { Notice, TAbstractFile } from "obsidian";
 import path from "path";
 import { rmSync } from "fs";
 
-import { error, log, warn } from "src/utils/log";
+import { error, log } from "src/utils/log";
 
 import { getAPI as getDataViewApi } from "obsidian-dataview";
 import { normalizeQuery } from "src/utils/normalize-query";
@@ -25,7 +25,7 @@ import {
 	ExportProperties,
 } from "src/models/export-properties";
 import { openFileByPath } from "src/obsidian-api-helpers/file-by-path";
-import { uniq } from "underscore";
+import { sortBy } from "underscore";
 
 export class Exporter {
 	plugin: BulkExporterPlugin;
@@ -37,7 +37,6 @@ export class Exporter {
 	constructor(plugin: BulkExporterPlugin) {
 		this.plugin = plugin;
 		this.display = new FileListItemWrapper(plugin);
-		this.registerUpdates();
 	}
 
 	registerUpdates() {
@@ -88,7 +87,7 @@ export class Exporter {
 				log(
 					`Found ${data.value.values.length} files for`,
 					` filter: '${this.plugin.settings.exportQuery}'`,
-					` groupped by: '${this.plugin.settings.groupBy}'`
+					` organized by: '${this.plugin.settings.outputFormat}'`
 				);
 
 				if (data.value && data.value.type === "table") {
@@ -119,6 +118,11 @@ export class Exporter {
 	}
 }
 
+/**
+ * Collects all the separate export folders.
+ * @param fileMap
+ * @returns
+ */
 export function getGroups(
 	fileMap: ExportMap
 ): ExportGroupMap {
@@ -126,9 +130,12 @@ export function getGroups(
 
 	Object.keys(fileMap).forEach((filePath) => {
 		const dir = fileMap[filePath].toRelativeDir as string;
-		console.log('' , dir)
 		if (!ret[dir]) { ret[dir] = [] }
 		ret[dir].push(fileMap[filePath])
+	})
+
+	Object.keys(ret).forEach((pathGroup)=>{
+		ret[pathGroup] = sortBy(ret[pathGroup], 'newFileName')
 	})
 	return ret
 }
@@ -145,7 +152,6 @@ export async function exportSelection(
 	const outputFolder = settings.outputFolder;
 	log("=============================");
 	log("Export to " + outputFolder);
-	const groupBy = settings.groupBy || false;
 
 	if (settings.emptyTargetFolder) {
 		log("Cleaning up target folder (per settings): " + outputFolder);
@@ -159,38 +165,10 @@ export async function exportSelection(
 		log("Created new target folder: " + outputFolder);
 	}
 
-	// Preliminary checks
-	// Do all the exporting files have the groupBy value?
-	if (groupBy) {
-		if (
-			Object.keys(fileList).filter((fileId: string) => {
-				const file = fileList[fileId];
-
-				// I think DataView populates the frontmatter property
-				// @ts-ignore
-				const frontMatter = file.file.frontmatter as {
-					[key: string]: string;
-				};
-
-				if (!frontMatter[groupBy]) {
-					log(
-						`[Warn] Missing front matter property ${groupBy} in file ${file.from}\n`
-					);
-				}
-				return !frontMatter[groupBy];
-			}).length
-		) {
-			new Notice(
-				"!!! Warning. Some files are missing the groupBy property from their front matter! They will be added to the root."
-			);
-		}
-	}
-
 	for (const fileIndex in fileList) {
 		const exportProperties = fileList[fileIndex] as ExportProperties;
 		const targetFileName = await convertAndCopy(
 			outputFolder,
-			groupBy,
 			exportProperties,
 			fileList,
 			settings
@@ -227,30 +205,19 @@ export async function exportSelection(
 
 export async function convertAndCopy(
 	rootPath: string,
-	groupBy: string | false,
 	fileExportProperties: ExportProperties,
 	allFileListMap: ExportMap,
 	settings: BulkExportSettings
 ) {
-	let targetDir = path.normalize(rootPath);
+	const targetDir = path.join(path.normalize(rootPath), fileExportProperties.toRelativeDir);
 	const fileDescriptor = fileExportProperties.file;
-	if (groupBy) {
-		// @ts-ignore - I think DataView populates the frontmatter property
-		const frontMatter = fileDescriptor.frontmatter as {
-			[key: string]: string;
-		};
 
-		const groupByValue = (frontMatter && frontMatter[groupBy]) || "";
-		if (groupByValue) {
-			targetDir = path.join(targetDir, groupByValue);
-		}
-		if (!existsSync(targetDir)) {
-			mkdirSync(targetDir);
-			log(
-				"Created new group-by folder for blog: ",
-					createEl('strong', {text: groupByValue})
-			);
-		}
+	if (!existsSync(targetDir)) {
+		mkdirSync(targetDir, { recursive: true });
+		log(
+			"Created new group-by folder for blog: ",
+				createEl('strong', {text: targetDir})
+		);
 	}
 	if (!fileDescriptor){ throw new Error('Null Error')}
 
@@ -279,8 +246,7 @@ async function collectAssets(
 	// Look for images!
 	const resolve = replaceImageLinks(
 		fileExportProperties,
-		settings.assetPath,
-		settings.autoImportFromWeb
+		settings.assetPath
 	);
 
 	return resolve;

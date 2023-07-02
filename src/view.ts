@@ -130,14 +130,14 @@ export class BulkExporterView extends ItemView {
 	 * @param results
 	 */
 	renderPreviewTable(results: ExportMap) {
+		this.results.innerHTML = ''
 		const resultListEl = this.results.createEl("div", {
 			cls: "nav-files-container meta-data-view-table-container",
 		});
 
 		new ExportTableRender(
 			resultListEl,
-			results,
-			this.exporter.plugin.settings
+			results
 		);
 	}
 
@@ -145,9 +145,9 @@ export class BulkExporterView extends ItemView {
 		const settingsRoot = root.createEl("table");
 		Object.keys(this.plugin.settings).forEach(
 			(settingKey: keyof typeof this.plugin.settings) => {
-				// Do not render everyt propery.
+				// Do not render every property.
 				if (
-					["lastExport", "autoImportFromWeb"].indexOf(settingKey) > -1
+					["lastExport"].indexOf(settingKey) > -1
 				) {
 					return;
 				}

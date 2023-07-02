@@ -10,11 +10,9 @@ export const DEFAULT_SETTINGS: BulkExportSettings = {
 	outputFolder: "output",
 	exportQuery: "blog",
 	slug: "",
-	smartSlug: true,
-	groupBy: "",
 	emptyTargetFolder: false,
 	assetPath: "assets",
-	autoImportFromWeb: false,
+	outputFormat: '${blog}/${slug}',
 	lastExport: {},
 };
 
@@ -29,30 +27,21 @@ export default class BulkExporterPlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 		this.exporter = new Exporter(this);
+		this.exporter.registerUpdates();
 
 		this.registerView(
 			META_DATA_VIEW_TYPE,
 			(leaf) => new BulkExporterView(leaf, this)
 		);
 
-		// This creates an icon in the left ribbon.
 		this.addRibbonIcon(
 			"folder-input",
-			"Bulk Exporter",
-			(evt: MouseEvent) => {
-				this.exporter.searchAndExport();
-			}
-		);
-
-		this.addRibbonIcon(
-			"view",
 			"Bulk Exporter Preview",
 			(evt: MouseEvent) => {
 				this.activateView();
 			}
 		);
 
-		// This adds a simple command that can be triggered anywhere
 		this.addCommand({
 			id: "bulk-export",
 			name: "Bulk Export",

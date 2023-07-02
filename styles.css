@@ -94,7 +94,7 @@ tr:hover .reveal-eye{ visibility: visible; }
 
 
 .top-right-button-container{ float: right; }
-.top-right-button-container button{ vertical-align: top; }
+.top-right-button-container button{ vertical-align: top; margin-left: 10px; }
 
 .log{ font-family: monospace; margin-top: 20px; margin-bottom: 20px}
 

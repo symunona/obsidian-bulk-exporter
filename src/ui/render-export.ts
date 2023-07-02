@@ -1,5 +1,5 @@
 /**
- * Draws a folder tree from a root element recursively.
+ * Draws an export grouped by the export path.
  * Handles collapse and open.
  */
 
@@ -11,7 +11,6 @@ import { openFileByPath } from "src/obsidian-api-helpers/file-by-path";
 import { URL } from "url";
 import { getGroups } from "src/export/exporter";
 import { ExportGroupMap, ExportMap, ExportProperties } from "src/models/export-properties";
-import { BulkExportSettings } from "src/models/bulk-export-settings";
 import { getMetaFields } from "src/utils/folder-meta";
 
 const OVERWRITE_LOCALE = 'hu-HU'
@@ -30,8 +29,7 @@ export class ExportTableRender {
 
 	constructor(
 		leaf: HTMLElement,
-		exportMap: ExportMap,
-		settings: BulkExportSettings
+		exportMap: ExportMap
 	) {
 		this.leaf = leaf;
 		this.exportMap = exportMap
@@ -67,7 +65,7 @@ export class ExportTableRender {
 	}
 
 	renderFileRow(tableBodyRoot: HTMLElement, item: ExportProperties) {
-		// @ts-ignore: TODO: I did a poor job with this filtering, the string should be a TAbstractFile
+		// @ts-ignore - probably DataView index populates it.
 		const metaData = item.file.frontmatter;
 
 		const fileItemRow = tableBodyRoot.createEl('tr', {
@@ -80,7 +78,6 @@ export class ExportTableRender {
 			text: item.newFileName
 		})
 
-		// title.createDiv({ cls: 'nav-file-title-content', text: fileName })
 		title.addEventListener('click', () => {
 			revealInFolder(item.from)
 		})
@@ -134,7 +131,6 @@ export class ExportTableRender {
 		metaKey: string,
 		value: any
 	) {
-		// console.log('stirng!')
 		const td = fileItemRow.createEl('td', { cls: 'data-view-meta-key' })
 		if (metaKey === 'tags' && value instanceof Array) {
 			value.forEach((tag: string, i) => {
@@ -144,13 +140,13 @@ export class ExportTableRender {
 			})
 		} else if ((typeof (value) === 'string') && isHttpUrl(value.trim())) {
 			createLink(td, value, '🔗 ' + new URL(value).hostname, value)
-			// There is no space in it: either a date, or something we can create a filter for.
+			// There is no space in it: can be a date or a string.
 		} else if (value && (typeof (value) === 'string') && value.indexOf(' ') === -1) {
 			// Try if this is a date
 			if (isValidDate(new Date(value))) {
 				const date = new Date(value)
 				let display = date.toLocaleDateString(OVERWRITE_LOCALE)
-				// Hide time, if it's just a date
+				// Smart hide time, if it's just a date
 				if (!(date.getUTCHours() === 0 && date.getMinutes() === 0)) {
 					display += ' ' + date.toLocaleTimeString()
 				}

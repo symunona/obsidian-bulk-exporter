@@ -1,75 +1,88 @@
-# Bulk Metadata Editor and Exporter plugin
+# Bulk Exporter plugin
 
 This is a plugin for Obsidian (https://obsidian.md).
 
 # What it does
 
-Uses the powerful [Obsidian Dataview plugin's](https://github.com/blacksmithgu/obsidian-dataview) language to filter and display files in a table providing a live-edit feature.
+Output and restructure your notes based on metadata!
 
-Comes with an exporter that can export a custom selection of files, grouped by a meta field.
+Simply:
 
-## Releasing new releases
+![mspaint](assets/explain.png)
 
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`. See here for an example: https://github.com/obsidianmd/obsidian-sample-plugin/releases
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
+Uses the powerful [Obsidian Dataview plugin's](https://github.com/blacksmithgu/obsidian-dataview) language to find the files you want to export.
 
-> You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
+Shows the latest exported file status in the sidebar.
 
-## Adding your plugin to the community plugin list
+![](assets/sidebar.png)
 
-- Check https://github.com/obsidianmd/obsidian-releases/blob/master/plugin-review.md
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
+### Output File Path and Name
 
-## How to use
+It's a standard JS string literal, that gets the file metadata and some extras into it's context. The following is an example:
 
-- Clone this repo.
-- `npm i` or `yarn` to install dependencies
-- `npm run dev` to start compilation in watch mode.
+If file metadata is like this:
+```js
+{
+  blog: 'diary',
+  publishDate: '...'
+  title: 'Another day at the office',
+  tags: ['running', 'some']
+}
+```
+
+it will be extended with the following:
+
+```js
+{
+  created: {
+    // moment style object with keys:
+    YYYY: '2023',
+    MM: '05',
+    ...
+    date: '2023-05-14',
+    time: '17-54'
+  },
+  modified { ... } // date like above
+
+  // if there is a slug property set, uses that, if there is not, falls back to the normalized
+  // version of the title property, if again not present, falls back to the normalized version of the file name.
+  slug: 'another-day-at-the-office'
+
+  d: function (dateLikeParam){
+    // Use it like this: ${d(someDateMetaData).date} // will return the date value parsed and reformatted.
+   }
+   norm: function(string){
+    // Will remove any special characters from the string and replaces spaces and separators with dash (-) so it's url safe.
+   }
+}
+```
+... so you can use these to create whatever format you'd like.
+
+#### Some Examples:
+
+Want separate folders for different blogs?
+
+`${blog}/${created.date}-${slug}`
+
+Want to group different years into different folders?
+
+`${blog}/${created.YYYY}/${created.MM}-${created.DD}-${slug}`
+
+Want to keep the original filename and just dump everything in a flat structure?
+
+`${fileName}`
+
+Use a custom metadata field as formatted date in the source:
+
+`${blog}/${d(date_published).date}-${slug}`
 
 ## Manually installing the plugin
 
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
+- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/bulk-exporter/`.
 
-## Improve code quality with eslint (optional)
-- [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code. 
-- To use eslint with this project, make sure to install eslint from terminal:
-  - `npm install -g eslint`
-- To use eslint to analyze this project use this command:
-  - `eslint main.ts`
-  - eslint will then create a report with suggestions for code improvement by file and line number.
-- If your source code is in a folder, such as `src`, you can use eslint with this command to analyze all files in that folder:
-  - `eslint .\src\`
 
-## Funding URL
+### Thanks
 
-You can include funding URLs where people who use your plugin can financially support it.
+Thanks to [jspaint.app](https://jspaint.app/) for this amazing service.
 
-The simple way is to set the `fundingUrl` field to your link in your `manifest.json` file:
-
-```json
-{
-    "fundingUrl": "https://buymeacoffee.com"
-}
-```
-
-If you have multiple URLs, you can also do:
-
-```json
-{
-    "fundingUrl": {
-        "Buy Me a Coffee": "https://buymeacoffee.com",
-        "GitHub Sponsor": "https://github.com/sponsors",
-        "Patreon": "https://www.patreon.com/"
-    }
-}
-```
-
-## API Documentation
-
-See https://github.com/obsidianmd/obsidian-api
+And of course shout out for the Obsidian people for this amazing tool!
