@@ -25,6 +25,7 @@ import {
 	ExportProperties,
 } from "src/models/export-properties";
 import { openFileByPath } from "src/obsidian-api-helpers/file-by-path";
+import { uniq } from "underscore";
 
 export class Exporter {
 	plugin: BulkExporterPlugin;
@@ -119,28 +120,17 @@ export class Exporter {
 }
 
 export function getGroups(
-	fileMap: ExportMap,
-	settings: BulkExportSettings
+	fileMap: ExportMap
 ): ExportGroupMap {
-	const groupBy = settings.groupBy || false;
+	const ret : {[key: string]: Array<ExportProperties>} = {}
 
-	if (groupBy) {
-		const groups: { [id: string]: Array<ExportProperties> } = {};
-		if (
-			Object.keys(fileMap).filter((filePath) => {
-				const file = fileMap[filePath];
-				groups[file.group] = groups[file.group] || [];
-				groups[file.group].push(file);
-			}).length
-		) {
-			warn(
-				"!!! Warning. Some files are missing the groupBy property from their front matter! They will be added to the root."
-			);
-		}
-		return groups;
-	}
-	error("[Bulk Exporter] Flat export is not supported yet.");
-	return {};
+	Object.keys(fileMap).forEach((filePath) => {
+		const dir = fileMap[filePath].toRelativeDir as string;
+		console.log('' , dir)
+		if (!ret[dir]) { ret[dir] = [] }
+		ret[dir].push(fileMap[filePath])
+	})
+	return ret
 }
 
 /**

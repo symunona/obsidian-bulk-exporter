@@ -1,6 +1,7 @@
 import { TAbstractFile } from "obsidian";
 
 export type ExportProperties = {
+	toRelativeDir: string | number | boolean | null;
     content: string;
     md5: string;
     file: TAbstractFile | null,
@@ -8,7 +9,6 @@ export type ExportProperties = {
     from: string,
     to: string,
     toRelative: string,
-    group: string
     lastExportDate: number
 }
 

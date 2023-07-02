@@ -14,6 +14,9 @@ dependencies:
   obsidian-markdown-export:
     specifier: github:bingryan/obsidian-markdown-export-plugin
     version: github.com/bingryan/obsidian-markdown-export-plugin/48fbdfd4413355ddea1cf8e062200317b9dbfb08
+  scoped-eval:
+    specifier: ^0.4.2
+    version: 0.4.2
   ts-md5:
     specifier: ^1.3.1
     version: 1.3.1
@@ -1272,6 +1275,11 @@ packages:
     dependencies:
       queue-microtask: 1.2.3
     dev: true
+
+  /scoped-eval@0.4.2:
+    resolution: {integrity: sha512-cewe5fPPQz1CfEcTdQtUnPCCaX2GWoGHuKnRjtkFfKu1EQlhaQEDjWs366X/1YzlwjgWuiR1tanAqbECssLtkw==}
+    engines: {node: '>=10.0.0'}
+    dev: false
 
   /semver@7.5.0:
     resolution: {integrity: sha512-+XC0AD/R7Q2mPSRuy2Id0+CGTZ98+8f+KvwirxOKIEyid+XSx6HbC63p+O4IndTHuX5Z+JxQ0TghCkO5Cg/2HA==}

@@ -3,6 +3,9 @@
  * @param fileName
  * @returns
  */
-export default function normalizeFileName(fileName: string): string{
-    return fileName.toLowerCase().replace(/_|\s|\.|,|\(|\)|\[|\]/g, '-')
+export default function normalizeFileName(fileName: string): string {
+	return String(fileName || "")
+		.toLowerCase()
+		.replace(/_|\s|\.|,|\(|\)|\[|\]/g, "-")
+		.replace(/[^A-Za-z0-9]/g, "");
 }

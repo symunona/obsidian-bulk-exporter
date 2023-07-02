@@ -10,7 +10,6 @@ import { createLink, isHttpUrl } from "../utils/url";
 import { openFileByPath } from "src/obsidian-api-helpers/file-by-path";
 import { URL } from "url";
 import { getGroups } from "src/export/exporter";
-import { without } from "underscore";
 import { ExportGroupMap, ExportMap, ExportProperties } from "src/models/export-properties";
 import { BulkExportSettings } from "src/models/bulk-export-settings";
 import { getMetaFields } from "src/utils/folder-meta";
@@ -36,10 +35,10 @@ export class ExportTableRender {
 	) {
 		this.leaf = leaf;
 		this.exportMap = exportMap
-		this.groupMap = getGroups(exportMap, settings)
+		this.groupMap = getGroups(exportMap)
 		this.metaKeysToShow = getMetaFields(exportMap)
-		this.metaFields = without(['fileName'].concat(Object.keys(this.metaKeysToShow)), settings.groupBy)
-		this.metaFieldsNoExtras = without(Object.keys(this.metaKeysToShow), settings.groupBy)
+		this.metaFields = ['fileName'].concat(Object.keys(this.metaKeysToShow))
+		this.metaFieldsNoExtras = Object.keys(this.metaKeysToShow)
 		this.render()
 	}
 
@@ -59,7 +58,6 @@ export class ExportTableRender {
 
 		Object.keys(this.groupMap).forEach((group) => {
 			const tBody = tableRoot.createEl('tbody', { cls: 'table-view-tbody' })
-			// this.renderGroup(tBody, this.groupMap[group], 0, '')
 			this.renderFolderHeaderRow(tBody, group)
 			this.groupMap[group].forEach((file) => {
 				this.renderFileRow(tBody, file)
@@ -74,7 +72,7 @@ export class ExportTableRender {
 
 		const fileItemRow = tableBodyRoot.createEl('tr', {
 			cls: "nav-file tree-item meta-data-table-file-row",
-			attr: {'data-path': item.group}
+			attr: {'data-path': item.toRelativeDir}
 		});
 
 		const title = fileItemRow.createEl('td', {
@@ -139,18 +137,8 @@ export class ExportTableRender {
 		// console.log('stirng!')
 		const td = fileItemRow.createEl('td', { cls: 'data-view-meta-key' })
 		if (metaKey === 'tags' && value instanceof Array) {
-			// console.log('aaaaa', value)
 			value.forEach((tag: string, i) => {
-				const tagLink = td.createEl('a', { cls: 'tag-link', text: tag })
-				tagLink.addEventListener('click', () => {
-					// DataView does not handle multi-word tags, instead it
-					// adds them to multiple indexes. Hence if this is a multi-word tag,
-					// let's just filter it with an AND.
-					if (tag.indexOf(' ') > -1) {
-						return this.goToFilter(`from ${tag.split(' ').map(t => `#${t}`).join(' AND ')}`)
-					}
-					this.goToFilter(`from #${tag}`)
-				})
+				td.createSpan({ cls: 'tag-link', text: tag })
 				if (i < value.length - 1)
 					td.createSpan({ text: ', ' })
 			})
@@ -168,10 +156,7 @@ export class ExportTableRender {
 				}
 				td.createSpan({ cls: 'meta-value', text: display, attr: { title: value } })
 			} else {
-				const link = createLink(td, value, value)
-				link.addEventListener('click', () => {
-					this.goToFilter(`where contains(${metaKey}, "${value}")`)
-				})
+				td.createSpan({text: value})
 			}
 		} else if (value instanceof Array) {
 			td.createSpan({ cls: 'meta-value', text: value.join(', ') })
