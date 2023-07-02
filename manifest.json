@@ -1,7 +1,7 @@
 {
 	"id": "bulk-exporter",
 	"name": "Bulk Exporter",
-	"version": "1.0.3",
+	"version": "1.0.4",
 	"minAppVersion": "0.15.0",
 	"description": "Use Dataview queries to export a set of notes with assets",
 	"author": "symunona",
