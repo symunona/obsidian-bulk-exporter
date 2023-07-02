@@ -2,6 +2,7 @@ import { ExportMap } from "./export-properties";
 
 export interface BulkExportSettings {
 	slug: string;
+	outputFormat: string;
 	smartSlug: boolean;
 	groupBy: string;
 	outputFolder: string;

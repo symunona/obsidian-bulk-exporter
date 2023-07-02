@@ -57,6 +57,21 @@ export class OutputSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
+			.setName("Output Name and Path")
+			.setDesc("JS expression to how to generate path variables: Example: ${blog}/${index?'index':'posts/' + cYYY + '-' + cMM + '-' + cDD + '-' + slug}")
+			.addText((text) =>
+				text
+					.setPlaceholder("${blog}/${slug}")
+					.setValue(this.plugin.settings.outputFormat)
+					.onChange(async (value) => {
+						this.plugin.settings.outputFormat = value;
+						// TODO: validate!
+						await this.plugin.saveSettings();
+					})
+			);
+
+
+		new Setting(containerEl)
 			.setName("Metadata To Filename")
 			.setDesc("if you specify a value, the exporter will rename your file to this front-matter value - this is useful e.g. if you are using a static site generator, and want to use a field as the filename to make it more web-accessible. (If it does not have a value, it falls back to the original filename) - WARN: if multiple files have the same property values the last one will be written!")
 			.addText((text) =>
