@@ -3,7 +3,7 @@
  * Handles collapse and open.
  */
 
-import { Notice } from "obsidian";
+import { Notice, Plugin } from "obsidian";
 import { revealInFolder } from "../obsidian-api-helpers/file-explorer";
 import { getIcon } from "../obsidian-api-helpers/get-icon";
 import { createLink, isHttpUrl } from "../utils/url";
@@ -26,12 +26,15 @@ export class ExportTableRender {
 	goToFilter: CallbackFunction
 	metaFields: Array<string>
 	metaFieldsNoExtras: Array<string>
+	plugin: Plugin;
 
 	constructor(
 		leaf: HTMLElement,
-		exportMap: ExportMap
+		exportMap: ExportMap,
+		plugin: Plugin
 	) {
 		this.leaf = leaf;
+		this.plugin = plugin;
 		this.exportMap = exportMap
 		this.groupMap = getGroups(exportMap)
 		this.metaKeysToShow = getMetaFields(exportMap)
@@ -79,11 +82,11 @@ export class ExportTableRender {
 		})
 
 		title.addEventListener('click', () => {
-			revealInFolder(item.from)
+			revealInFolder(this.plugin, item.from)
 		})
 		title.addEventListener('dblclick', () => {
-			revealInFolder(item.from)
-			openFileByPath(item.from)
+			revealInFolder(this.plugin, item.from)
+			openFileByPath(this.plugin, item.from)
 		})
 
 		this.metaFieldsNoExtras.forEach((metaKey) => {

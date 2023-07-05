@@ -5,6 +5,7 @@
 import { log } from "console";
 import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "fs";
 import path, { dirname } from "path";
+import BulkExporterPlugin from "src/main";
 import { ExportMap, ExportProperties } from "src/models/export-properties";
 import { error, warn } from "src/utils/log";
 import replaceAll from "src/utils/replace-all";
@@ -110,7 +111,8 @@ export function replaceLocalLinks(
  */
 export async function replaceImageLinks(
 	exportProperties: ExportProperties,
-	assetPath: string
+	assetPath: string,
+	plugin: BulkExporterPlugin
 ) {
 	const imageLinks = getImageLinks(exportProperties.content);
 
@@ -127,7 +129,7 @@ export async function replaceImageLinks(
 		);
 		const imageExtension = imageName.substring(imageName.lastIndexOf("."));
 
-		const asset = this.app.metadataCache.getFirstLinkpathDest(
+		const asset = plugin.app.metadataCache.getFirstLinkpathDest(
 			imageLink,
 			exportProperties.from
 		);
@@ -169,7 +171,7 @@ export async function replaceImageLinks(
 		}
 
 		if (!asset) {
-			error("could not find asset", filePath);
+			error("Could not find asset ", filePath);
 			continue;
 		}
 
@@ -179,14 +181,17 @@ export async function replaceImageLinks(
 			warn("asset already exists", documentLink);
 			continue;
 		}
-		if (this.app.vault.adapter.basePath) {
+		// @ts-ignore : simple way to figure out if we are on the cloud I guess.
+		const basePath =  plugin.app.vault.adapter.basePath;
+
+		if (basePath) {
 			const fullAssetPath = path.join(
-				this.app.vault.adapter.basePath,
+				basePath,
 				filePath
 			);
 			copyFileSync(fullAssetPath, assetAbsoluteTarget);
 		} else {
-			const assetContent = await this.app.vault.readBinary(asset);
+			const assetContent = await plugin.app.vault.readBinary(asset);
 			writeFileSync(assetAbsoluteTarget, Buffer.from(assetContent));
 		}
 	}

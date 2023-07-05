@@ -98,7 +98,9 @@ export class Exporter {
 					throw new Error("[Bulk Exporter]: return type error");
 				}
 			}
-			error("[Bulk Exporter] ", data.error);
+			error(`[Bulk Exporter] Error in Query: "${initialQuery}"`);
+			error(data.error)
+			console.error(data)
 			throw new Error("[Bulk Exporter] Query Error");
 		} else {
 			new Notice("Meta-Dataview needs Dataview plugin to be installed.");
@@ -111,7 +113,8 @@ export class Exporter {
 		console.warn("Found files to export: ", results);
 		this.plugin.settings.lastExport = await exportSelection(
 			results,
-			this.plugin.settings
+			this.plugin.settings,
+			this.plugin
 		);
 		this.plugin.saveSettings();
 		this.display.applyStatusIcons(this.plugin.settings.lastExport);
@@ -145,7 +148,8 @@ export function getGroups(
  */
 export async function exportSelection(
 	fileList: ExportMap,
-	settings: BulkExportSettings
+	settings: BulkExportSettings,
+	plugin: BulkExporterPlugin
 ): Promise<ExportMap> {
 	const start = new Date();
 	// Check if target directory exists
@@ -171,7 +175,8 @@ export async function exportSelection(
 			outputFolder,
 			exportProperties,
 			fileList,
-			settings
+			settings,
+			plugin
 		);
 
 
@@ -188,7 +193,7 @@ export async function exportSelection(
 
 		const linkToFile = createEl("a", { text: targetFileName });
 		linkToFile.addEventListener("click", () =>
-			openFileByPath(exportProperties.from)
+			openFileByPath(plugin, exportProperties.from)
 		);
 		log("Exported ", linkToFile);
 	}
@@ -207,7 +212,8 @@ export async function convertAndCopy(
 	rootPath: string,
 	fileExportProperties: ExportProperties,
 	allFileListMap: ExportMap,
-	settings: BulkExportSettings
+	settings: BulkExportSettings,
+	plugin: BulkExporterPlugin
 ) {
 	const targetDir = path.join(path.normalize(rootPath), fileExportProperties.toRelativeDir);
 	const fileDescriptor = fileExportProperties.file;
@@ -221,12 +227,12 @@ export async function convertAndCopy(
 	}
 	if (!fileDescriptor){ throw new Error('Null Error')}
 
-	const fileContent = await this.app.vault.adapter.read(fileDescriptor.path);
+	const fileContent = await plugin.app.vault.adapter.read(fileDescriptor.path);
 	fileExportProperties.content = fileContent;
 
 	fileExportProperties.md5 = Md5.hashStr(fileContent);
 
-	await collectAssets(fileExportProperties, settings);
+	await collectAssets(fileExportProperties, settings, plugin);
 
 	replaceLocalLinks(fileExportProperties, allFileListMap);
 
@@ -241,12 +247,14 @@ export async function convertAndCopy(
 
 async function collectAssets(
 	fileExportProperties: ExportProperties,
-	settings: BulkExportSettings
+	settings: BulkExportSettings,
+	plugin: BulkExporterPlugin
 ) {
 	// Look for images!
 	const resolve = replaceImageLinks(
 		fileExportProperties,
-		settings.assetPath
+		settings.assetPath,
+		plugin
 	);
 
 	return resolve;

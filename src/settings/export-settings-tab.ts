@@ -14,8 +14,16 @@ export class OutputSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 
 		containerEl.empty();
-		containerEl.createEl("h2", { text: "Bulk Export Settings" });
-		containerEl.createEl("div", { text: "Export a certain subset of your notes, based on whether they match a query filter." });
+
+		const linkToIssues = createEl('a', {href: 'https://github.com/symunona/obsidian-bulk-exporter/issues', text: 'Github Issue Tracker'})
+		const genericInfo = createSpan({text: "Export a certain subset of your notes, based on whether they match a DataView query. Bug reports and Feature Requests are welcome at "})
+		genericInfo.append(linkToIssues)
+		const genericFragment = document.createDocumentFragment()
+		genericFragment.append(genericInfo)
+
+		new Setting(containerEl)
+			.setName("Bulk Exporter")
+			.setDesc(genericFragment)
 
 		new Setting(containerEl)
 			.setName("Export Folder")
@@ -30,10 +38,15 @@ export class OutputSettingTab extends PluginSettingTab {
 					})
 			);
 
+		const linkToDataViewDocs = createEl('a', {href: 'https://blacksmithgu.github.io/obsidian-dataview/queries/data-commands/', text: 'DataView Language Specs'})
+		const filterInfo = createSpan({text: `Use a DataView style query for matching your metadata. Example: "blog='personal'". For more, see `})
+		filterInfo.append(linkToDataViewDocs)
+		const filterInfoFragment = document.createDocumentFragment()
+		filterInfoFragment.append(filterInfo)
 
 		new Setting(containerEl)
 			.setName("Filter Query")
-			.setDesc("DataView style query")
+			.setDesc(filterInfoFragment)
 			.addText((text) =>
 				text
 					.setPlaceholder("default")
@@ -45,13 +58,13 @@ export class OutputSettingTab extends PluginSettingTab {
 			);
 
 		const linkToDocs = createEl('a', {href: 'https://github.com/symunona/obsidian-bulk-exporter', text: 'Docs'})
-		const filenameInfo = createSpan({text: 'You can define the output path with the following JS expression. Example: ${blog}/${created.date} - see '})
+		const filenameInfo = createSpan({text: 'You can define the output path with the following JS expression. Example: "${blog}/${created.date}-${slug}" - see '})
 		filenameInfo.append(linkToDocs)
-		const fragment = document.createDocumentFragment()
-		fragment.append(filenameInfo)
+		const exportFileNameInfoFragment = document.createDocumentFragment()
+		exportFileNameInfoFragment.append(filenameInfo)
 		new Setting(containerEl)
 			.setName("Output Filename and Path")
-			.setDesc(fragment)
+			.setDesc(exportFileNameInfoFragment)
 			.addText((text) =>
 				text
 					.setPlaceholder("${blog}/${slug}")

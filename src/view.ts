@@ -67,7 +67,6 @@ export class BulkExporterView extends ItemView {
 
 		// Logging
 		this.log = this.settingsHeader.createDiv();
-		this.log.style.whiteSpace = "pre-wrap";
 		setLogOutput(this.log);
 		log('Hey! Single click on the file name to reveal it in the sidebar, double click to open it!')
 
@@ -91,7 +90,7 @@ export class BulkExporterView extends ItemView {
 		this.settingsButton = this.topRightMenuContainer.createEl("button", {title: 'Open Plugin Settings'});
 		this.settingsButton.append(getIcon("settings"));
 		this.settingsButton.addEventListener("click", () => {
-			openSettingsPage("bulk-exporter");
+			openSettingsPage("bulk-exporter", this.plugin);
 		});
 
 		this.exportButton = this.topRightMenuContainer.createEl("button", {
@@ -122,6 +121,7 @@ export class BulkExporterView extends ItemView {
 			this.renderPreviewTable(results);
 		} catch (e) {
 			this.settingsHeader.style.display = "block";
+			console.error(e)
 		}
 	}
 
@@ -137,7 +137,8 @@ export class BulkExporterView extends ItemView {
 
 		new ExportTableRender(
 			resultListEl,
-			results
+			results,
+			this.plugin
 		);
 	}
 

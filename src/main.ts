@@ -9,7 +9,6 @@ import { OutputSettingTab } from "./settings/export-settings-tab";
 export const DEFAULT_SETTINGS: BulkExportSettings = {
 	outputFolder: "output",
 	exportQuery: "blog",
-	slug: "",
 	emptyTargetFolder: false,
 	assetPath: "assets",
 	outputFormat: '${blog}/${slug}',
@@ -68,7 +67,10 @@ export default class BulkExporterPlugin extends Plugin {
 		);
 	}
 
-	onunload() {}
+	onunload() {
+		// Do cleanup the sidebar.
+		this.exporter.display.clean()
+	}
 
 	async loadSettings() {
 		this.settings = Object.assign(
