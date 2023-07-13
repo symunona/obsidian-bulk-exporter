@@ -60,6 +60,7 @@ tr:hover .data-view-meta-key.undefined {background: var(--text-selection); opaci
     font-family: monospace; margin-top: 20px; margin-bottom: 20px;
     white-space: pre-wrap;
 }
+.meta-data-view .clear-log-button{ float: right; }
 
 .export-plugin-icon{ display: inline-block; margin-right: 4px; }
 .export-plugin-icon.green{ color: var(--color-green) }

@@ -21,7 +21,7 @@ function toView(color: string, ...args: any) {
 	const m = String(new Date().getMinutes()).padStart(2, "0");
 	const s = String(new Date().getSeconds()).padStart(2, "0");
 	const timeStamp = `[${h}:${m}:${s}] `;
-	const spn = createSpan({ attr: { style: `color: ${color}` } });
+	const spn = createSpan({ attr: { style: `color: ${color}`, class: 'log-entry' } });
 	spn.append(timeStamp);
 	args.forEach((element: string | Node) => {
 		spn.append(element);

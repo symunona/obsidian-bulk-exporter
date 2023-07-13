@@ -11,6 +11,7 @@
 	"keywords": [],
 	"author": "",
 	"license": "MIT",
+	"platform": "node",
 	"devDependencies": {
 		"@types/node": "^16.11.6",
 		"@typescript-eslint/eslint-plugin": "5.29.0",
@@ -25,6 +26,7 @@
 	"dependencies": {
 		"@types/underscore": "^1.11.4",
 		"crypto-js": "^4.1.1",
+		"glob": "^10.3.3",
 		"obsidian-markdown-export": "github:bingryan/obsidian-markdown-export-plugin",
 		"scoped-eval": "^0.4.2",
 		"ts-md5": "^1.3.1",

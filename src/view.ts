@@ -30,6 +30,7 @@ export class BulkExporterView extends ItemView {
 	plugin: BulkExporterPlugin;
 	refreshButton: HTMLButtonElement;
 	logButton: HTMLButtonElement;
+	clearLogButton: HTMLButtonElement;
 
 	constructor(leaf: WorkspaceLeaf, plugin: BulkExporterPlugin) {
 		super(leaf);
@@ -67,6 +68,11 @@ export class BulkExporterView extends ItemView {
 
 		// Logging
 		this.log = this.settingsHeader.createDiv();
+		this.clearLogButton = this.log.createEl('button', {text: 'Clear', cls: 'clear-log-button'})
+		this.clearLogButton.addEventListener('click', ()=>{
+			this.log.querySelectorAll('.log-entry').forEach(e=>e.remove())
+		})
+
 		setLogOutput(this.log);
 		log('Hey! Single click on the file name to reveal it in the sidebar, double click to open it!')
 

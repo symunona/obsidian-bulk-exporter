@@ -1,5 +1,26 @@
 /**
  * Inspiration: obsidian-markdown-export plugin.
+ *
+ * In the source, markdown files can point to any place within the vault.
+ * This is not optimal for exporting as we usually want to collect it to
+ * one assets folder.
+ *
+ * Also, there are relative/local links from one note to another
+ * they need to be remapped too.
+ *
+ * Steps:
+ *  Links:
+ * - collect all links,
+ * - check if they are among the exported
+ * - if yes, replace the link with their new address
+ * - if no, make them plain text.
+ *
+ *  Images:
+ * - find all the embedded images
+ * - if they are linked from the web, just ignore
+ * - if they are from local refs
+ *    - copy them to the asset folder
+ *    - replace the image references in content!
  */
 
 import { log } from "console";

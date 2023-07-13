@@ -3,7 +3,7 @@
  */
 import { existsSync, mkdirSync, writeFileSync } from "fs";
 import { Notice, TAbstractFile } from "obsidian";
-import path from "path";
+import path, { parse } from "path";
 import { rmSync } from "fs";
 
 import { error, log } from "src/utils/log";
@@ -25,7 +25,8 @@ import {
 	ExportProperties,
 } from "src/models/export-properties";
 import { openFileByPath } from "src/obsidian-api-helpers/file-by-path";
-import { sortBy } from "underscore";
+import { isArray, isString, sortBy } from "underscore";
+import { copyGlob } from "./globCopy";
 
 export class Exporter {
 	plugin: BulkExporterPlugin;
@@ -129,7 +130,7 @@ export class Exporter {
 export function getGroups(
 	fileMap: ExportMap
 ): ExportGroupMap {
-	const ret : {[key: string]: Array<ExportProperties>} = {}
+	const ret: { [key: string]: Array<ExportProperties> } = {}
 
 	Object.keys(fileMap).forEach((filePath) => {
 		const dir = fileMap[filePath].toRelativeDir as string;
@@ -137,7 +138,7 @@ export function getGroups(
 		ret[dir].push(fileMap[filePath])
 	})
 
-	Object.keys(ret).forEach((pathGroup)=>{
+	Object.keys(ret).forEach((pathGroup) => {
 		ret[pathGroup] = sortBy(ret[pathGroup], 'newFileName')
 	})
 	return ret
@@ -200,8 +201,7 @@ export async function exportSelection(
 
 	new Notice("Exported to " + outputFolder);
 	log(
-		`Exported took ${
-			(new Date().getTime() - start.getTime()) / 1000
+		`Exported took ${(new Date().getTime() - start.getTime()) / 1000
 		}s to ` + outputFolder
 	);
 
@@ -222,10 +222,10 @@ export async function convertAndCopy(
 		mkdirSync(targetDir, { recursive: true });
 		log(
 			"Created new group-by folder for blog: ",
-				createEl('strong', {text: targetDir})
+			createEl('strong', { text: targetDir })
 		);
 	}
-	if (!fileDescriptor){ throw new Error('Null Error')}
+	if (!fileDescriptor) { throw new Error('Null Error') }
 
 	const fileContent = await plugin.app.vault.adapter.read(fileDescriptor.path);
 	fileExportProperties.content = fileContent;
@@ -245,6 +245,16 @@ export async function convertAndCopy(
 	return fileExportProperties.to;
 }
 
+/**
+ * This function assumes, that we have the file content loaded into the
+ * `content`
+ * parameter within fileExportProperties, and overwrites that, removing/
+ * moving the references further described in get-markdown-attachments.ts.
+ * @param fileExportProperties file being processed
+ * @param settings to retrieve assetPath
+ * @param plugin
+ * @returns
+ */
 async function collectAssets(
 	fileExportProperties: ExportProperties,
 	settings: BulkExportSettings,
@@ -256,6 +266,22 @@ async function collectAssets(
 		settings.assetPath,
 		plugin
 	);
+
+	// @ts-ignore
+	const frontMatterData = fileExportProperties.file.frontmatter;
+
+	if (frontMatterData && frontMatterData.copy) {
+		const relativeRoot = parse(fileExportProperties.from).dir
+		log(`[glob] [${fileExportProperties.newFileName}.md] has a copy property. Looking for file matches here: ${relativeRoot}`);
+		// Iterate every file that matches the regex.
+		if (isArray(frontMatterData.copy)){
+			// TODO: copy files that are next to the index.md!
+			frontMatterData.copy.forEach((globPattern: string) =>
+			copyGlob(fileExportProperties, globPattern, plugin));
+		} else if (isString(frontMatterData.copy)){
+			copyGlob(fileExportProperties, frontMatterData.copy, plugin)
+		}
+	}
 
 	return resolve;
 }
