@@ -163,6 +163,29 @@ The following will put all values that have a same `blogname/post/some-entry` me
 `${blog}/${index?'':'posts/'}${slug}`
 
 
+### Assets and internal links
+
+If a document references images from your vault, it will be exported into an assets folder, relative
+to the markdown file! If obsidian shows it, it will be copied.
+
+```
+- assets/
+   - attachment1.jpg
+   - image.webp
+   - pic.gif
+- markdown.md <- referenced in the content or even in metadata!
+```
+
+Also, the plugin parses the internal links that point to other notes. If the referenced obsidian file is
+exported in the process, the links will be re-pointed to the appropriate output file name.
+
+If the link is to a non-exported note, it is removed (the text is left in).
+
+### Magic Metadata Key `copy`
+
+If you want other files to be exported with your markdown, just add a `copy` metadata parameter.
+It eats [any glob](https://www.npmjs.com/package/glob) formatted regular expression you give it, using relative paths compared to where your markdown file is.
+
 ## Manually installing the plugin
 
 - Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/obsidian-bulk-exporter/`.
@@ -181,6 +204,9 @@ Open an [Issue on github](https://github.com/symunona/obsidian-bulk-exporter/iss
 
 ### Thanks
 
-Thanks to [jspaint.app](https://jspaint.app/) for this amazing service.
+[Obsidian people](https://obsidian.md/about) for this amazing tool!
 
-And of course shout out for the Obsidian people for this amazing tool!
+[Marcus Olson](https://marcus.se.net/) for the Dataview plugin and the [developer docs](https://marcus.se.net/obsidian-plugin-docs/)!
+
+[jspaint.app](https://jspaint.app/) - the software missing from my childhood.
+

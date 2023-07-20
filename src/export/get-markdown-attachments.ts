@@ -25,12 +25,13 @@
 
 import { log } from "console";
 import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "fs";
-import path, { dirname } from "path";
+import { basename, dirname, join } from "path";
 import BulkExporterPlugin from "src/main";
-import { ExportMap, ExportProperties } from "src/models/export-properties";
+import { ExportProperties } from "src/models/export-properties";
 import { error, warn } from "src/utils/log";
 import replaceAll from "src/utils/replace-all";
 import { Md5 } from "ts-md5";
+import { isArray, isString } from "underscore";
 
 export const ATTACHMENT_URL_REGEXP = /!\[\[((.*?)\.(\w+))\]\]/g;
 export const MARKDOWN_ATTACHMENT_URL_REGEXP = /!\[(.*?)\]\(((.*?)\.(\w+))\)/g;
@@ -38,6 +39,8 @@ export const MARKDOWN_ATTACHMENT_URL_REGEXP = /!\[(.*?)\]\(((.*?)\.(\w+))\)/g;
 // Finds all [title](url) formatted expressions, ignores the ones that are embedded with !
 export const LINK_URL_REGEXP = /[^!]\[(.*?)\]\(((.*?))\)/g;
 export const EMBED_URL_REGEXP = /!\[\[(.*?)\]\]/g;
+
+export const IMAGE_MATCHER = /(([^\s]*).(png|jpe?g|gif|webp))/
 
 export function getImageLinks(markdown: string) {
 	const imageLinks = markdown.matchAll(ATTACHMENT_URL_REGEXP);
@@ -52,168 +55,169 @@ export function getLinks(markdown: string) {
 	return Array.from(markdown.matchAll(LINK_URL_REGEXP));
 }
 
-/**
- * Supports obsidian: formatted links, replaces exportProperties' content.
- * @param exportProperties
- * @param allFileListMap
- */
-export function replaceLocalLinks(
-	exportProperties: ExportProperties,
-	allFileListMap: ExportMap
-) {
-	const links = getLinks(exportProperties.content);
 
-	for (const index in links) {
-		const original = links[index][0].trim();
-		const linkUrlEncrypted = links[index][links[index].length - 2];
-		let link = decodeURI(linkUrlEncrypted);
-
-		const title = links[index][1];
-
-		if (link.startsWith("http")) {
-			log("Skipping URL", title, link);
-			continue;
-		}
-
-		if (link.startsWith("obsidian")) {
-			const fileLink = decodeURIComponent(
-				link.substring(link.indexOf("&file=") + 6)
-			);
-			link = fileLink;
-		}
-
-		const fromDir = dirname(exportProperties.from);
-		const linkWithMd = link + ".md";
-		const guessRelative = path.join(fromDir, linkWithMd);
-
-		// Replace all links that point to other markdown files.
-		// If not found, send a warning.
-		if (allFileListMap[linkWithMd]) {
-			const newFilePath = allFileListMap[linkWithMd].toRelative;
-			// Remove the extension!
-			const newLink = newFilePath.substring(
-				0,
-				newFilePath.lastIndexOf(".")
-			);
-			const newLinkWithTitle = `[${title}](${newLink})`;
-			exportProperties.content = replaceAll(
-				original,
-				exportProperties.content,
-				newLinkWithTitle
-			);
-		} else if (allFileListMap[guessRelative]) {
-			const newFilePath = allFileListMap[guessRelative].toRelative;
-			// Remove the extension!
-			const newLink = newFilePath.substring(
-				0,
-				newFilePath.lastIndexOf(".")
-			);
-			const newLinkWithTitle = `[${title}](${newLink})`;
-			exportProperties.content = replaceAll(
-				original,
-				exportProperties.content,
-				newLinkWithTitle
-			);
-		} else {
-			warn("Local link not found, removing!", link, title);
-			exportProperties.content = replaceAll(
-				original,
-				exportProperties.content,
-				`[${title}]?`
-			);
-		}
-	}
-}
 
 /**
  * Does not yet support pulling external images in, it just leaves them in place.
- * @param exportProperties
- * @param assetPath
  */
 export async function replaceImageLinks(
 	exportProperties: ExportProperties,
-	assetPath: string,
 	plugin: BulkExporterPlugin
 ) {
+	const list = [];
+
 	const imageLinks = getImageLinks(exportProperties.content);
+
+	let str = exportProperties.content;
 
 	for (const index in imageLinks) {
 		const urlEncodedImageLink =
 			imageLinks[index][imageLinks[index].length - 3];
-		const imageLink = decodeURI(urlEncodedImageLink);
 
-		const imageLinkMd5 = Md5.hashStr(imageLink);
-		const imageName = path.basename(imageLink);
-		const imageNameWithoutExtension = imageName.substring(
-			0,
-			imageName.lastIndexOf(".")
-		);
-		const imageExtension = imageName.substring(imageName.lastIndexOf("."));
+		str = await replaceOneImageLink(str, urlEncodedImageLink, exportProperties, plugin);
+		list.push(urlEncodedImageLink)
+	}
+	exportProperties.content = str
+	return list
+}
 
-		const asset = plugin.app.metadataCache.getFirstLinkpathDest(
-			imageLink,
-			exportProperties.from
-		);
+/**
+ * If a meta property is referencing an image, do copy that over too!
+ * Not having a better way to do this: just regex for a no-space value
+ * ending with .(png|jpe?g|gif|webp)
+ *
+ * @param exportProperties
+ * @param plugin
+ * @returns
+ */
+export async function replaceImageLinksInMetaData(
+	exportProperties: ExportProperties,
+	plugin: BulkExporterPlugin
+) {
+	// @ts-ignore
+	const frontMatterData = exportProperties.file.frontmatter;
+	const list = [];
+	let str = exportProperties.content;
 
-		const filePath =
-			asset !== null
-				? asset.path
-				: path.join(path.dirname(exportProperties.from), imageLink);
-
-		// filter markdown link eg: http://xxx.png
-		// If this is an external url and we have the importFromWeb true, download the resource.
-		if (urlEncodedImageLink.startsWith("http")) {
-			log("Skipping Web Resource: ", urlEncodedImageLink);
-			continue;
+	for (let key in frontMatterData) {
+		const value = frontMatterData[key]
+		if (isArray(value)) {
+			value.forEach(async (arrayItem: string) => {
+				const isImage: boolean = isImageUrl(arrayItem)
+				if (isImage) {
+					str = await replaceOneImageLink(str, arrayItem, exportProperties, plugin);
+					list.push(arrayItem)
+				}
+			})
 		}
-
-		// Create asset dir if not exists
-		const toDir = path.dirname(exportProperties.to);
-		const imageTargetFileName =
-			imageNameWithoutExtension + "-" + imageLinkMd5 + imageExtension;
-		const documentLink = path.join(assetPath, imageTargetFileName);
-		const assetAbsoluteTarget = path.join(
-			toDir,
-			assetPath,
-			imageTargetFileName
-		);
-		const absoluteTargetDir = path.dirname(assetAbsoluteTarget);
-
-		// Update the content with the new asset URL.
-		exportProperties.content = replaceAll(
-			urlEncodedImageLink,
-			exportProperties.content,
-			documentLink
-		);
-
-		if (!existsSync(absoluteTargetDir)) {
-			mkdirSync(absoluteTargetDir, { recursive: true });
-			log("Created new group-by asset folder");
-		}
-
-		if (!asset) {
-			error("Could not find asset ", filePath);
-			continue;
-		}
-
-		// If we have a local system, use a simple copy, if we
-		// have a cloud store, export the binary.
-		if (existsSync(assetAbsoluteTarget)) {
-			warn("asset already exists", documentLink);
-			continue;
-		}
-		// @ts-ignore : simple way to figure out if we are on the cloud I guess.
-		const basePath =  plugin.app.vault.adapter.basePath;
-
-		if (basePath) {
-			const fullAssetPath = path.join(
-				basePath,
-				filePath
-			);
-			copyFileSync(fullAssetPath, assetAbsoluteTarget);
-		} else {
-			const assetContent = await plugin.app.vault.readBinary(asset);
-			writeFileSync(assetAbsoluteTarget, Buffer.from(assetContent));
+		else if (isString(value)) {
+			const isImage: boolean = isImageUrl(value)
+			if (isImage) {
+				str = await replaceOneImageLink(str, value, exportProperties, plugin);
+				list.push(value)
+			}
 		}
 	}
+
+	exportProperties.content = str
+	return list
+}
+
+function isImageUrl(imageUrl: string): boolean {
+	// Check if it has space, we do not support image urls with spaces.
+	if (imageUrl.split(' ').length > 1) {
+		return false;
+	}
+	return IMAGE_MATCHER.test(imageUrl)
+}
+
+
+export async function replaceOneImageLink(
+	str: string,
+	urlEncodedImageLink: string,
+	exportProperties: ExportProperties,
+	// used for: plugin.settings, reading binary
+	plugin: BulkExporterPlugin) {
+
+	log('replacing ', urlEncodedImageLink)
+
+	const assetFolderName = plugin.settings.assetPath || 'assets'
+
+	const imageLink = decodeURI(urlEncodedImageLink);
+	const imageLinkMd5 = Md5.hashStr(imageLink);
+	const imageName = basename(imageLink);
+	const imageNameWithoutExtension = imageName.substring(
+		0,
+		imageName.lastIndexOf(".")
+	);
+	const imageExtension = imageName.substring(imageName.lastIndexOf("."));
+
+	const asset = plugin.app.metadataCache.getFirstLinkpathDest(
+		imageLink,
+		exportProperties.from
+	);
+
+	const filePath =
+		asset !== null
+			? asset.path
+			: join(dirname(exportProperties.from), imageLink);
+
+	// filter markdown link eg: http://xxx.png
+	// If this is an external url and we have the importFromWeb true, download the resource.
+	if (urlEncodedImageLink.startsWith("http")) {
+		log("Skipping Web Resource: ", urlEncodedImageLink);
+		return str;
+	}
+
+	// Create asset dir if not exists
+	const toDir = dirname(exportProperties.to);
+	const imageTargetFileName =
+		imageNameWithoutExtension + "-" + imageLinkMd5 + imageExtension;
+	const documentLink = join(assetFolderName, imageTargetFileName);
+	const assetAbsoluteTarget = join(
+		toDir,
+		assetFolderName,
+		imageTargetFileName
+	);
+	const absoluteTargetDir = dirname(assetAbsoluteTarget);
+
+
+	if (!existsSync(absoluteTargetDir)) {
+		mkdirSync(absoluteTargetDir, { recursive: true });
+		log("Created new group-by asset folder");
+	}
+
+	if (!asset) {
+		error("Could not find asset ", filePath);
+		return str;
+	}
+
+	// Update the content with the new asset URL.
+	str = replaceAll(
+		urlEncodedImageLink,
+		str,
+		documentLink
+	);
+
+	// If we have a local system, use a simple copy, if we
+	// have a cloud store, export the binary.
+	if (existsSync(assetAbsoluteTarget)) {
+		warn("asset already exists ", documentLink);
+		return str;
+	}
+
+	// @ts-ignore : simple way to figure out if we are on the cloud I guess.
+	const basePath = plugin.app.vault.adapter.basePath;
+
+	if (basePath) {
+		const fullAssetPath = join(
+			basePath,
+			filePath
+		);
+		copyFileSync(fullAssetPath, assetAbsoluteTarget);
+	} else {
+		const assetContent = await plugin.app.vault.readBinary(asset);
+		writeFileSync(assetAbsoluteTarget, Buffer.from(assetContent));
+	}
+	return str
 }
