@@ -63,9 +63,11 @@ tr:hover .data-view-meta-key.undefined {background: var(--text-selection); opaci
 .meta-data-view .clear-log-button{ float: right; }
 
 .meta-data-view .export-stats{ display: none; padding-left: 20px; }
-.meta-data-view .export-stats .pull-in{ padding-left: 20px; }
-.meta-data-view .export-stats .error{ color: red }
-.meta-data-view .export-stats.export-stats-open{ display: block;  }
+.meta-data-view .export-stats .pull-in{ padding-left: 20px; display: block; }
+.meta-data-view .error{ color: var(--color-red) }
+.meta-data-view .export-stats.export-stats-open{ display: block; color: var(--color-base-100) }
+.meta-data-view .clickable {cursor: pointer}
+.meta-data-view .clickable:hover {color: var(--color-base-70)}
 
 .export-plugin-icon{ display: inline-block; margin-right: 4px; }
 .export-plugin-icon.green{ color: var(--color-green) }

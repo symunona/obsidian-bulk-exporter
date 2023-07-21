@@ -12,7 +12,6 @@ import { getAPI as getDataViewApi } from "obsidian-dataview";
 import { normalizeQuery } from "src/utils/normalize-query";
 import { createPathMap } from "src/utils/create-path-map";
 import BulkExporterPlugin from "src/main";
-import { BulkExportSettings } from "src/models/bulk-export-settings";
 import { Md5 } from "ts-md5";
 import {
 	ImageAttachment,
@@ -28,7 +27,7 @@ import { openFileByPath } from "src/obsidian-api-helpers/file-by-path";
 import { isArray, isString, sortBy } from "underscore";
 import { copyGlob } from "./globCopy";
 import { LinkStat, replaceLocalLinks } from "./replace-local-links";
-import { createDeflate } from "zlib";
+import { getIcon } from "src/obsidian-api-helpers/get-icon";
 
 export class Exporter {
 	plugin: BulkExporterPlugin;
@@ -253,48 +252,64 @@ function exportedLogEntry(
 	allAssetsExported: Array<ImageAttachment>,
 	plugin: BulkExporterPlugin
 ) {
-	let hasError = false;
+	let errorCount = 0;
 
 	// Depending on whether there were errors, let's change the color in the log!
-	const linkToFile = createEl("span", { text: fileExportProperties.toRelative });
-	const exportStats = linkToFile.createDiv({
+	const linkToFile = createEl("span", { cls: 'clickable', text: fileExportProperties.toRelative });
+	const exportStats = createDiv({
 		text: `${linkStats.length} Local links, ${allAssetsExported.length} images.`,
 		cls: 'export-stats'
 	})
-	const linkButton = exportStats.createEl('a', { text: 'open' })
+	const linkButton = exportStats.createEl('a')
+	linkButton.append(getIcon('external-link'))
 	linkButton.addEventListener('click', () => openFileByPath(plugin, fileExportProperties.from))
 
 	linkToFile.addEventListener("click", () =>
 		exportStats.classList.toggle('export-stats-open')
 	);
+
+	// Links
 	const linkStatContainer = exportStats.createDiv({ text: `Links found: ${linkStats.length}` })
 	linkStats.forEach((linkStat) => {
 		const link = linkStatContainer.createDiv({
-			cls: 'pull-in',
-			text: `${linkStat.type} [${linkStat.text}] => ${linkStat.url}`
+			cls: 'pull-in clickable',
+			text: `${linkStat.type} `
 		})
-		if (linkStat.type !== "external") {
-			link.classList.add('clickable')
-			link.addEventListener('click', () => openFileByPath(plugin, linkStat.url))
-		}
+		const linkText = link.createEl('a', {text: linkStat.text || linkStat.original})
+		linkText.append(getIcon('external-link'))
+		linkText.addEventListener('click', (evt) => {
+			evt.stopPropagation();
+			if (linkStat.type === 'external'){
+				window.open(linkStat.url)
+			} else {
+				openFileByPath(plugin, linkStat.url)
+			}
+		})
 	})
 
+	// Assets
 	const assetStatContainer = exportStats.createDiv({ text: `Image Assets Copied: ${allAssetsExported.length}` })
 	allAssetsExported.forEach((imageAsset) => {
-		const assetElement = assetStatContainer.createDiv({
-			cls: 'pull-in',
-			text: `${imageAsset.newPath} (${imageAsset.count})`
+		const assetElement = assetStatContainer.createEl('a', {
+			cls: 'pull-in clickable',
+			title: imageAsset.originalPath,
+			text: `${imageAsset.newPath || '-- no title --'} (${imageAsset.count})`
 		})
 		if (imageAsset.status === 'assetNotFound') {
-			hasError = true;
+			errorCount++;
 			assetElement.classList.add('error')
 		} else {
-			assetElement.classList.add('clickable')
-			assetElement.addEventListener('click', () => openFileByPath(plugin, imageAsset.originalPath))
+			assetElement.addEventListener('click', (evt) => { evt.stopPropagation(); openFileByPath(plugin, imageAsset.originalPath)})
 		}
 	})
+	const container = createSpan({'text': 'Exported '})
+	container.append(linkToFile, exportStats)
+	if (errorCount){
+		container.classList.add('error')
+		container.append(createSpan({text: ` ${errorCount} errors`}))
+	}
 
-	log("Exported ", linkToFile);
+	log(container);
 }
 
 

@@ -208,7 +208,6 @@ export async function replaceOneImageLink(
 	// filter markdown link eg: http://xxx.png
 	// If this is an external url and we have the importFromWeb true, download the resource.
 	if (urlEncodedImageLink.startsWith("http")) {
-		log("Skipping Web Resource: ", urlEncodedImageLink);
 		return {str, count: 0, status: 'webLink'};
 	}
 
@@ -231,7 +230,6 @@ export async function replaceOneImageLink(
 	}
 
 	if (!asset) {
-		error("Could not find asset ", filePath);
 		return {str, count: 0, status: 'assetNotFound'};
 	}
 
@@ -248,7 +246,6 @@ export async function replaceOneImageLink(
 	// If we have a local system, use a simple copy, if we
 	// have a cloud store, export the binary.
 	if (existsSync(assetAbsoluteTarget)) {
-		warn("asset already exists ", documentLink);
 		return {str, count, status: 'alreadyExists'};
 	}
 
