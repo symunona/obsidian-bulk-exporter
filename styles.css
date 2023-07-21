@@ -62,6 +62,11 @@ tr:hover .data-view-meta-key.undefined {background: var(--text-selection); opaci
 }
 .meta-data-view .clear-log-button{ float: right; }
 
+.meta-data-view .export-stats{ display: none; padding-left: 20px; }
+.meta-data-view .export-stats .pull-in{ padding-left: 20px; }
+.meta-data-view .export-stats .error{ color: red }
+.meta-data-view .export-stats.export-stats-open{ display: block;  }
+
 .export-plugin-icon{ display: inline-block; margin-right: 4px; }
 .export-plugin-icon.green{ color: var(--color-green) }
 .export-plugin-icon.orange{ color: var(--color-orange) }

@@ -4,6 +4,15 @@ import { log, warn } from "console";
 import { dirname, join } from "path";
 import replaceAll from "src/utils/replace-all";
 
+export type LinkType = 'external' | 'internalFound' | 'internalNotFound';
+
+export interface LinkStat {
+	text: string
+	url: string
+	type: LinkType,
+	original?: string
+}
+
 /**
  * Supports obsidian: formatted links, replaces exportProperties' content.
  * @param exportProperties
@@ -14,6 +23,7 @@ export function replaceLocalLinks(
 	allFileListMap: ExportMap
 ) {
 	const links = getLinks(exportProperties.content);
+	const linkStats: Array<LinkStat> = []
 
 	for (const index in links) {
 		const original = links[index][0].trim();
@@ -24,6 +34,7 @@ export function replaceLocalLinks(
 
 		if (link.startsWith("http")) {
 			log("Skipping URL", title, link);
+			linkStats.push({text: title, url: link, type: "external"})
 			continue;
 		}
 
@@ -47,6 +58,7 @@ export function replaceLocalLinks(
 				0,
 				newFilePath.lastIndexOf(".")
 			);
+			linkStats.push({text: title, url: link, type: "internalFound", original})
 			const newLinkWithTitle = `[${title}](${newLink})`;
 			exportProperties.content = replaceAll(
 				original,
@@ -61,6 +73,7 @@ export function replaceLocalLinks(
 				newFilePath.lastIndexOf(".")
 			);
 			const newLinkWithTitle = `[${title}](${newLink})`;
+			linkStats.push({text: title, url: link, type: "internalFound", original})
 			exportProperties.content = replaceAll(
 				original,
 				exportProperties.content,
@@ -68,6 +81,7 @@ export function replaceLocalLinks(
 			);
 		} else {
 			warn("Local link not found, removing!", link, title);
+			linkStats.push({text: title, url: link, type: "internalNotFound"})
 			exportProperties.content = replaceAll(
 				original,
 				exportProperties.content,
@@ -75,4 +89,5 @@ export function replaceLocalLinks(
 			);
 		}
 	}
+	return linkStats;
 }

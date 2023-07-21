@@ -29,7 +29,7 @@ import { basename, dirname, join } from "path";
 import BulkExporterPlugin from "src/main";
 import { ExportProperties } from "src/models/export-properties";
 import { error, warn } from "src/utils/log";
-import replaceAll from "src/utils/replace-all";
+import replaceAll, { matchAll } from "src/utils/replace-all";
 import { Md5 } from "ts-md5";
 import { isArray, isString } from "underscore";
 
@@ -41,6 +41,25 @@ export const LINK_URL_REGEXP = /[^!]\[(.*?)\]\(((.*?))\)/g;
 export const EMBED_URL_REGEXP = /!\[\[(.*?)\]\]/g;
 
 export const IMAGE_MATCHER = /(([^\s]*).(png|jpe?g|gif|webp))/
+
+export type ImageAttachmentType = 'body' | 'frontMatter'
+export type ImageAttachmentStatus = 'success' | 'webLink' | 'assetNotFound' | 'alreadyExists'
+
+export interface ReplaceOneResult {
+	/** Replaced string */
+	str: string
+	count: number
+	status: ImageAttachmentStatus,
+	imageAttachment?: ImageAttachment
+}
+export interface ImageAttachment {
+	originalPath: string
+	newPath: string
+	type?: ImageAttachmentType
+	status?: ImageAttachmentStatus
+	extension?: string
+	count: number
+}
 
 export function getImageLinks(markdown: string) {
 	const imageLinks = markdown.matchAll(ATTACHMENT_URL_REGEXP);
@@ -55,8 +74,6 @@ export function getLinks(markdown: string) {
 	return Array.from(markdown.matchAll(LINK_URL_REGEXP));
 }
 
-
-
 /**
  * Does not yet support pulling external images in, it just leaves them in place.
  */
@@ -64,7 +81,7 @@ export async function replaceImageLinks(
 	exportProperties: ExportProperties,
 	plugin: BulkExporterPlugin
 ) {
-	const list = [];
+	const list :{ [originalUrl: string]: ImageAttachment} = {};
 
 	const imageLinks = getImageLinks(exportProperties.content);
 
@@ -73,9 +90,17 @@ export async function replaceImageLinks(
 	for (const index in imageLinks) {
 		const urlEncodedImageLink =
 			imageLinks[index][imageLinks[index].length - 3];
+		const results = await replaceOneImageLink(str, urlEncodedImageLink, exportProperties, plugin);
+		str = results.str
 
-		str = await replaceOneImageLink(str, urlEncodedImageLink, exportProperties, plugin);
-		list.push(urlEncodedImageLink)
+		list[urlEncodedImageLink] = list[urlEncodedImageLink] || {
+			originalPath: urlEncodedImageLink,
+			newPath: results.imageAttachment?.newPath || list[urlEncodedImageLink]?.newPath,
+			type: 'body',
+			status: results.status,
+			count: 0
+		}
+		list[urlEncodedImageLink].count += results.count
 	}
 	exportProperties.content = str
 	return list
@@ -96,25 +121,43 @@ export async function replaceImageLinksInMetaData(
 ) {
 	// @ts-ignore
 	const frontMatterData = exportProperties.file.frontmatter;
-	const list = [];
+	const list :{ [originalUrl: string]: ImageAttachment} = {};
 	let str = exportProperties.content;
 
 	for (let key in frontMatterData) {
 		const value = frontMatterData[key]
 		if (isArray(value)) {
-			value.forEach(async (arrayItem: string) => {
-				const isImage: boolean = isImageUrl(arrayItem)
+			value.forEach(async (imageUrl: string) => {
+				const isImage: boolean = isImageUrl(imageUrl)
 				if (isImage) {
-					str = await replaceOneImageLink(str, arrayItem, exportProperties, plugin);
-					list.push(arrayItem)
+					const results = await replaceOneImageLink(str, imageUrl, exportProperties, plugin);
+					str = results.str
+
+					list[imageUrl] = list[imageUrl] || {
+						originalPath: imageUrl,
+						newPath: results.imageAttachment?.newPath || list[imageUrl]?.newPath,
+						type: 'frontMatter',
+						status: results.status,
+						count: 0
+					}
+					list[imageUrl].count += results.count
 				}
 			})
 		}
 		else if (isString(value)) {
-			const isImage: boolean = isImageUrl(value)
+			const imageUrl = value
+			const isImage: boolean = isImageUrl(imageUrl)
 			if (isImage) {
-				str = await replaceOneImageLink(str, value, exportProperties, plugin);
-				list.push(value)
+				const results = await replaceOneImageLink(str, value, exportProperties, plugin);
+				str = results.str
+				list[imageUrl] = list[imageUrl] || {
+					originalPath: imageUrl,
+					newPath: results.imageAttachment?.newPath || list[imageUrl]?.newPath,
+					type: 'frontMatter',
+					status: results.status,
+					count: 0
+				}
+				list[imageUrl].count += results.count
 			}
 		}
 	}
@@ -137,7 +180,7 @@ export async function replaceOneImageLink(
 	urlEncodedImageLink: string,
 	exportProperties: ExportProperties,
 	// used for: plugin.settings, reading binary
-	plugin: BulkExporterPlugin) {
+	plugin: BulkExporterPlugin): Promise<ReplaceOneResult> {
 
 	log('replacing ', urlEncodedImageLink)
 
@@ -166,7 +209,7 @@ export async function replaceOneImageLink(
 	// If this is an external url and we have the importFromWeb true, download the resource.
 	if (urlEncodedImageLink.startsWith("http")) {
 		log("Skipping Web Resource: ", urlEncodedImageLink);
-		return str;
+		return {str, count: 0, status: 'webLink'};
 	}
 
 	// Create asset dir if not exists
@@ -189,10 +232,13 @@ export async function replaceOneImageLink(
 
 	if (!asset) {
 		error("Could not find asset ", filePath);
-		return str;
+		return {str, count: 0, status: 'assetNotFound'};
 	}
 
 	// Update the content with the new asset URL.
+
+	const count : number = matchAll(urlEncodedImageLink, str)?.length || 0
+
 	str = replaceAll(
 		urlEncodedImageLink,
 		str,
@@ -203,7 +249,7 @@ export async function replaceOneImageLink(
 	// have a cloud store, export the binary.
 	if (existsSync(assetAbsoluteTarget)) {
 		warn("asset already exists ", documentLink);
-		return str;
+		return {str, count, status: 'alreadyExists'};
 	}
 
 	// @ts-ignore : simple way to figure out if we are on the cloud I guess.
@@ -219,5 +265,9 @@ export async function replaceOneImageLink(
 		const assetContent = await plugin.app.vault.readBinary(asset);
 		writeFileSync(assetAbsoluteTarget, Buffer.from(assetContent));
 	}
-	return str
+	return {str, count, status: 'success', imageAttachment: {
+		originalPath: filePath,
+		newPath: imageTargetFileName,
+		count: 0
+	}}
 }

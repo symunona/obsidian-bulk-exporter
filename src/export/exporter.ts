@@ -15,6 +15,7 @@ import BulkExporterPlugin from "src/main";
 import { BulkExportSettings } from "src/models/bulk-export-settings";
 import { Md5 } from "ts-md5";
 import {
+	ImageAttachment,
 	replaceImageLinks, replaceImageLinksInMetaData,
 } from "./get-markdown-attachments";
 import { FileListItemWrapper } from "src/ui/file-list-export-indicator";
@@ -26,7 +27,8 @@ import {
 import { openFileByPath } from "src/obsidian-api-helpers/file-by-path";
 import { isArray, isString, sortBy } from "underscore";
 import { copyGlob } from "./globCopy";
-import { replaceLocalLinks } from "./replace-local-links";
+import { LinkStat, replaceLocalLinks } from "./replace-local-links";
+import { createDeflate } from "zlib";
 
 export class Exporter {
 	plugin: BulkExporterPlugin;
@@ -224,7 +226,7 @@ export async function convertAndCopy(
 
 	const allAssetsExported = await collectAssets(fileExportProperties, plugin);
 
-	replaceLocalLinks(fileExportProperties, allFileListMap);
+	const linkStats = replaceLocalLinks(fileExportProperties, allFileListMap);
 
 	writeFileSync(
 		fileExportProperties.to,
@@ -232,25 +234,69 @@ export async function convertAndCopy(
 		"utf-8"
 	);
 
-	const linkToFile = createEl("a", { text: fileExportProperties.toRelative });
-		linkToFile.addEventListener("click", () =>
-			openFileByPath(plugin, fileExportProperties.from)
-		);
-
-	let exportedAssetsLogElement;
-	if (allAssetsExported.length) {
-		exportedAssetsLogElement = createSpan({
-			text: ` with ${allAssetsExported.length} assets.`,
-			title: allAssetsExported.join('\n')
-		})
-	}
-	log("Exported ", linkToFile, exportedAssetsLogElement);
-
-
-
+	exportedLogEntry(fileExportProperties, linkStats, allAssetsExported, plugin)
 
 	return fileExportProperties.to;
 }
+
+/**
+ * I want great logging per file, with all the info.
+ * For easy debugging and preserving sanity.
+ * @param fileExportProperties
+ * @param linkStats
+ * @param allAssetsExported
+ * @param plugin
+ */
+function exportedLogEntry(
+	fileExportProperties: ExportProperties,
+	linkStats: Array<LinkStat>,
+	allAssetsExported: Array<ImageAttachment>,
+	plugin: BulkExporterPlugin
+) {
+	let hasError = false;
+
+	// Depending on whether there were errors, let's change the color in the log!
+	const linkToFile = createEl("span", { text: fileExportProperties.toRelative });
+	const exportStats = linkToFile.createDiv({
+		text: `${linkStats.length} Local links, ${allAssetsExported.length} images.`,
+		cls: 'export-stats'
+	})
+	const linkButton = exportStats.createEl('a', { text: 'open' })
+	linkButton.addEventListener('click', () => openFileByPath(plugin, fileExportProperties.from))
+
+	linkToFile.addEventListener("click", () =>
+		exportStats.classList.toggle('export-stats-open')
+	);
+	const linkStatContainer = exportStats.createDiv({ text: `Links found: ${linkStats.length}` })
+	linkStats.forEach((linkStat) => {
+		const link = linkStatContainer.createDiv({
+			cls: 'pull-in',
+			text: `${linkStat.type} [${linkStat.text}] => ${linkStat.url}`
+		})
+		if (linkStat.type !== "external") {
+			link.classList.add('clickable')
+			link.addEventListener('click', () => openFileByPath(plugin, linkStat.url))
+		}
+	})
+
+	const assetStatContainer = exportStats.createDiv({ text: `Image Assets Copied: ${allAssetsExported.length}` })
+	allAssetsExported.forEach((imageAsset) => {
+		const assetElement = assetStatContainer.createDiv({
+			cls: 'pull-in',
+			text: `${imageAsset.newPath} (${imageAsset.count})`
+		})
+		if (imageAsset.status === 'assetNotFound') {
+			hasError = true;
+			assetElement.classList.add('error')
+		} else {
+			assetElement.classList.add('clickable')
+			assetElement.addEventListener('click', () => openFileByPath(plugin, imageAsset.originalPath))
+		}
+	})
+
+	log("Exported ", linkToFile);
+}
+
 
 /**
  * This function assumes, that we have the file content loaded into the
@@ -276,7 +322,13 @@ async function collectAssets(
 		plugin
 	);
 
-	const allAssetsExported = imageLinkList.concat(imageLinkListInMeta)
+	const allAssetsExported: Array<ImageAttachment> = []
+	Object.keys(imageLinkListInMeta).forEach((originalUrl) => {
+		allAssetsExported.push(imageLinkListInMeta[originalUrl])
+	})
+	Object.keys(imageLinkList).forEach((originalUrl) => {
+		allAssetsExported.push(imageLinkList[originalUrl])
+	})
 
 	// @ts-ignore
 	const frontMatterData = fileExportProperties.file.frontmatter;
