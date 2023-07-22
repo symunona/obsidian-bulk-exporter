@@ -23,12 +23,10 @@
  *    - replace the image references in content!
  */
 
-import { log } from "console";
 import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "fs";
 import { basename, dirname, join } from "path";
 import BulkExporterPlugin from "src/main";
 import { ExportProperties } from "src/models/export-properties";
-import { error, warn } from "src/utils/log";
 import replaceAll, { matchAll } from "src/utils/replace-all";
 import { Md5 } from "ts-md5";
 import { isArray, isString } from "underscore";
@@ -42,22 +40,22 @@ export const EMBED_URL_REGEXP = /!\[\[(.*?)\]\]/g;
 
 export const IMAGE_MATCHER = /(([^\s]*).(png|jpe?g|gif|webp))/
 
-export type ImageAttachmentType = 'body' | 'frontMatter'
-export type ImageAttachmentStatus = 'success' | 'webLink' | 'assetNotFound' | 'alreadyExists'
+export type AttachmentType = 'body' | 'frontMatter' | 'globCopy' | 'folder'
+export type AttachmentStatus = 'success' | 'webLink' | 'assetNotFound' | 'alreadyExists' | 'error'
 
 export interface ReplaceOneResult {
 	/** Replaced string */
 	str: string
 	count: number
-	status: ImageAttachmentStatus,
-	imageAttachment?: ImageAttachment
+	status: AttachmentStatus,
+	imageAttachment?: AttachmentStat
 }
-export interface ImageAttachment {
+export interface AttachmentStat {
 	originalPath: string
 	newPath: string
-	type?: ImageAttachmentType
-	status?: ImageAttachmentStatus
-	extension?: string
+	type?: AttachmentType
+	status?: AttachmentStatus
+	error?: string,
 	count: number
 }
 
@@ -81,7 +79,7 @@ export async function replaceImageLinks(
 	exportProperties: ExportProperties,
 	plugin: BulkExporterPlugin
 ) {
-	const list :{ [originalUrl: string]: ImageAttachment} = {};
+	const list :{ [originalUrl: string]: AttachmentStat} = {};
 
 	const imageLinks = getImageLinks(exportProperties.content);
 
@@ -106,6 +104,8 @@ export async function replaceImageLinks(
 	return list
 }
 
+const META_KEY_IGNORE_LIST = ['copy']
+
 /**
  * If a meta property is referencing an image, do copy that over too!
  * Not having a better way to do this: just regex for a no-space value
@@ -121,10 +121,11 @@ export async function replaceImageLinksInMetaData(
 ) {
 	// @ts-ignore
 	const frontMatterData = exportProperties.file.frontmatter;
-	const list :{ [originalUrl: string]: ImageAttachment} = {};
+	const list :{ [originalUrl: string]: AttachmentStat} = {};
 	let str = exportProperties.content;
 
 	for (let key in frontMatterData) {
+		if (META_KEY_IGNORE_LIST.indexOf(key) > -1){ continue }
 		const value = frontMatterData[key]
 		if (isArray(value)) {
 			value.forEach(async (imageUrl: string) => {
@@ -182,8 +183,6 @@ export async function replaceOneImageLink(
 	// used for: plugin.settings, reading binary
 	plugin: BulkExporterPlugin): Promise<ReplaceOneResult> {
 
-	log('replacing ', urlEncodedImageLink)
-
 	const assetFolderName = plugin.settings.assetPath || 'assets'
 
 	const imageLink = decodeURI(urlEncodedImageLink);
@@ -223,10 +222,9 @@ export async function replaceOneImageLink(
 	);
 	const absoluteTargetDir = dirname(assetAbsoluteTarget);
 
-
 	if (!existsSync(absoluteTargetDir)) {
+		// Create new group-by asset folder
 		mkdirSync(absoluteTargetDir, { recursive: true });
-		log("Created new group-by asset folder");
 	}
 
 	if (!asset) {

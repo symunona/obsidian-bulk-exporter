@@ -1,4 +1,7 @@
 import { TAbstractFile } from "obsidian";
+import { AttachmentStat } from "src/export/get-markdown-attachments";
+import { GlobMap } from "src/export/globCopy";
+import { LinkStat } from "src/export/replace-local-links";
 
 export type ExportProperties = {
 	toRelativeDir: string;
@@ -9,7 +12,11 @@ export type ExportProperties = {
     from: string,
     to: string,
     toRelative: string,
-    lastExportDate: number
+    lastExportDate: number,
+    copyGlob?: GlobMap,
+    imageInBody?: Array<AttachmentStat>,
+    imageInMeta?: Array<AttachmentStat>,
+    linkStats?: Array<LinkStat>
 }
 
 export type ExportMap = { [key: string]: ExportProperties }

@@ -7,12 +7,14 @@
  */
 
 import { ExportProperties } from "src/models/export-properties"
-import { error, log } from "src/utils/log"
 
 import { globSync } from 'glob'
 import { join, parse } from "path"
 import { cpSync, existsSync, mkdirSync, stat, statSync } from "fs"
 import { Plugin } from "obsidian"
+import { AttachmentStat } from "./get-markdown-attachments"
+
+export interface GlobMap { [glob: string]: Array<AttachmentStat> }
 
 export async function copyGlob(fileExportProperties: ExportProperties, globString: string, plugin: Plugin){
     const relativeRoot = parse(fileExportProperties.from).dir
@@ -22,27 +24,50 @@ export async function copyGlob(fileExportProperties: ExportProperties, globStrin
     const fromAbsoluteRoot = join(basePath, relativeRoot)
     const toRootDir = parse(fileExportProperties.to).dir
 	const files = globSync(globString, {cwd: fromAbsoluteRoot})
-	log(`Pattern: ${globString}:  ${files.length}`)
+
+    const fileListExported : Array<AttachmentStat> = []
 
 	files.forEach((relativeFileName: string)=>{
         const toAbsolutePath = join(toRootDir, relativeFileName)
         const fromAbsolutePath = join(fromAbsoluteRoot, relativeFileName)
         const exportTargetDir = parse(toAbsolutePath).dir
+        const fileStats = statSync(fromAbsolutePath)
 
-        if (statSync(fromAbsolutePath).isFile()){
+        if (fileStats.isFile()){
             // Create folder if does not exist!
             if (!existsSync(exportTargetDir)){
                 mkdirSync(exportTargetDir, {recursive: true})
-                log(`[glob]   Creating dir ${exportTargetDir}`)
+                fileListExported.push({
+                    count: 0,
+                    newPath: toAbsolutePath,
+                    originalPath: relativeFileName,
+                    status: 'success',
+                    type: 'folder'
+                })
             }
-            log(`[glob]     copy ${relativeFileName} -> ${toAbsolutePath}`)
+
             // NOTE: this DOES NOT work for sync for now!
             try{
                 cpSync(fromAbsolutePath, toAbsolutePath)
+                fileListExported.push({
+                    count: 1,
+                    newPath: exportTargetDir,
+                    originalPath: relativeFileName,
+                    status: 'success'
+                })
             } catch(e){
-                error(e)
                 console.error(e)
+                fileListExported.push({
+                    count: 1,
+                    newPath: toAbsolutePath,
+                    originalPath: relativeFileName,
+                    status: 'error',
+                    error: e.message
+                })
             }
+        } else if (fileStats.isDirectory()){
+            // Noop.
         }
     })
+    return fileListExported
 }

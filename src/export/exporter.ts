@@ -3,7 +3,6 @@
  */
 import { existsSync, mkdirSync, writeFileSync } from "fs";
 import { Notice, TAbstractFile } from "obsidian";
-import path, { parse } from "path";
 import { rmSync } from "fs";
 
 import { error, log } from "src/utils/log";
@@ -14,7 +13,7 @@ import { createPathMap } from "src/utils/create-path-map";
 import BulkExporterPlugin from "src/main";
 import { Md5 } from "ts-md5";
 import {
-	ImageAttachment,
+	AttachmentStat,
 	replaceImageLinks, replaceImageLinksInMetaData,
 } from "./get-markdown-attachments";
 import { FileListItemWrapper } from "src/ui/file-list-export-indicator";
@@ -23,11 +22,11 @@ import {
 	ExportMap,
 	ExportProperties,
 } from "src/models/export-properties";
-import { openFileByPath } from "src/obsidian-api-helpers/file-by-path";
-import { isArray, isString, sortBy } from "underscore";
-import { copyGlob } from "./globCopy";
-import { LinkStat, replaceLocalLinks } from "./replace-local-links";
-import { getIcon } from "src/obsidian-api-helpers/get-icon";
+import {  isArray, isString, sortBy } from "underscore";
+import { GlobMap, copyGlob } from "./globCopy";
+import { replaceLocalLinks } from "./replace-local-links";
+import { exportedLogEntry } from "./export-log";
+import { join, normalize } from "path";
 
 export class Exporter {
 	plugin: BulkExporterPlugin;
@@ -154,6 +153,7 @@ export async function exportSelection(
 	const start = new Date();
 	// Check if target directory exists
 	const outputFolder = plugin.settings.outputFolder;
+	const outputPathMap: {[path: string]: Array<ExportProperties>} = {}
 	log("=============================");
 	log("Export to " + outputFolder);
 
@@ -171,13 +171,12 @@ export async function exportSelection(
 
 	for (const fileIndex in fileList) {
 		const exportProperties = fileList[fileIndex] as ExportProperties;
-		const targetFileName = await convertAndCopy(
+		await convertAndCopy(
 			outputFolder,
 			exportProperties,
 			fileList,
 			plugin
 		);
-
 
 		// Unofficial or I could not find API of TAbstractFile:
 		// it has an mtime attr, which stores the last modified date.
@@ -189,7 +188,11 @@ export async function exportSelection(
 		// Save the export properties, but do not save the whole content, just the MD5 hash.
 		exportProperties.content = "";
 		exportProperties.file = null;
+		outputPathMap[exportProperties.toRelativeDir] = outputPathMap[exportProperties.toRelativeDir] || []
+		outputPathMap[exportProperties.toRelativeDir].push(exportProperties)
 	}
+
+	exportedLogEntry(outputPathMap, plugin)
 
 	new Notice("Exported to " + outputFolder);
 	log(
@@ -206,15 +209,12 @@ export async function convertAndCopy(
 	allFileListMap: ExportMap,
 	plugin: BulkExporterPlugin
 ) {
-	const targetDir = path.join(path.normalize(rootPath), fileExportProperties.toRelativeDir);
+	const targetDir = join(normalize(rootPath), fileExportProperties.toRelativeDir);
 	const fileDescriptor = fileExportProperties.file;
 
+	// 	Create new group-by folder for blog
 	if (!existsSync(targetDir)) {
 		mkdirSync(targetDir, { recursive: true });
-		log(
-			"Created new group-by folder for blog: ",
-			createEl('strong', { text: targetDir })
-		);
 	}
 	if (!fileDescriptor) { throw new Error('Null Error') }
 
@@ -223,9 +223,8 @@ export async function convertAndCopy(
 
 	fileExportProperties.md5 = Md5.hashStr(fileContent);
 
-	const allAssetsExported = await collectAssets(fileExportProperties, plugin);
-
-	const linkStats = replaceLocalLinks(fileExportProperties, allFileListMap);
+	await collectAssets(fileExportProperties, plugin);
+	fileExportProperties.linkStats = replaceLocalLinks(fileExportProperties, allFileListMap);
 
 	writeFileSync(
 		fileExportProperties.to,
@@ -233,83 +232,7 @@ export async function convertAndCopy(
 		"utf-8"
 	);
 
-	exportedLogEntry(fileExportProperties, linkStats, allAssetsExported, plugin)
-
-	return fileExportProperties.to;
-}
-
-/**
- * I want great logging per file, with all the info.
- * For easy debugging and preserving sanity.
- * @param fileExportProperties
- * @param linkStats
- * @param allAssetsExported
- * @param plugin
- */
-function exportedLogEntry(
-	fileExportProperties: ExportProperties,
-	linkStats: Array<LinkStat>,
-	allAssetsExported: Array<ImageAttachment>,
-	plugin: BulkExporterPlugin
-) {
-	let errorCount = 0;
-
-	// Depending on whether there were errors, let's change the color in the log!
-	const linkToFile = createEl("span", { cls: 'clickable', text: fileExportProperties.toRelative });
-	const exportStats = createDiv({
-		text: `${linkStats.length} Local links, ${allAssetsExported.length} images.`,
-		cls: 'export-stats'
-	})
-	const linkButton = exportStats.createEl('a')
-	linkButton.append(getIcon('external-link'))
-	linkButton.addEventListener('click', () => openFileByPath(plugin, fileExportProperties.from))
-
-	linkToFile.addEventListener("click", () =>
-		exportStats.classList.toggle('export-stats-open')
-	);
-
-	// Links
-	const linkStatContainer = exportStats.createDiv({ text: `Links found: ${linkStats.length}` })
-	linkStats.forEach((linkStat) => {
-		const link = linkStatContainer.createDiv({
-			cls: 'pull-in clickable',
-			text: `${linkStat.type} `
-		})
-		const linkText = link.createEl('a', {text: linkStat.text || linkStat.original})
-		linkText.append(getIcon('external-link'))
-		linkText.addEventListener('click', (evt) => {
-			evt.stopPropagation();
-			if (linkStat.type === 'external'){
-				window.open(linkStat.url)
-			} else {
-				openFileByPath(plugin, linkStat.url)
-			}
-		})
-	})
-
-	// Assets
-	const assetStatContainer = exportStats.createDiv({ text: `Image Assets Copied: ${allAssetsExported.length}` })
-	allAssetsExported.forEach((imageAsset) => {
-		const assetElement = assetStatContainer.createEl('a', {
-			cls: 'pull-in clickable',
-			title: imageAsset.originalPath,
-			text: `${imageAsset.newPath || '-- no title --'} (${imageAsset.count})`
-		})
-		if (imageAsset.status === 'assetNotFound') {
-			errorCount++;
-			assetElement.classList.add('error')
-		} else {
-			assetElement.addEventListener('click', (evt) => { evt.stopPropagation(); openFileByPath(plugin, imageAsset.originalPath)})
-		}
-	})
-	const container = createSpan({'text': 'Exported '})
-	container.append(linkToFile, exportStats)
-	if (errorCount){
-		container.classList.add('error')
-		container.append(createSpan({text: ` ${errorCount} errors`}))
-	}
-
-	log(container);
+	return fileExportProperties;
 }
 
 
@@ -327,39 +250,46 @@ async function collectAssets(
 	fileExportProperties: ExportProperties,
 	plugin: BulkExporterPlugin
 ) {
+	const imageLinkListInBody: Array<AttachmentStat> = [], imageLinkListInMeta: Array<AttachmentStat> = [];
 	// Look for images!
-	const imageLinkList = await replaceImageLinks(
+	const imageLinkListInBodyMap = await replaceImageLinks(
 		fileExportProperties,
 		plugin
 	);
-	const imageLinkListInMeta = await replaceImageLinksInMetaData(
-		fileExportProperties,
-		plugin
-	);
+	Object.keys(imageLinkListInBodyMap).map((key)=>{
+		imageLinkListInBody.push(imageLinkListInBodyMap[key])
+	})
 
-	const allAssetsExported: Array<ImageAttachment> = []
-	Object.keys(imageLinkListInMeta).forEach((originalUrl) => {
-		allAssetsExported.push(imageLinkListInMeta[originalUrl])
+	const imageLinkListInMetaMap = await replaceImageLinksInMetaData(
+		fileExportProperties,
+		plugin
+	);
+	Object.keys(imageLinkListInMetaMap).map((key)=>{
+		imageLinkListInMeta.push(imageLinkListInMetaMap[key])
 	})
-	Object.keys(imageLinkList).forEach((originalUrl) => {
-		allAssetsExported.push(imageLinkList[originalUrl])
-	})
+
 
 	// @ts-ignore
 	const frontMatterData = fileExportProperties.file.frontmatter;
 
+	let filesCopied: GlobMap = {}
 	if (frontMatterData && frontMatterData.copy) {
-		const relativeRoot = parse(fileExportProperties.from).dir
-		log(`[glob] [${fileExportProperties.newFileName}.md] has a copy property. Looking for file matches here: ${relativeRoot}`);
+		// const relativeRoot = parse(fileExportProperties.from).dir
+		// log(`[glob] [${fileExportProperties.newFileName}.md] has a copy property.
+		// Looking for file matches here: ${relativeRoot}`);
 		// Iterate every file that matches the regex.
 		if (isArray(frontMatterData.copy)) {
-			// TODO: copy files that are next to the index.md!
-			frontMatterData.copy.forEach((globPattern: string) =>
-				copyGlob(fileExportProperties, globPattern, plugin));
+			for(let i = 0; i < frontMatterData.copy.length; i++){
+				const globPattern = frontMatterData.copy[i]
+				filesCopied[globPattern] = await copyGlob(fileExportProperties, globPattern, plugin)
+			}
 		} else if (isString(frontMatterData.copy)) {
-			copyGlob(fileExportProperties, frontMatterData.copy, plugin)
+			filesCopied[frontMatterData.copy] = await copyGlob(fileExportProperties, frontMatterData.copy, plugin)
 		}
 	}
+	fileExportProperties.imageInBody = imageLinkListInBody;
+	fileExportProperties.imageInMeta = imageLinkListInMeta;
+	fileExportProperties.copyGlob = filesCopied
 
-	return allAssetsExported;
+	return fileExportProperties
 }
