@@ -119,8 +119,11 @@ function fileAssetElementCreator(asset: AttachmentStat, errorCount: number, plug
     const assetElement = createEl('a', {
         cls: 'clickable-link',
         title: asset.newPath,
-        text: `${asset.originalPath || asset.newPath} (${asset.count})`
+        text: `${asset.originalPath || asset.newPath}`
     })
+    if (asset.count > 1){
+        assetElement.innerText += ` (${asset.count})`
+    }
     assetElement.classList.add('pull-in')
     if (asset.status === 'assetNotFound') {
         errorCount++;
