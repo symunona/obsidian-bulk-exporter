@@ -13,6 +13,7 @@ export const DEFAULT_SETTINGS: BulkExportSettings = {
 	assetPath: "assets",
 	outputFormat: '${blog}/${slug}',
 	lastExport: {},
+	shell: ''
 };
 
 export default class BulkExporterPlugin extends Plugin {

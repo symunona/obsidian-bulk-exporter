@@ -89,5 +89,19 @@ export class OutputSettingTab extends PluginSettingTab {
 					})
 			);
 
+		new Setting(containerEl)
+			.setName("Run Script After Export")
+			.setDesc("Place here anything you want to run after the export is done. Uses child_process.spawn.")
+			.addText((text) =>
+				text
+					.setPlaceholder("shell script path")
+					.setValue(this.plugin.settings.shell)
+					.onChange(async (value) => {
+						this.plugin.settings.shell = value;
+						// TODO: validate! Can I validate?
+						await this.plugin.saveSettings();
+					})
+			);
+
 	}
 }

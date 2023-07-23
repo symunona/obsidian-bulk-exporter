@@ -27,6 +27,7 @@ import { GlobMap, copyGlob } from "./globCopy";
 import { replaceLocalLinks } from "./replace-local-links";
 import { exportedLogEntry } from "./export-log";
 import { join, normalize } from "path";
+import { runShellCommand } from "src/utils/runner";
 
 export class Exporter {
 	plugin: BulkExporterPlugin;
@@ -194,9 +195,16 @@ export async function exportSelection(
 
 	exportedLogEntry(outputPathMap, plugin)
 
+	if (plugin.settings.shell && plugin.settings.shell.trim()){
+		log('Starting shell script ', plugin.settings.shell)
+		const shellStart = new Date()
+		await runShellCommand(plugin.settings.shell)
+		log('Finished shell script! ', (new Date().getTime() - shellStart.getTime())/1000, 's')
+	}
+
 	new Notice("Exported to " + outputFolder);
 	log(
-		`Exported took ${(new Date().getTime() - start.getTime()) / 1000
+		`Export took ${(new Date().getTime() - start.getTime()) / 1000
 		}s to ` + outputFolder
 	);
 

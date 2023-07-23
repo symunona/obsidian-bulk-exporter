@@ -41,7 +41,8 @@ If your plugin does not need CSS, delete this file.
 }
 
 .meta-data-view .nav-file { border-radius: var(--radius-s); }
-tal scrolling */
+
+/* Horizontal scrolling */
 .meta-data-view-table-container{overflow-x: auto;}
 .data-view-meta-key { overflow: hidden; text-overflow: ellipsis; max-height: 32px; white-space: nowrap }
 .data-view-meta-key.undefined {background: var(--color-base-05)}
@@ -59,6 +60,8 @@ tr:hover .data-view-meta-key.undefined {background: var(--text-selection); opaci
 .meta-data-view .log{
     font-family: monospace; margin-top: 20px; margin-bottom: 20px;
     white-space: pre-wrap;
+    user-select: text;
+    line-height: 1.5em;
 }
 .meta-data-view .clear-log-button{ float: right; }
 
