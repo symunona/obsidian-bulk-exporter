@@ -79,7 +79,7 @@ export class OutputSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("Empty target folder on each export")
-			.setDesc("if true, contents will be erased every time. This can be good for getting rid of deleted blog posts, as by default the plugin does not track the ones that were deleted.")
+			.setDesc("if true, the target folder contents will be erased every time. This can be good for getting rid of deleted blog posts, as by default the plugin does not track the ones that were deleted. Note that the ROOT of the folder is NOT deleted if everything is ordered in folders, so if you want to have your blogs in a monorepo, you can do so.")
 			.addToggle((text) =>
 				text
 					.setValue(this.plugin.settings.emptyTargetFolder)

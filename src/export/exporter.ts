@@ -158,16 +158,20 @@ export async function exportSelection(
 	log("=============================");
 	log("Export to " + outputFolder);
 
-	if (plugin.settings.emptyTargetFolder) {
-		log("Cleaning up target folder (per settings): " + outputFolder);
-		if (existsSync(outputFolder)) {
-			rmSync(outputFolder, { recursive: true, force: true });
-		}
-	}
-
 	if (!existsSync(outputFolder)) {
 		mkdirSync(outputFolder);
 		log("Created new target folder: " + outputFolder);
+	}
+
+	// If emptying target folder is set, remove all the folders that are to be exporter.
+	// Doing it this way, the root of the folder remains intact.
+	if (plugin.settings.emptyTargetFolder){
+		Object.keys(getGroups(fileList)).forEach((path)=>{
+			const targetDir = join(normalize(outputFolder), path);
+			if (existsSync(targetDir)) {
+				rmSync(targetDir, { recursive: true, force: true });
+			}
+		})
 	}
 
 	for (const fileIndex in fileList) {
@@ -220,7 +224,6 @@ export async function convertAndCopy(
 	const targetDir = join(normalize(rootPath), fileExportProperties.toRelativeDir);
 	const fileDescriptor = fileExportProperties.file;
 
-	// 	Create new group-by folder for blog
 	if (!existsSync(targetDir)) {
 		mkdirSync(targetDir, { recursive: true });
 	}

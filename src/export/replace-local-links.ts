@@ -85,7 +85,7 @@ export function replaceLocalLinks(
 			exportProperties.content = replaceAll(
 				original,
 				exportProperties.content,
-				`[${title}]?`
+				`${title}`
 			);
 		}
 	}
