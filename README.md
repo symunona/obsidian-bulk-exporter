@@ -2,6 +2,10 @@
 
 This is a plugin for Obsidian (https://obsidian.md).
 
+# Bugs and Feature Requests
+
+Use [GitHub's issue tracker](https://github.com/symunona/obsidian-bulk-exporter/issues)!
+
 # What it does
 
 Output and restructure your notes based on metadata!
