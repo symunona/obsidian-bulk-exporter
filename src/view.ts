@@ -102,13 +102,22 @@ export class BulkExporterView extends ItemView {
 		this.exportButton = this.topRightMenuContainer.createEl("button", {
 			text: "Export ...",
 		});
-		this.exportButton.append(getIcon("folder-input"));
+		const folderIcon = getIcon("folder-input");
+		const loaderIcon = getIcon("loader-2");
+		loaderIcon.classList.add('spin')
+		this.exportButton.append(folderIcon);
 		this.exportButton.addEventListener("click", async () => {
 			if (
 				this.lastFoundFileList &&
 				Object.keys(this.lastFoundFileList).length
 			) {
+				folderIcon.remove()
+				this.exportButton.append(loaderIcon)
+				this.exportButton.disabled = true
 				await this.exporter.searchAndExport();
+				this.exportButton.disabled = false
+				loaderIcon.remove()
+				this.exportButton.append(folderIcon)
 				this.log.scrollIntoView();
 			} else {
 				new Notice("Hmmm... Nothing to export.");

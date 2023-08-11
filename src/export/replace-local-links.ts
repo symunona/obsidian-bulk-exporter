@@ -10,9 +10,9 @@ export interface LinkStat {
 	text: string
 	url: string
 	type: LinkType,
-	original?: string
+	original?: string,
+	newUrl?: string
 }
-
 /**
  * Supports obsidian: formatted links, replaces exportProperties' content.
  * @param exportProperties
@@ -58,7 +58,7 @@ export function replaceLocalLinks(
 				0,
 				newFilePath.lastIndexOf(".")
 			);
-			linkStats.push({text: title, url: link, type: "internalFound", original})
+			linkStats.push({text: title, url: link, type: "internalFound", original, newUrl: newLink})
 			const newLinkWithTitle = `[${title}](${newLink})`;
 			exportProperties.content = replaceAll(
 				original,
@@ -73,7 +73,7 @@ export function replaceLocalLinks(
 				newFilePath.lastIndexOf(".")
 			);
 			const newLinkWithTitle = `[${title}](${newLink})`;
-			linkStats.push({text: title, url: link, type: "internalFound", original})
+			linkStats.push({text: title, url: link, type: "internalFound", original, newUrl: newLink})
 			exportProperties.content = replaceAll(
 				original,
 				exportProperties.content,

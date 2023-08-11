@@ -40,7 +40,8 @@ export function exportedLogEntry(
             })
             exportStats.classList.add('pull-in')
             const linkButton = exportStats.createEl('a')
-            linkButton.append(getIcon('external-link'))
+            const newLink = getIcon('external-link')
+            linkButton.append(newLink)
             linkButton.addEventListener('click', () => openFileByPath(plugin, fileExportProperties.from))
 
             linkToFileElement.addEventListener("click", () => exportStats.classList.toggle('export-stats-open'));
@@ -52,8 +53,9 @@ export function exportedLogEntry(
                     cls: 'pull-in clickable',
                     text: `${linkStat.type} `
                 })
-                const linkText = link.createEl('a', { text: linkStat.text || linkStat.original || linkStat.url })
+                const linkText = link.createEl('a', { text: linkStat.text || linkStat.original || linkStat.url, title: linkStat.newUrl })
                 linkText.append(getIcon('external-link'))
+
                 linkText.addEventListener('click', (evt) => {
                     evt.stopPropagation();
                     if (linkStat.type === 'external') {

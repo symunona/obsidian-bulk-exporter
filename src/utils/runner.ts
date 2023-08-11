@@ -1,5 +1,6 @@
 import { spawn } from 'child_process';
-import { log, error } from './log';
+import { log, error, COLORS, logEntry } from './log';
+import { getIcon } from 'src/obsidian-api-helpers/get-icon';
 
 export function runShellCommand (commandWithArgs: string){
     const list = commandWithArgs.split(' ')
@@ -12,6 +13,26 @@ function runShellCommandWithArgs(command: string, args: string[] = []): Promise<
   return new Promise((resolve, reject) => {
     log('starting: ', command)
     log('args: ', args)
+    const outputContainer = createDiv({cls: 'closed pull-in'});
+    const toggler = createSpan({cls: 'clickable', text: 'output'})
+    const status = toggler.createSpan({text: '('})
+    const statusLogLineCounter = createSpan({text: '0'})
+    const statusErrorCounter = createSpan({text: '0'})
+    status.append(statusLogLineCounter)
+    status.append(', errors: ')
+    status.append(statusErrorCounter)
+    status.append(')')
+    let logLines = 0
+    let errors = 0
+    const togglerChevron = getIcon('chevron-down')
+    toggler.append(togglerChevron)
+    toggler.addEventListener('click', ()=>{
+      outputContainer.classList.toggle('closed')
+      togglerChevron.classList.toggle('rotate-180')
+    })
+
+    log(toggler, outputContainer)
+
     // log('env: ', JSON.stringify(process.env, null, 2))
     const scriptProcess = spawn(command, args, {
         shell: true,
@@ -22,13 +43,18 @@ function runShellCommandWithArgs(command: string, args: string[] = []): Promise<
       const lines = data.toString().trim().split('\n');
       lines.forEach((line:string) => {
         // Process each line here
-        log(line)
+        logEntry(outputContainer, COLORS.LOG, line)
+        logLines++
+        statusLogLineCounter.innerText = logLines.toString()
       });
     });
 
     scriptProcess.stderr.on('data', (data) => {
       // Handle any error output from the command
-      error(data.toString());
+      logEntry(outputContainer, COLORS.ERROR, data.toString())
+      errors++
+      statusErrorCounter.innerText = errors.toString()
+      statusErrorCounter.style.color = COLORS.ERROR
     });
 
     scriptProcess.on('close', (code) => {
