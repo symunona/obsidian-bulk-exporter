@@ -104,6 +104,8 @@ export class BulkExporterView extends ItemView {
 		});
 		const folderIcon = getIcon("folder-input");
 		const loaderIcon = getIcon("loader-2");
+		const exclamationIcon = getIcon("alert-circle");
+		exclamationIcon.classList.add('error')
 		loaderIcon.classList.add('spin')
 		this.exportButton.append(folderIcon);
 		this.exportButton.addEventListener("click", async () => {
@@ -112,12 +114,19 @@ export class BulkExporterView extends ItemView {
 				Object.keys(this.lastFoundFileList).length
 			) {
 				folderIcon.remove()
+				exclamationIcon.remove()
 				this.exportButton.append(loaderIcon)
 				this.exportButton.disabled = true
-				await this.exporter.searchAndExport();
-				this.exportButton.disabled = false
-				loaderIcon.remove()
-				this.exportButton.append(folderIcon)
+				try{
+					await this.exporter.searchAndExport();
+					this.exportButton.append(folderIcon)
+				} catch (e) {
+					this.exportButton.append(exclamationIcon)
+				} finally {
+					this.exportButton.disabled = false
+					loaderIcon.remove()
+				}
+
 				this.log.scrollIntoView();
 			} else {
 				new Notice("Hmmm... Nothing to export.");
