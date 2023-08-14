@@ -12,6 +12,8 @@ import { URL } from "url";
 import { getGroups } from "src/export/exporter";
 import { ExportGroupMap, ExportMap, ExportProperties } from "src/models/export-properties";
 import { getMetaFields } from "src/utils/folder-meta";
+import BulkExporterPlugin from "src/main";
+import { without } from "underscore";
 
 const OVERWRITE_LOCALE = 'hu-HU'
 
@@ -25,13 +27,13 @@ export class ExportTableRender {
 	fileMapByAbsolutePath: { [key: string]: Array<any> }
 	goToFilter: CallbackFunction
 	metaFields: Array<string>
-	metaFieldsNoExtras: Array<string>
-	plugin: Plugin;
+	metaFieldsWithoutFileName: Array<string>
+	plugin: BulkExporterPlugin;
 
 	constructor(
 		leaf: HTMLElement,
 		exportMap: ExportMap,
-		plugin: Plugin
+		plugin: BulkExporterPlugin
 	) {
 		this.leaf = leaf;
 		this.plugin = plugin;
@@ -39,7 +41,11 @@ export class ExportTableRender {
 		this.groupMap = getGroups(exportMap)
 		this.metaKeysToShow = getMetaFields(exportMap)
 		this.metaFields = ['fileName'].concat(Object.keys(this.metaKeysToShow))
-		this.metaFieldsNoExtras = Object.keys(this.metaKeysToShow)
+		if (this.plugin.settings.draftField){
+			// delete this.metaKeysToShow[this.plugin.settings.draftField]
+			this.metaFields = ['fileName', this.plugin.settings.draftField].concat(Object.keys(this.metaKeysToShow))
+		}
+		this.metaFieldsWithoutFileName = without(this.metaFields, 'fileName')
 		this.render()
 	}
 
@@ -75,6 +81,9 @@ export class ExportTableRender {
 			cls: "nav-file tree-item meta-data-table-file-row",
 			attr: {'data-path': item.toRelativeDir}
 		});
+		if (this.plugin.settings.draftField && metaData[this.plugin.settings.draftField]){
+			fileItemRow.classList.add('draft')
+		}
 
 		const title = fileItemRow.createEl('td', {
 			cls: 'nav-file-title is-clickable tree-item-self',
@@ -89,7 +98,7 @@ export class ExportTableRender {
 			openFileByPath(this.plugin, item.from)
 		})
 
-		this.metaFieldsNoExtras.forEach((metaKey) => {
+		this.metaFieldsWithoutFileName.forEach((metaKey) => {
 			this.renderMetaCell(fileItemRow, metaKey, metaData[metaKey])
 		})
 	}

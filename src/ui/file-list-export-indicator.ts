@@ -57,7 +57,9 @@ export class FileListItemWrapper {
 						this.applyStatusIconToFile(
 							fileItemElement,
 							path,
-							lastExport[path]
+							lastExport[path],
+							// @ts-ignore
+							fileMap[path].file.frontmatter
 						);
 					}
 				}
@@ -90,7 +92,9 @@ export class FileListItemWrapper {
 			this.applyStatusIconToFile(
 				fileItemElement,
 				exportProperties.from,
-				lastExport[exportProperties.from]
+				lastExport[exportProperties.from],
+				// @ts-ignore
+				exportProperties.file.frontmatter
 			);
 		});
 	}
@@ -98,7 +102,8 @@ export class FileListItemWrapper {
 	applyStatusIconToFile(
 		element: HTMLElement,
 		path: string,
-		alreadyExported: ExportProperties
+		alreadyExported: ExportProperties,
+		frontMatter: {[key: string]: any}
 	) {
 		let iconSpanAddedAlready = element.querySelector(".export-plugin-icon");
 
@@ -113,6 +118,18 @@ export class FileListItemWrapper {
 
 		this.removeClasses(iconSpanAddedAlready, "green orange lime");
 		iconSpanAddedAlready.innerHTML = "";
+
+		if (this.plugin.settings.draftField &&
+			frontMatter &&
+			frontMatter[this.plugin.settings.draftField]
+		) {
+			iconSpanAddedAlready.classList.add("grey");
+			iconSpanAddedAlready.append(getIcon("file-plus"));
+			// @ts-ignore - this is a DOM Element, I have no clue why id would not have a title attr prop...
+			iconSpanAddedAlready.title = "Draft";
+
+			return
+		}
 
 		// Not yet exported! Add a new icon.
 		if (!alreadyExported) {

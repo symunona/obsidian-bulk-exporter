@@ -1,7 +1,7 @@
 import { ItemView, Notice, WorkspaceLeaf } from "obsidian";
 
 import { getAPI as getDataViewApi } from "obsidian-dataview";
-import { log, setLogOutput } from "./utils/log";
+import { error, log, setLogOutput } from "./utils/log";
 import { Exporter } from "./export/exporter";
 import { ExportTableRender } from "./ui/render-export";
 import { getIcon } from "./obsidian-api-helpers/get-icon";
@@ -122,6 +122,8 @@ export class BulkExporterView extends ItemView {
 					this.exportButton.append(folderIcon)
 				} catch (e) {
 					this.exportButton.append(exclamationIcon)
+					error(e.message)
+					this.settingsHeader.style.display = 'block';
 				} finally {
 					this.exportButton.disabled = false
 					loaderIcon.remove()

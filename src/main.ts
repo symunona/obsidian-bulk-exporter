@@ -10,6 +10,7 @@ export const DEFAULT_SETTINGS: BulkExportSettings = {
 	outputFolder: "output",
 	exportQuery: "blog",
 	emptyTargetFolder: false,
+	draftField: '',
 	assetPath: "assets",
 	outputFormat: '${blog}/${slug}',
 	lastExport: {},

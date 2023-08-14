@@ -57,6 +57,21 @@ export class OutputSettingTab extends PluginSettingTab {
 					})
 			);
 
+		new Setting(containerEl)
+			.setName("Draft Field")
+			.setDesc("If provided, files that have this field in their front matter will be shown on the file tree and the export preview, but will not get actually exported.")
+			.addText((text) =>
+				text
+					.setPlaceholder("key of the meta value, like draft")
+					.setValue(this.plugin.settings.draftField)
+					.onChange(async (value) => {
+						this.plugin.settings.draftField = value.trim();
+						// TODO: validate! Can I validate?
+						await this.plugin.saveSettings();
+					})
+			);
+
+
 		const linkToDocs = createEl('a', {href: 'https://github.com/symunona/obsidian-bulk-exporter', text: 'Docs'})
 		const filenameInfo = createSpan({text: 'You can define the output path with the following JS expression. Example: "${blog}/${created.date}-${slug}" - see '})
 		filenameInfo.append(linkToDocs)

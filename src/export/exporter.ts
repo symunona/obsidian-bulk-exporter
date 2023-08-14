@@ -113,6 +113,16 @@ export class Exporter {
 	async searchAndExport() {
 		const results = await this.searchFilesToExport();
 		console.warn("Found files to export: ", results);
+		if (this.plugin.settings.draftField){
+			Object.keys(results).map(path=>{
+				// @ts-ignore // Front matter Data
+				const fileMetaData = results[path].file.frontmatter;
+				if (fileMetaData[this.plugin.settings.draftField]){
+					delete results[path]
+				}
+			})
+		}
+
 		this.plugin.settings.lastExport = await exportSelection(
 			results,
 			this.plugin
