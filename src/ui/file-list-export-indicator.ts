@@ -27,7 +27,9 @@ export class FileListItemWrapper {
 				([path, fileItem]) => {
 					// @ts-ignore: so as fileItem: it's an internal type the file explorer uses.
 					const fileItemElement = fileItem.selfEl as HTMLElement;
-					fileItemElement.querySelector('.export-plugin-icon')?.remove()
+					fileItemElement
+						.querySelector(".export-plugin-icon")
+						?.remove();
 				}
 			);
 		});
@@ -52,7 +54,7 @@ export class FileListItemWrapper {
 					// @ts-ignore: so as fileItem: it's an internal type the file explorer uses.
 					const fileItemElement = fileItem.selfEl as HTMLElement;
 
-					if (fileMap[path]) {
+					if (fileMap[path] && fileMap[path].file) {
 						// Get the tree-node element, and see if there is already an indicator icon.
 						this.applyStatusIconToFile(
 							fileItemElement,
@@ -89,6 +91,9 @@ export class FileListItemWrapper {
 			}
 			// @ts-ignore: so as fileItem: it's an internal type the file explorer uses.
 			const fileItemElement = fileExplorerFileItem.selfEl as HTMLElement;
+			if (!exportProperties.file) {
+				return;
+			}
 			this.applyStatusIconToFile(
 				fileItemElement,
 				exportProperties.from,
@@ -103,7 +108,7 @@ export class FileListItemWrapper {
 		element: HTMLElement,
 		path: string,
 		alreadyExported: ExportProperties,
-		frontMatter: {[key: string]: any}
+		frontMatter: { [key: string]: any }
 	) {
 		let iconSpanAddedAlready = element.querySelector(".export-plugin-icon");
 
@@ -119,7 +124,8 @@ export class FileListItemWrapper {
 		this.removeClasses(iconSpanAddedAlready, "green orange lime");
 		iconSpanAddedAlready.innerHTML = "";
 
-		if (this.plugin.settings.draftField &&
+		if (
+			this.plugin.settings.draftField &&
 			frontMatter &&
 			frontMatter[this.plugin.settings.draftField]
 		) {
@@ -128,7 +134,7 @@ export class FileListItemWrapper {
 			// @ts-ignore - this is a DOM Element, I have no clue why id would not have a title attr prop...
 			iconSpanAddedAlready.title = "Draft";
 
-			return
+			return;
 		}
 
 		// Not yet exported! Add a new icon.

@@ -65,7 +65,7 @@ export class ExportTableRender {
 
 		Object.keys(this.groupMap).forEach((group) => {
 			const tBody = tableRoot.createEl('tbody', { cls: 'table-view-tbody' })
-			this.renderFolderHeaderRow(tBody, group)
+			this.renderFolderHeaderRow(tBody, group, this.groupMap)
 			this.groupMap[group].forEach((file) => {
 				this.renderFileRow(tBody, file)
 			})
@@ -79,7 +79,7 @@ export class ExportTableRender {
 
 		const fileItemRow = tableBodyRoot.createEl('tr', {
 			cls: "nav-file tree-item meta-data-table-file-row",
-			attr: {'data-path': item.toRelativeDir}
+			attr: {'data-path': item.toRelativeDir, style: 'display: none'}
 		});
 		if (this.plugin.settings.draftField && metaData[this.plugin.settings.draftField]){
 			fileItemRow.classList.add('draft')
@@ -104,15 +104,15 @@ export class ExportTableRender {
 	}
 
 
-	renderFolderHeaderRow(tableBodyRoot: HTMLElement, group: string) {
+	renderFolderHeaderRow(tableBodyRoot: HTMLElement, group: string, exportGroupMap: ExportGroupMap) {
 		const pathHeader = tableBodyRoot.createEl('tr', { cls: "table-sub-header tree-item" });
 
 		// TODO: get the full path of the folder here
 		const pathHeaderTd = pathHeader.createEl('td', {
-			attr: { colspan: Object.keys(this.metaKeysToShow).length + 1 }
+			attr: { colspan: Object.keys(this.metaKeysToShow).length + 1 }, cls: 'is-collapsed'
 		})
 
-		const title = pathHeaderTd.createDiv({ cls: "nav-folder-title mod-collapsible tree-item-self" });
+		const title = pathHeaderTd.createDiv({ cls: "nav-folder-title mod-collapsible tree-item-self"});
 
 		const collapseArrow = title.createDiv({
 			cls: "nav-folder-collapse-indicator collapse-icon",
@@ -123,10 +123,20 @@ export class ExportTableRender {
 			text: group,
 		});
 
+		title.createSpan({
+			text: ' ' + String(exportGroupMap[group].length),
+			cls: 'metadata'
+		})
+		console.warn(exportGroupMap[group])
+
 		collapseArrow.append(getIcon("chevron-down"));
 
-		collapseArrow.addEventListener('click', (event) => {
-			event.stopPropagation();
+		pathHeaderTd.addEventListener('click', (evt)=>this.collapseHeaderRow(evt, pathHeaderTd, tableBodyRoot, group))
+		collapseArrow.addEventListener('click', (evt)=>this.collapseHeaderRow(evt, pathHeaderTd, tableBodyRoot, group))
+	}
+
+	collapseHeaderRow(event: Event, pathHeaderTd: HTMLElement, tableBodyRoot: HTMLElement, group: string){
+		event.stopPropagation();
 			pathHeaderTd.classList.toggle('is-collapsed')
 			const isOpen = !pathHeaderTd.classList.contains('is-collapsed')
 
@@ -135,7 +145,6 @@ export class ExportTableRender {
 				elements.forEach((el: HTMLElement) => el.style.display = isOpen ? 'table-row' : 'none')
 			}
 
-		})
 	}
 
 	renderMetaCell(
