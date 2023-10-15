@@ -29,6 +29,7 @@ export class ExportTableRender {
 	metaFields: Array<string>
 	metaFieldsWithoutFileName: Array<string>
 	plugin: BulkExporterPlugin;
+	draftField: string;
 
 	constructor(
 		leaf: HTMLElement,
@@ -41,8 +42,11 @@ export class ExportTableRender {
 		this.groupMap = getGroups(exportMap)
 		this.metaKeysToShow = getMetaFields(exportMap)
 		this.metaFields = ['fileName'].concat(Object.keys(this.metaKeysToShow))
-		if (this.plugin.settings.draftField){
-			// delete this.metaKeysToShow[this.plugin.settings.draftField]
+
+		// Put the draftField to the beginning, next to the filename.
+		if (this.plugin.settings.draftField) {
+			delete this.metaKeysToShow[this.plugin.settings.draftField]
+			this.draftField = this.plugin.settings.draftField;
 			this.metaFields = ['fileName', this.plugin.settings.draftField].concat(Object.keys(this.metaKeysToShow))
 		}
 		this.metaFieldsWithoutFileName = without(this.metaFields, 'fileName')
@@ -74,14 +78,12 @@ export class ExportTableRender {
 	}
 
 	renderFileRow(tableBodyRoot: HTMLElement, item: ExportProperties) {
-		// @ts-ignore - probably DataView index populates it.
-		const metaData = item.file.frontmatter;
-
+		const metaData = item.frontMatter;
 		const fileItemRow = tableBodyRoot.createEl('tr', {
 			cls: "nav-file tree-item meta-data-table-file-row",
-			attr: {'data-path': item.toRelativeDir, style: 'display: none'}
+			attr: { 'data-path': item.toRelativeDir, style: 'display: none' }
 		});
-		if (this.plugin.settings.draftField && metaData[this.plugin.settings.draftField]){
+		if (this.plugin.settings.draftField && metaData[this.plugin.settings.draftField]) {
 			fileItemRow.classList.add('draft')
 		}
 
@@ -112,7 +114,7 @@ export class ExportTableRender {
 			attr: { colspan: Object.keys(this.metaKeysToShow).length + 1 }, cls: 'is-collapsed'
 		})
 
-		const title = pathHeaderTd.createDiv({ cls: "nav-folder-title mod-collapsible tree-item-self"});
+		const title = pathHeaderTd.createDiv({ cls: "nav-folder-title mod-collapsible tree-item-self" });
 
 		const collapseArrow = title.createDiv({
 			cls: "nav-folder-collapse-indicator collapse-icon",
@@ -123,28 +125,56 @@ export class ExportTableRender {
 			text: group,
 		});
 
-		title.createSpan({
-			text: ' ' + String(exportGroupMap[group].length),
-			cls: 'metadata'
-		})
-		console.warn(exportGroupMap[group])
+		title.append(this.folderHeaderRowStats(exportGroupMap[group]))
 
 		collapseArrow.append(getIcon("chevron-down"));
 
-		pathHeaderTd.addEventListener('click', (evt)=>this.collapseHeaderRow(evt, pathHeaderTd, tableBodyRoot, group))
-		collapseArrow.addEventListener('click', (evt)=>this.collapseHeaderRow(evt, pathHeaderTd, tableBodyRoot, group))
+		pathHeaderTd.addEventListener('click', (evt) => this.collapseHeaderRow(evt, pathHeaderTd, tableBodyRoot, group))
+		collapseArrow.addEventListener('click', (evt) => this.collapseHeaderRow(evt, pathHeaderTd, tableBodyRoot, group))
 	}
 
-	collapseHeaderRow(event: Event, pathHeaderTd: HTMLElement, tableBodyRoot: HTMLElement, group: string){
+	collapseHeaderRow(event: Event, pathHeaderTd: HTMLElement, tableBodyRoot: HTMLElement, group: string) {
 		event.stopPropagation();
-			pathHeaderTd.classList.toggle('is-collapsed')
-			const isOpen = !pathHeaderTd.classList.contains('is-collapsed')
+		pathHeaderTd.classList.toggle('is-collapsed')
+		const isOpen = !pathHeaderTd.classList.contains('is-collapsed')
 
-			const elements = tableBodyRoot.querySelectorAll(`.meta-data-table-file-row[data-path="${group}"]`)
-			if (elements) {
-				elements.forEach((el: HTMLElement) => el.style.display = isOpen ? 'table-row' : 'none')
+		const elements = tableBodyRoot.querySelectorAll(`.meta-data-table-file-row[data-path="${group}"]`)
+		if (elements) {
+			elements.forEach((el: HTMLElement) => el.style.display = isOpen ? 'table-row' : 'none')
+		}
+	}
+
+	folderHeaderRowStats(list: ExportProperties[]) {
+		const allInFolder = list.length
+		const metadataWrapper = createSpan({ cls: 'metadata' })
+
+		if (this.plugin.settings.draftField) {
+			const draftsInFolder = this.countDraftsInFolder(list)
+			const publishedInFolder = allInFolder - draftsInFolder;
+			if (draftsInFolder > 0){
+				metadataWrapper.title = 'Published / Draft = ' + allInFolder;
+				metadataWrapper.createSpan({
+					text: String(publishedInFolder),
+					cls: 'metadata-published',
+				})
+				metadataWrapper.append('/')
+				metadataWrapper.createSpan({
+					text: String(draftsInFolder),
+					cls: 'metadata-draft'
+				})
+			} else {
+				metadataWrapper.append(String(allInFolder))
 			}
+		} else {
+			metadataWrapper.append(String(allInFolder))
+		}
+		return metadataWrapper
+	}
 
+	countDraftsInFolder(list: ExportProperties[]): number {
+		return list.filter((e) => {
+			return Boolean(e.frontMatter[this.plugin.settings.draftField])
+		}).length
 	}
 
 	renderMetaCell(
@@ -173,7 +203,7 @@ export class ExportTableRender {
 				}
 				td.createSpan({ cls: 'meta-value', text: display, attr: { title: value } })
 			} else {
-				td.createSpan({text: value})
+				td.createSpan({ text: value })
 			}
 		} else if (value instanceof Array) {
 			td.createSpan({ cls: 'meta-value', text: value.join(', ') })

@@ -60,8 +60,7 @@ export class FileListItemWrapper {
 							fileItemElement,
 							path,
 							lastExport[path],
-							// @ts-ignore
-							fileMap[path].file.frontmatter
+							fileMap[path].frontMatter
 						);
 					}
 				}
@@ -98,8 +97,7 @@ export class FileListItemWrapper {
 				fileItemElement,
 				exportProperties.from,
 				lastExport[exportProperties.from],
-				// @ts-ignore
-				exportProperties.file.frontmatter
+				exportProperties.frontMatter
 			);
 		});
 	}

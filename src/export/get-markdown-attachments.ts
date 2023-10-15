@@ -119,8 +119,7 @@ export async function replaceImageLinksInMetaData(
 	exportProperties: ExportProperties,
 	plugin: BulkExporterPlugin
 ) {
-	// @ts-ignore
-	const frontMatterData = exportProperties.file.frontmatter;
+	const frontMatterData = exportProperties.frontMatter;
 	const list :{ [originalUrl: string]: AttachmentStat} = {};
 	let str = exportProperties.content;
 

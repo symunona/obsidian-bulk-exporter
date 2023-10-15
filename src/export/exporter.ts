@@ -115,8 +115,7 @@ export class Exporter {
 		console.warn("Found files to export: ", results);
 		if (this.plugin.settings.draftField){
 			Object.keys(results).map(path=>{
-				// @ts-ignore // Front matter Data
-				const fileMetaData = results[path].file.frontmatter;
+				const fileMetaData = results[path].frontMatter;
 				if (fileMetaData[this.plugin.settings.draftField]){
 					delete results[path]
 				}
@@ -289,9 +288,7 @@ async function collectAssets(
 		imageLinkListInMeta.push(imageLinkListInMetaMap[key])
 	})
 
-
-	// @ts-ignore
-	const frontMatterData = fileExportProperties.file.frontmatter;
+	const frontMatterData = fileExportProperties.frontMatter;
 
 	let filesCopied: GlobMap = {}
 	if (frontMatterData && frontMatterData.copy) {

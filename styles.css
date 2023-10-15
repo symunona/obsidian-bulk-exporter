@@ -74,6 +74,9 @@ tr:hover .data-view-meta-key.undefined {background: var(--text-selection); opaci
 .meta-data-view .clickable {cursor: pointer}
 .meta-data-view .clickable:hover {color: var(--color-base-70)}
 .meta-data-view .closed{ height: 0; overflow: hidden;}
+.meta-data-view .table-view-table .metadata{ display: flex; color: #999; padding-left: 10px; }
+.meta-data-view .table-view-table .metadata .metadata-draft{ color: var(--color-orange); }
+.meta-data-view .table-view-table .metadata .metadata-published{ color: var(--color-green); }
 
 /* .meta-data-view .path-folder{ padding-left: 20px; display: block; } */
 

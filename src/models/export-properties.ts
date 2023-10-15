@@ -7,6 +7,7 @@ export type ExportProperties = {
 	toRelativeDir: string;
     content: string;
     md5: string;
+    frontMatter: {[key: string]: any};
     file: TAbstractFile | null,
     newFileName: string,
     from: string,

@@ -73,12 +73,7 @@ export type PropertyMap = { [key: string]: Array<string>}
 export function getMetaFields(mapOfFiles: ExportMap) {
     const resultsMap: PropertyMap = {};
     Object.keys(mapOfFiles).forEach((filePath: string)  => {
-        const file = mapOfFiles[filePath].file
-
-        // @ts-ignore
-        const frontMatter = file.frontmatter as {
-            [key: string]: string;
-        };
+        const frontMatter = mapOfFiles[filePath].frontMatter
 
         Object.keys(frontMatter).map(attributeKey => {
             const value = frontMatter[attributeKey];

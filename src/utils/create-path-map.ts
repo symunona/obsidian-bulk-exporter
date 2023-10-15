@@ -32,6 +32,7 @@ export function createPathMap(
 
 			const newExportPropertyItem: ExportProperties = {
 				file: fileDescriptor,
+				frontMatter: fileDescriptor.frontmatter,
 				from: fileDescriptor.path,
 				newFileName: newFileName,
 				to: join(targetRoot, targetPath + "." + fileDescriptor.ext),
