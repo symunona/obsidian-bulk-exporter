@@ -13,7 +13,13 @@ function runShellCommandWithArgs(command: string, args: string[] = []): Promise<
   return new Promise((resolve, reject) => {
     log('starting: ', command)
     log('args: ', args)
-    const outputContainer = createDiv({cls: 'closed pull-in'});
+    const outputContainer = createDiv({cls: 'pull-in'});
+    const errorsHeader = outputContainer.createDiv()
+    const errorsContainer = outputContainer.createDiv({cls: 'pull-in'});
+
+    const allOutputHeader = outputContainer.createDiv()
+    const allOutputContainer = outputContainer.createDiv({cls: 'closed pull-in'});
+
     const toggler = createSpan({cls: 'clickable', text: 'output'})
     const status = toggler.createSpan({text: '('})
     const statusLogLineCounter = createSpan({text: '0'})
@@ -24,12 +30,25 @@ function runShellCommandWithArgs(command: string, args: string[] = []): Promise<
     status.append(')')
     let logLines = 0
     let errors = 0
-    const togglerChevron = getIcon('chevron-down')
-    toggler.append(togglerChevron)
-    toggler.addEventListener('click', ()=>{
-      outputContainer.classList.toggle('closed')
-      togglerChevron.classList.toggle('rotate-180')
+
+    const errorsTogglerChevron = createSpan({cls: 'clickable', text: 'Errors'})
+    errorsTogglerChevron.append(getIcon('chevron-down'))
+    errorsHeader.append(errorsTogglerChevron)
+
+    const allTogglerChevron = createSpan({cls: 'clickable', text: 'All Output'})
+    allTogglerChevron.append(getIcon('chevron-down'))
+    allOutputHeader.append(allTogglerChevron)
+
+    allTogglerChevron.addEventListener('click', ()=>{
+      allOutputContainer.classList.toggle('closed')
+      allTogglerChevron.classList.toggle('rotate-180')
     })
+
+    errorsTogglerChevron.addEventListener('click', ()=>{
+      errorsContainer.classList.toggle('closed')
+      errorsTogglerChevron.classList.toggle('rotate-180')
+    })
+
 
     log(toggler, outputContainer)
 
@@ -43,7 +62,7 @@ function runShellCommandWithArgs(command: string, args: string[] = []): Promise<
       const lines = data.toString().trim().split('\n');
       lines.forEach((line:string) => {
         // Process each line here
-        logEntry(outputContainer, COLORS.LOG, line)
+        logEntry(allOutputContainer, COLORS.LOG, line)
         logLines++
         statusLogLineCounter.innerText = logLines.toString()
       });
@@ -51,7 +70,8 @@ function runShellCommandWithArgs(command: string, args: string[] = []): Promise<
 
     scriptProcess.stderr.on('data', (data) => {
       // Handle any error output from the command
-      logEntry(outputContainer, COLORS.ERROR, data.toString())
+      logEntry(errorsContainer, COLORS.ERROR, data.toString())
+      logEntry(allOutputContainer, COLORS.ERROR, data.toString())
       errors++
       statusErrorCounter.innerText = errors.toString()
       statusErrorCounter.style.color = COLORS.ERROR

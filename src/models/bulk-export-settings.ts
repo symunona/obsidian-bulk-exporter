@@ -9,4 +9,6 @@ export interface BulkExportSettings {
 	assetPath: string;
 	lastExport: ExportMap;
 	shell: string;
+	headerFieldsToShow: Array<string>;
+	groupOpenMap: {[id: string]: boolean}
 }

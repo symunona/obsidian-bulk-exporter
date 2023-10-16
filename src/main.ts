@@ -14,7 +14,9 @@ export const DEFAULT_SETTINGS: BulkExportSettings = {
 	assetPath: "assets",
 	outputFormat: '${blog}/${slug}',
 	lastExport: {},
-	shell: ''
+	shell: '',
+	headerFieldsToShow: [],
+	groupOpenMap: {}
 };
 
 export default class BulkExporterPlugin extends Plugin {

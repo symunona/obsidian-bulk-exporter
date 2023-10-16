@@ -122,8 +122,9 @@ export class BulkExporterView extends ItemView {
 					this.exportButton.append(folderIcon)
 				} catch (e) {
 					this.exportButton.append(exclamationIcon)
-					error(e.message)
+					error(e?.message || 'Something went wrong with the export, see log!')
 					this.settingsHeader.style.display = 'block';
+					this.log.style.display = 'block'
 				} finally {
 					this.exportButton.disabled = false
 					loaderIcon.remove()
@@ -156,13 +157,8 @@ export class BulkExporterView extends ItemView {
 	 * @param results
 	 */
 	renderPreviewTable(results: ExportMap) {
-		this.results.innerHTML = ''
-		const resultListEl = this.results.createEl("div", {
-			cls: "nav-files-container meta-data-view-table-container",
-		});
-
 		new ExportTableRender(
-			resultListEl,
+			this.results,
 			results,
 			this.plugin
 		);

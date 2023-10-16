@@ -77,6 +77,17 @@ tr:hover .data-view-meta-key.undefined {background: var(--text-selection); opaci
 .meta-data-view .table-view-table .metadata{ display: flex; color: #999; padding-left: 10px; }
 .meta-data-view .table-view-table .metadata .metadata-draft{ color: var(--color-orange); }
 .meta-data-view .table-view-table .metadata .metadata-published{ color: var(--color-green); }
+.meta-data-view .meta-data-table-file-row:hover td { background: #0005 }
+.meta-data-view .meta-data-table-file-row td.reveal-link { width: 32px; padding-left: 5px; background-color: transparent; }
+.meta-data-view .meta-data-table-file-row .reveal-link svg{ visibility: hidden; cursor: pointer;}
+.meta-data-view .meta-data-table-file-row:hover .reveal-link svg{ visibility: visible;}
+
+.meta-data-view button[disabled]{ opacity: 0.6; }
+
+.meta-data-header-selector-input { width: 100% }
+.meta-data-header-selector-scroller > span { display: inline-block; padding: 4px; color: var(--color-base-50); cursor: pointer; }
+.meta-data-header-selector-scroller > span:hover { color: var(--color-base-60); }
+.meta-data-header-selector-scroller > span.active { color: var(--color-base-70) }
 
 /* .meta-data-view .path-folder{ padding-left: 20px; display: block; } */
 

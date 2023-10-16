@@ -112,7 +112,8 @@ export class Exporter {
 	}
 	async searchAndExport() {
 		const results = await this.searchFilesToExport();
-		console.warn("Found files to export: ", results);
+		// Uncomment this for the actual object info!
+		// console.warn("Found files to export: ", results);
 		if (this.plugin.settings.draftField){
 			Object.keys(results).map(path=>{
 				const fileMetaData = results[path].frontMatter;

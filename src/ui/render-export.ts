@@ -14,6 +14,7 @@ import { ExportGroupMap, ExportMap, ExportProperties } from "src/models/export-p
 import { getMetaFields } from "src/utils/folder-meta";
 import BulkExporterPlugin from "src/main";
 import { without } from "underscore";
+import { HeaderFieldSelectorModal } from "./header-selector-modal";
 
 const OVERWRITE_LOCALE = 'hu-HU'
 
@@ -30,13 +31,18 @@ export class ExportTableRender {
 	metaFieldsWithoutFileName: Array<string>
 	plugin: BulkExporterPlugin;
 	draftField: string;
+	fieldsToRender: Array<string>;
 
 	constructor(
 		leaf: HTMLElement,
 		exportMap: ExportMap,
 		plugin: BulkExporterPlugin
 	) {
-		this.leaf = leaf;
+		const resultListEl = leaf.createEl("div", {
+			cls: "nav-files-container meta-data-view-table-container",
+		});
+
+		this.leaf = resultListEl;
 		this.plugin = plugin;
 		this.exportMap = exportMap
 		this.groupMap = getGroups(exportMap)
@@ -49,22 +55,45 @@ export class ExportTableRender {
 			this.draftField = this.plugin.settings.draftField;
 			this.metaFields = ['fileName', this.plugin.settings.draftField].concat(Object.keys(this.metaKeysToShow))
 		}
+
 		this.metaFieldsWithoutFileName = without(this.metaFields, 'fileName')
+
 		this.render()
 	}
 
 	render() {
+		if (this.plugin.settings.headerFieldsToShow?.length){
+			this.fieldsToRender = this.plugin.settings.headerFieldsToShow
+		} else {
+			this.fieldsToRender = this.metaFieldsWithoutFileName
+		}
+
+		this.leaf.innerHTML = ''
 		const tableRoot = this.leaf.createEl('table', { cls: "dataview table-view-table" });
 		const tableHead = tableRoot.createEl('thead', { cls: "table-view-thead" })
 		const tableHeadTr = tableHead.createEl('tr', { cls: "table-view-tr-header" })
 
+		const fileNameTh = tableHeadTr.createEl('th', {
+			cls: 'table-view-th',
+			attr: { 'data-column-id': 'fileName' },
+		})
+
+		const editHeaderFieldsLink = fileNameTh.createEl('span', {cls: 'clickable'})
+		editHeaderFieldsLink.append(getIcon('eye'));
+
 		// Header
-		this.metaFields.forEach((name) => {
+		this.fieldsToRender.forEach((name) => {
 			const tableHeadTh = tableHeadTr.createEl('th', {
 				cls: 'table-view-th', attr: { 'data-column-id': name }
 			})
 			tableHeadTr.append(tableHeadTh)
 			tableHeadTh.createSpan({ text: name })
+		})
+
+		editHeaderFieldsLink.addEventListener('click', ()=>{
+			new HeaderFieldSelectorModal(this.plugin, this.metaFields, ()=>{
+				this.render();
+			}).open();
 		})
 
 		Object.keys(this.groupMap).forEach((group) => {
@@ -79,29 +108,36 @@ export class ExportTableRender {
 
 	renderFileRow(tableBodyRoot: HTMLElement, item: ExportProperties) {
 		const metaData = item.frontMatter;
+		const group = item.toRelativeDir
+		const isOpen = (this.plugin.settings.groupOpenMap || {})[group]
 		const fileItemRow = tableBodyRoot.createEl('tr', {
 			cls: "nav-file tree-item meta-data-table-file-row",
-			attr: { 'data-path': item.toRelativeDir, style: 'display: none' }
+			attr: { 'data-path': item.toRelativeDir, style: isOpen ? '' : 'display: none' }
 		});
 		if (this.plugin.settings.draftField && metaData[this.plugin.settings.draftField]) {
 			fileItemRow.classList.add('draft')
 		}
 
-		const title = fileItemRow.createEl('td', {
-			cls: 'nav-file-title is-clickable tree-item-self',
-			text: item.newFileName
+		const linkTd = fileItemRow.createEl('td', {
+			cls: 'nav-file-title is-clickable tree-item-self reveal-link',
 		})
+		// linkTd.append(getIcon('external-link'))
 
-		title.addEventListener('click', () => {
+		fileItemRow.addEventListener('click', () => {
 			revealInFolder(this.plugin, item.from)
 		})
-		title.addEventListener('dblclick', () => {
+
+		fileItemRow.addEventListener('dblclick', () => {
 			revealInFolder(this.plugin, item.from)
 			openFileByPath(this.plugin, item.from)
 		})
 
-		this.metaFieldsWithoutFileName.forEach((metaKey) => {
-			this.renderMetaCell(fileItemRow, metaKey, metaData[metaKey])
+		this.fieldsToRender.forEach((metaKey) => {
+		if (metaKey ==='fileName'){
+				this.renderMetaCell(fileItemRow, metaKey, item.newFileName)
+			} else {
+				this.renderMetaCell(fileItemRow, metaKey, metaData[metaKey])
+			}
 		})
 	}
 
@@ -109,9 +145,11 @@ export class ExportTableRender {
 	renderFolderHeaderRow(tableBodyRoot: HTMLElement, group: string, exportGroupMap: ExportGroupMap) {
 		const pathHeader = tableBodyRoot.createEl('tr', { cls: "table-sub-header tree-item" });
 
+		const isOpen = (this.plugin.settings.groupOpenMap || {})[group]
+
 		// TODO: get the full path of the folder here
 		const pathHeaderTd = pathHeader.createEl('td', {
-			attr: { colspan: Object.keys(this.metaKeysToShow).length + 1 }, cls: 'is-collapsed'
+			attr: { colspan: Object.keys(this.metaKeysToShow).length + 1 }, cls: isOpen ? '' : 'is-collapsed'
 		})
 
 		const title = pathHeaderTd.createDiv({ cls: "nav-folder-title mod-collapsible tree-item-self" });
@@ -137,6 +175,10 @@ export class ExportTableRender {
 		event.stopPropagation();
 		pathHeaderTd.classList.toggle('is-collapsed')
 		const isOpen = !pathHeaderTd.classList.contains('is-collapsed')
+
+		this.plugin.settings.groupOpenMap = this.plugin.settings.groupOpenMap || {}
+		this.plugin.settings.groupOpenMap[group] = isOpen
+		this.plugin.saveSettings()
 
 		const elements = tableBodyRoot.querySelectorAll(`.meta-data-table-file-row[data-path="${group}"]`)
 		if (elements) {
