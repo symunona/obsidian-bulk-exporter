@@ -31,6 +31,7 @@ export class BulkExporterView extends ItemView {
 	refreshButton: HTMLButtonElement;
 	logButton: HTMLButtonElement;
 	clearLogButton: HTMLButtonElement;
+	exportTable: ExportTableRender;
 
 	constructor(leaf: WorkspaceLeaf, plugin: BulkExporterPlugin) {
 		super(leaf);
@@ -157,7 +158,8 @@ export class BulkExporterView extends ItemView {
 	 * @param results
 	 */
 	renderPreviewTable(results: ExportMap) {
-		new ExportTableRender(
+		if (this.exportTable) this.exportTable.remove()
+		this.exportTable = new ExportTableRender(
 			this.results,
 			results,
 			this.plugin

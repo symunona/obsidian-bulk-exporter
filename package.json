@@ -1,6 +1,6 @@
 {
 	"name": "bulk-exporter",
-	"version": "1.0.10",
+	"version": "1.0.11",
 	"description": "Export structured data for Obsidian (https://obsidian.md)",
 	"main": "main.js",
 	"scripts": {

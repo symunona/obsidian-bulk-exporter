@@ -3,7 +3,7 @@
  * Handles collapse and open.
  */
 
-import { Notice, Plugin } from "obsidian";
+import { Notice } from "obsidian";
 import { revealInFolder } from "../obsidian-api-helpers/file-explorer";
 import { getIcon } from "../obsidian-api-helpers/get-icon";
 import { createLink, isHttpUrl } from "../utils/url";
@@ -263,7 +263,10 @@ export class ExportTableRender {
 		} else {
 			td.createSpan({ cls: 'meta-value', text: value })
 		}
+	}
 
+	remove(){
+		this.leaf.remove();
 	}
 }
 
