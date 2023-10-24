@@ -1,14 +1,14 @@
-import { TAbstractFile } from "obsidian";
-import { AttachmentStat } from "src/export/get-markdown-attachments";
-import { GlobMap } from "src/export/globCopy";
-import { LinkStat } from "src/export/replace-local-links";
+import { Literal, SMarkdownPage } from "obsidian-dataview";
+import { AttachmentStat } from "../export/get-markdown-attachments";
+import { GlobMap } from "../export/globCopy";
+import { LinkStat } from "../export/replace-local-links";
 
 export type ExportProperties = {
 	toRelativeDir: string;
     content: string;
     md5: string;
-    frontMatter: {[key: string]: any};
-    file: TAbstractFile | null,
+    frontMatter: Record<string, Literal>;
+    file: SMarkdownPage,
     newFileName: string,
     from: string,
     to: string,

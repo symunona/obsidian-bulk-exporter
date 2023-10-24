@@ -1,6 +1,5 @@
 import { ItemView, Notice, WorkspaceLeaf } from "obsidian";
 
-import { getAPI as getDataViewApi } from "obsidian-dataview";
 import { error, log, setLogOutput } from "./utils/log";
 import { Exporter } from "./export/exporter";
 import { ExportTableRender } from "./ui/render-export";
@@ -16,7 +15,6 @@ export const MAX_META_VALUE_LENGTH_TO_DISPLAY = 20;
 // const MAX_LIST = 10;
 
 export class BulkExporterView extends ItemView {
-	dataViewApi = getDataViewApi();
 	header: HTMLElement;
 	error: HTMLElement;
 	results: HTMLElement;

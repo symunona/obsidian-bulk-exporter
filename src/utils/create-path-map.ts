@@ -1,48 +1,43 @@
-import { TAbstractFile } from "obsidian";
 import { BulkExportSettings } from "../models/bulk-export-settings";
 import path, { basename, join } from "path";
 import normalizeFileName from "./normalize-file-name";
 import { ExportMap, ExportProperties } from "src/models/export-properties";
 import { error } from "./log";
 import ScopedEval from "scoped-eval";
+import { SMarkdownPage } from "obsidian-dataview";
 
 /**
  * From a DataView query results, it creates an output map, running
  * the output transformation.
  */
 export function createPathMap(
-	queryResults: Array<any>,
+	queryResults: Array<[any, SMarkdownPage]>,
 	settings: BulkExportSettings
 ): ExportMap {
 	const foundFileMap: { [key: string]: ExportProperties } = {};
 	const targetRoot = settings.outputFolder;
 
-	queryResults.map((item) => {
-		const fileDescriptor = item[1];
-		if (fileDescriptor instanceof TAbstractFile) {
-			throw new Error(
-				"fileDescriptor returned from dataview api is not a TAbstractFile"
-			);
-		}
+	queryResults.map(([link, fileDescriptor]) => {
 
 		try {
 			const targetPath = getTargetPath(fileDescriptor, settings);
 
 			const newFileName = basename(targetPath);
+			const extension = fileDescriptor.path.substring(fileDescriptor.path.lastIndexOf('.'))
 
 			const newExportPropertyItem: ExportProperties = {
 				file: fileDescriptor,
 				frontMatter: fileDescriptor.frontmatter,
 				from: fileDescriptor.path,
 				newFileName: newFileName,
-				to: join(targetRoot, targetPath + "." + fileDescriptor.ext),
-				toRelative: targetPath + "." + fileDescriptor.ext,
+				to: join(targetRoot, targetPath + "." + extension),
+				toRelative: targetPath + "." + extension,
 				md5: "",
 				content: "",
 				toRelativeDir: path.parse(targetPath).dir,
 				lastExportDate: 0,
 			};
-			foundFileMap[item[1].path] = newExportPropertyItem;
+			foundFileMap[fileDescriptor.path] = newExportPropertyItem;
 		} catch (e) {
 			console.error(e);
 			error("File Export Error: ", fileDescriptor.path);
@@ -64,7 +59,7 @@ export function createPathMap(
  * @returns
  */
 function getTargetPath(
-	fileDescriptor: TAbstractFile,
+	fileDescriptor: SMarkdownPage,
 	settings: BulkExportSettings
 ) {
 	// Populate an object with all the properties

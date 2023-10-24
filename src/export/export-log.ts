@@ -53,7 +53,7 @@ export function exportedLogEntry(
                     cls: 'pull-in clickable',
                     text: `${linkStat.type} `
                 })
-                const linkText = link.createEl('a', { text: linkStat.text || linkStat.original || linkStat.url, title: linkStat.newUrl })
+                const linkText = link.createEl('a', { text: linkStat.text || linkStat.original || linkStat.url, title: linkStat.original + ' -> ' + linkStat.newUrl })
                 linkText.append(getIcon('external-link'))
 
                 linkText.addEventListener('click', (evt) => {
@@ -96,8 +96,8 @@ export function exportedLogEntry(
                     arrayOfAssets.forEach((asset) => {
                         const fileAssetElement = fileAssetElementCreator(asset, errorCount, plugin)
                         errorCount = fileAssetElement.errorCount
-                        if (errorCount > 0) {console.error(asset) }
-                        if (asset.type === 'folder'){
+                        if (errorCount > 0) { console.error(asset) }
+                        if (asset.type === 'folder') {
                             globGroupContainer.append(createSpan('[Folder] '))
                         }
                         globGroupContainer.append(fileAssetElement.assetElement)
@@ -123,7 +123,7 @@ function fileAssetElementCreator(asset: AttachmentStat, errorCount: number, plug
         title: asset.newPath,
         text: `${asset.originalPath || asset.newPath}`
     })
-    if (asset.count > 1){
+    if (asset.count > 1) {
         assetElement.innerText += ` (${asset.count})`
     }
     assetElement.classList.add('pull-in')

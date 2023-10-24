@@ -25,9 +25,9 @@
 
 import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "fs";
 import { basename, dirname, join } from "path";
-import BulkExporterPlugin from "src/main";
-import { ExportProperties } from "src/models/export-properties";
-import replaceAll, { matchAll } from "src/utils/replace-all";
+import BulkExporterPlugin from "../main";
+import { ExportProperties } from "../models/export-properties";
+import replaceAll, { matchAll } from "../utils/replace-all";
 import { Md5 } from "ts-md5";
 import { isArray, isString } from "underscore";
 
@@ -35,13 +35,16 @@ export const ATTACHMENT_URL_REGEXP = /!\[\[((.*?)\.(\w+))\]\]/g;
 export const MARKDOWN_ATTACHMENT_URL_REGEXP = /!\[(.*?)\]\(((.*?)\.(\w+))\)/g;
 
 // Finds all [title](url) formatted expressions, ignores the ones that are embedded with !
-export const LINK_URL_REGEXP = /[^!]\[(.*?)\]\(((.*?))\)/g;
+// export const LINK_URL_REGEXP = /[^!]\[(.*?)\]\(((.*?))\)/g;
+export const LINK_URL_REGEXP = /(\[\[[^\]]+\]\]|\[[^\]]+\]\([^)]+\))/g
+
 export const EMBED_URL_REGEXP = /!\[\[(.*?)\]\]/g;
 
 export const IMAGE_MATCHER = /(([^\s]*).(png|jpe?g|gif|webp))/
 
 export type AttachmentType = 'body' | 'frontMatter' | 'globCopy' | 'folder'
 export type AttachmentStatus = 'success' | 'webLink' | 'assetNotFound' | 'alreadyExists' | 'error'
+
 
 export interface ReplaceOneResult {
 	/** Replaced string */

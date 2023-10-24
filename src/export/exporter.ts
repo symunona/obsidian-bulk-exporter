@@ -2,12 +2,11 @@
  * Find files with DataView's API, organize exports.
  */
 import { existsSync, mkdirSync, writeFileSync } from "fs";
-import { Notice, TAbstractFile } from "obsidian";
+import { Notice } from "obsidian";
 import { rmSync } from "fs";
 
 import { error, log } from "src/utils/log";
 
-import { getAPI as getDataViewApi } from "obsidian-dataview";
 import { normalizeQuery } from "src/utils/normalize-query";
 import { createPathMap } from "src/utils/create-path-map";
 import BulkExporterPlugin from "src/main";
@@ -28,13 +27,13 @@ import { replaceLocalLinks } from "./replace-local-links";
 import { exportedLogEntry } from "./export-log";
 import { join, normalize } from "path";
 import { runShellCommand } from "src/utils/runner";
+import { getDataViewApi } from "src/utils/data-view-api";
+import { SMarkdownPage } from "obsidian-dataview";
 
 export class Exporter {
 	plugin: BulkExporterPlugin;
 
 	display: FileListItemWrapper;
-
-	dataViewApi = getDataViewApi();
 
 	constructor(plugin: BulkExporterPlugin) {
 		this.plugin = plugin;
@@ -46,7 +45,7 @@ export class Exporter {
 			this.plugin.app.metadataCache.on(
 				// @ts-ignore
 				"dataview:metadata-change",
-				(type: string, file: TAbstractFile) => {
+				(type: string, file: SMarkdownPage) => {
 					// If this was already a file, see if it got updated!
 					const previouslyExported =
 						this.plugin.settings.lastExport[file.path];
@@ -75,17 +74,20 @@ export class Exporter {
 	 * @returns
 	 */
 	async searchFilesToExport(): Promise<ExportMap> {
-		if (this.dataViewApi) {
+		const dataViewApi = getDataViewApi()
+		if (dataViewApi) {
 			const initialQuery = normalizeQuery(
 				this.plugin.settings.exportQuery
 			);
-			const data = await this.dataViewApi.query(initialQuery);
+			const data = await dataViewApi.query(initialQuery);
 
 			if (data.successful) {
 				const exportFileMap = createPathMap(
+					// @ts-ignore
 					data.value.values,
 					this.plugin.settings
 				);
+				// console.warn(exportFileMap)
 				log(
 					`Found ${data.value.values.length} files for`,
 					` filter: '${this.plugin.settings.exportQuery}'`,
@@ -113,7 +115,7 @@ export class Exporter {
 	async searchAndExport() {
 		const results = await this.searchFilesToExport();
 		// Uncomment this for the actual object info!
-		// console.warn("Found files to export: ", results);
+		console.warn("Found files to export: ", results);
 		if (this.plugin.settings.draftField){
 			Object.keys(results).map(path=>{
 				const fileMetaData = results[path].frontMatter;
@@ -123,10 +125,22 @@ export class Exporter {
 			})
 		}
 
-		this.plugin.settings.lastExport = await exportSelection(
+		const lastExport = await exportSelection(
 			results,
 			this.plugin
 		);
+
+		// Save the export properties, but do not save the whole content, just the MD5 hash.
+		// Object.keys(lastExport).forEach((absoluteFilePath)=>{
+		// 	const exportProperties = lastExport[absoluteFilePath]
+		// 	exportProperties.content = "";
+		// 	exportProperties.file = null;
+		// })
+		console.log(lastExport)
+
+		// Save the last export map so we can see what's already exported.
+		this.plugin.settings.lastExport = lastExport
+
 		this.plugin.saveSettings();
 		this.display.applyStatusIcons(this.plugin.settings.lastExport);
 	}
@@ -193,16 +207,10 @@ export async function exportSelection(
 			plugin
 		);
 
-		// Unofficial or I could not find API of TAbstractFile:
-		// it has an mtime attr, which stores the last modified date.
 		exportProperties.lastExportDate = new Date(
-			// @ts-ignore
-			exportProperties.file.mtime
+			exportProperties.file?.mtime
 		).getTime();
 
-		// Save the export properties, but do not save the whole content, just the MD5 hash.
-		exportProperties.content = "";
-		exportProperties.file = null;
 		outputPathMap[exportProperties.toRelativeDir] = outputPathMap[exportProperties.toRelativeDir] || []
 		outputPathMap[exportProperties.toRelativeDir].push(exportProperties)
 	}
@@ -291,7 +299,7 @@ async function collectAssets(
 
 	const frontMatterData = fileExportProperties.frontMatter;
 
-	let filesCopied: GlobMap = {}
+	const filesCopied: GlobMap = {}
 	if (frontMatterData && frontMatterData.copy) {
 		// const relativeRoot = parse(fileExportProperties.from).dir
 		// log(`[glob] [${fileExportProperties.newFileName}.md] has a copy property.

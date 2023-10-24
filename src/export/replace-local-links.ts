@@ -1,8 +1,8 @@
-import { ExportMap, ExportProperties } from "src/models/export-properties";
+import { ExportMap, ExportProperties } from "../models/export-properties";
 import { getLinks } from "./get-markdown-attachments";
 import { log, warn } from "console";
 import { dirname, join } from "path";
-import replaceAll from "src/utils/replace-all";
+import replaceAll from "../utils/replace-all";
 
 export type LinkType = 'external' | 'internalFound' | 'internalNotFound';
 
@@ -32,20 +32,25 @@ export function replaceLocalLinks(
 
 		const title = links[index][1];
 
+		// EXTERNAL link
 		if (link.startsWith("http")) {
 			log("Skipping URL", title, link);
 			linkStats.push({text: title, url: link, type: "external"})
 			continue;
 		}
 
-		if (link.startsWith("obsidian")) {
+		// Internal link, starting with obsidian://
+		if (link.startsWith("obsidian://")) {
+			// Just grab the file value from the link.
 			const fileLink = decodeURIComponent(
 				link.substring(link.indexOf("&file=") + 6)
 			);
 			link = fileLink;
 		}
 
+		// Get the dir of the file being exported
 		const fromDir = dirname(exportProperties.from);
+		// Guess where the file may be, the file's relative position.
 		const linkWithMd = link + ".md";
 		const guessRelative = join(fromDir, linkWithMd);
 
