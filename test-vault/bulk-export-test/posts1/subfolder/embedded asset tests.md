@@ -1,9 +1,12 @@
 ---
 blog: test
-externalLinks: "2"
-internalLinks: "3"
 links: "0"
-embedLinks: "7"
+internalLinks: "0"
+externalLinks: "0"
+attachments: "8"
+internalAttachments: "5"
+externalAttachments: "3"
+lvl: one
 ---
 
 I am going to embed a picture from the internet:
@@ -22,5 +25,8 @@ Find it anywhere in the vault
 
 ![Asset path relative](../../assets/18.png)
 ![asset-path-absolute](assets/18.png)
+	![[18.png]]
+
+
 
 ![](https://www.youtube.com/watch?v=MBRqu0YOH14)

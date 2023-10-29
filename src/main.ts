@@ -2,10 +2,11 @@ import { Plugin } from "obsidian";
 import { BulkExporterView, META_DATA_VIEW_TYPE } from "src/view";
 
 import { Exporter } from "./export/exporter";
-import { BulkExportSettings } from "./models/bulk-export-settings";
+import { BulkExportSettings, BulkExportSettingsList } from "./models/bulk-export-settings";
 import { OutputSettingTab } from "./settings/export-settings-tab";
 
 export const DEFAULT_SETTINGS: BulkExportSettings = {
+	name: "export set",
 	outputFolder: "output",
 	exportQuery: "blog",
 	emptyTargetFolder: false,
@@ -15,11 +16,12 @@ export const DEFAULT_SETTINGS: BulkExportSettings = {
 	lastExport: {},
 	shell: '',
 	headerFieldsToShow: [],
-	groupOpenMap: {}
+	groupOpenMap: {},
+	absoluteAssets: false
 };
 
 export default class BulkExporterPlugin extends Plugin {
-	settings: BulkExportSettings;
+	settings: BulkExportSettingsList;
 
 	exporter: Exporter;
 
@@ -47,7 +49,7 @@ export default class BulkExporterPlugin extends Plugin {
 			id: "bulk-export",
 			name: "Bulk Export",
 			callback: () => {
-				this.exporter.searchAndExport();
+				this.exporter.searchAndExportAll();
 				this.activateView();
 			},
 		});
@@ -59,7 +61,7 @@ export default class BulkExporterPlugin extends Plugin {
 				// If the dataview plugin was not loaded when this inited,
 				// let's create the initial search!
 				if (!this.inited) {
-					this.exporter.searchFilesToExport();
+					this.exporter.searchAll();
 					this.inited = true;
 				} else {
 					// Check files
@@ -75,11 +77,32 @@ export default class BulkExporterPlugin extends Plugin {
 	}
 
 	async loadSettings() {
-		this.settings = Object.assign(
-			{},
-			DEFAULT_SETTINGS,
-			await this.loadData()
-		);
+		const storedData = await this.loadData()
+		if (storedData) {
+			// Backward Compatibility: if it's not an array, it's the old BulkExportSettings.
+			if (!(storedData.items instanceof Array)) {
+				this.settings = {
+					selected: 0,
+					items: Object.assign(
+						{},
+						DEFAULT_SETTINGS,
+						storedData
+					)
+				}
+			}
+			else {
+				this.settings = Object.assign({items: [], selected: 0}, storedData);
+				if (!this.settings.items.length) {
+					this.settings.items.push(Object.assign({}, DEFAULT_SETTINGS))
+				}
+			}
+		} else {
+			this.settings = {
+				items: [
+					Object.assign({}, DEFAULT_SETTINGS)], selected: 0
+			}
+		}
+		console.warn(this.settings)
 	}
 
 	async saveSettings() {

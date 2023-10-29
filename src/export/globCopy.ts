@@ -12,9 +12,9 @@ import { globSync } from 'glob'
 import { join, parse } from "path"
 import { cpSync, existsSync, mkdirSync, stat, statSync } from "fs"
 import { Plugin } from "obsidian"
-import { AttachmentStat } from "./get-markdown-attachments"
+import { AttachmentLink } from "./get-markdown-attachments"
 
-export interface GlobMap { [glob: string]: Array<AttachmentStat> }
+export interface GlobMap { [glob: string]: Array<AttachmentLink> }
 
 export async function copyGlob(fileExportProperties: ExportProperties, globString: string, plugin: Plugin){
     const relativeRoot = parse(fileExportProperties.from).dir
@@ -22,10 +22,10 @@ export async function copyGlob(fileExportProperties: ExportProperties, globStrin
     // @ts-ignore : simple way to figure out if we are on the cloud I guess.
     const basePath =  plugin.app.vault.adapter.basePath;
     const fromAbsoluteRoot = join(basePath, relativeRoot)
-    const toRootDir = parse(fileExportProperties.to).dir
+    const toRootDir = parse(fileExportProperties.toAbsoluteFs).dir
 	const files = globSync(globString, {cwd: fromAbsoluteRoot})
 
-    const fileListExported : Array<AttachmentStat> = []
+    const fileListExported : Array<AttachmentLink> = []
 
 	files.forEach((relativeFileName: string)=>{
         const toAbsolutePath = join(toRootDir, relativeFileName)

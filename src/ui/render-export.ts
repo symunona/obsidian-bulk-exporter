@@ -108,11 +108,11 @@ export class ExportTableRender {
 
 	renderFileRow(tableBodyRoot: HTMLElement, item: ExportProperties) {
 		const metaData = item.frontMatter;
-		const group = item.toRelativeDir
+		const group = item.toRelativeToExportDirRoot
 		const isOpen = (this.plugin.settings.groupOpenMap || {})[group]
 		const fileItemRow = tableBodyRoot.createEl('tr', {
 			cls: "nav-file tree-item meta-data-table-file-row",
-			attr: { 'data-path': item.toRelativeDir, style: isOpen ? '' : 'display: none' }
+			attr: { 'data-path': item.toRelativeToExportDirRoot, style: isOpen ? '' : 'display: none' }
 		});
 		if (this.plugin.settings.draftField && metaData[this.plugin.settings.draftField]) {
 			fileItemRow.classList.add('draft')

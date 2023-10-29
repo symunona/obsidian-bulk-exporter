@@ -1,23 +1,22 @@
 import { Literal, SMarkdownPage } from "obsidian-dataview";
-import { AttachmentStat } from "../export/get-markdown-attachments";
 import { GlobMap } from "../export/globCopy";
-import { LinkStat } from "../export/replace-local-links";
+import { AttachmentLink } from "src/export/get-links-and-attachments";
 
 export type ExportProperties = {
-	toRelativeDir: string;
+	toRelativeToExportDirRoot: string;
     content: string;
     md5: string;
     frontMatter: Record<string, Literal>;
     file: SMarkdownPage,
     newFileName: string,
     from: string,
-    to: string,
+    toAbsoluteFs: string,
     toRelative: string,
     lastExportDate: number,
     copyGlob?: GlobMap,
-    imageInBody?: Array<AttachmentStat>,
-    imageInMeta?: Array<AttachmentStat>,
-    linkStats?: Array<LinkStat>
+    imageInBody?: Array<AttachmentLink>,
+    imageInMeta?: Array<AttachmentLink>,
+    linkStats?: Array<AttachmentLink>
 }
 
 export type ExportMap = { [key: string]: ExportProperties }

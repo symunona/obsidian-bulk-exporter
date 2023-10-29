@@ -1,6 +1,5 @@
 ---
 blog: test
-links: "0"
-embedLinks: "0"
+lvl: three
 ---
 This is the first entry.

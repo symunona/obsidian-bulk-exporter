@@ -55,16 +55,15 @@
             "tasks": [],
             "ctime": "2023-10-24T08:46:34.180+02:00",
             "cday": "2023-10-24T00:00:00.000+02:00",
-            "mtime": "2023-10-24T19:59:48.833+02:00",
+            "mtime": "2023-10-24T21:02:53.555+02:00",
             "mday": "2023-10-24T00:00:00.000+02:00",
-            "size": 486,
+            "size": 470,
             "starred": false,
             "frontmatter": {
                 "blog": "test",
                 "index": "true",
                 "internalLinks": "6",
-                "links": "6",
-                "embedLinks": "0"
+                "links": "6"
             },
             "ext": "md"
         },
@@ -72,52 +71,17 @@
             "blog": "test",
             "index": "true",
             "internalLinks": "6",
-            "links": "6",
-            "embedLinks": "0"
+            "links": "6"
         },
         "from": "index.md",
         "newFileName": "index",
         "to": "/home/symunona/tmp/bulk-exporter-unit-test/test/index..md",
         "toRelative": "test/index..md",
-        "md5": "690f9ab4373a4f5a30fb2c7c39f5d455",
-        "content": "---\nblog: test\nindex: \"true\"\ninternalLinks: \"6\"\nlinks: \"6\"\nembedLinks: \"0\"\n---\n# h1\nI want to link [[post1]] and [anywhere subfolder find by title](post1), then [posts1/post1](posts1/post1)\n\nThe first link is NOT supported currently by the client!\n\n## h2\nFinally, I want to link \nObsidian URL:\n[obsidian url to subfolder](obsidian://open?vault=bulk-export-test&file=posts1%2Fsubfolder%2Fsub-note1)\n[simple absolute subfolder](posts1/subfolder/sub-note1)\n[find it by name](sub-note1)\n\n\n\n",
+        "md5": "df46f5d12d1650d6809141b850cba8d6",
+        "content": "---\nblog: test\nindex: \"true\"\ninternalLinks: \"6\"\nlinks: \"6\"\n---\n# h1\nI want to link [[post1]] and [anywhere subfolder find by title](post1), then [posts1/post1](posts1/post1)\n\nThe first link is NOT supported currently by the client!\n\n## h2\nFinally, I want to link \nObsidian URL:\n[obsidian url to subfolder](obsidian://open?vault=bulk-export-test&file=posts1%2Fsubfolder%2Fsub-note1)\n[simple absolute subfolder](posts1/subfolder/sub-note1)\n[find it by name](sub-note1)\n\n\n\n",
         "toRelativeDir": "test",
-        "lastExportDate": 1698170388833,
-        "imageInBody": [],
-        "imageInMeta": [],
-        "copyGlob": {},
-        "linkStats": [
-            {
-                "text": "[[post1]]",
-                "url": "[[post1]]",
-                "type": "internalNotFound"
-            },
-            {
-                "text": "[anywhere subfolder find by title](post1)",
-                "url": "[anywhere subfolder find by title](post1)",
-                "type": "internalNotFound"
-            },
-            {
-                "text": "[posts1/post1](posts1/post1)",
-                "url": "[posts1/post1](posts1/post1)",
-                "type": "internalNotFound"
-            },
-            {
-                "text": "[obsidian url to subfolder](obsidian://open?vault=bulk-export-test&file=posts1%2Fsubfolder%2Fsub-note1)",
-                "url": "[obsidian url to subfolder](obsidian://open?vault=bulk-export-test&file=posts1%2Fsubfolder%2Fsub-note1)",
-                "type": "internalNotFound"
-            },
-            {
-                "text": "[simple absolute subfolder](posts1/subfolder/sub-note1)",
-                "url": "[simple absolute subfolder](posts1/subfolder/sub-note1)",
-                "type": "internalNotFound"
-            },
-            {
-                "text": "[find it by name](sub-note1)",
-                "url": "[find it by name](sub-note1)",
-                "type": "internalNotFound"
-            }
-        ]
+        "lastExportDate": 1698174173555,
+        "copyGlob": {}
     },
     "posts1/external link test.md": {
         "file": {
@@ -138,52 +102,31 @@
             "tasks": [],
             "ctime": "2023-10-24T08:52:25.146+02:00",
             "cday": "2023-10-24T00:00:00.000+02:00",
-            "mtime": "2023-10-24T19:59:27.961+02:00",
+            "mtime": "2023-10-24T21:02:30.863+02:00",
             "mday": "2023-10-24T00:00:00.000+02:00",
-            "size": 311,
+            "size": 295,
             "starred": false,
             "frontmatter": {
                 "blog": "test",
                 "links": "3",
-                "externalLinks": "3",
-                "embedLinks": "0"
+                "externalLinks": "3"
             },
             "ext": "md"
         },
         "frontMatter": {
             "blog": "test",
             "links": "3",
-            "externalLinks": "3",
-            "embedLinks": "0"
+            "externalLinks": "3"
         },
         "from": "posts1/external link test.md",
         "newFileName": "2023-10-24-external-link-test",
         "to": "/home/symunona/tmp/bulk-exporter-unit-test/test/posts/2023-10-24-external-link-test..md",
         "toRelative": "test/posts/2023-10-24-external-link-test..md",
-        "md5": "3093572c813899acd5294789a8201be6",
-        "content": "---\nblog: test\nlinks: \"3\"\nexternalLinks: \"3\"\nembedLinks: \"0\"\n---\nI want to test external links:\n\nThis is a link to a comic, where [Cueball is debugging](https://xkcd.com/1479/) something what should be obvious\n\n[same link](https://xkcd.com/1479/)\n\nA link to an [SVG](https://shapes.tmpx.space/vol_01/out/9.svg)\n",
+        "md5": "f7e59f65222d63c7b9f88e8ca2cf93da",
+        "content": "---\nblog: test\nlinks: \"3\"\nexternalLinks: \"3\"\n---\nI want to test external links:\n\nThis is a link to a comic, where [Cueball is debugging](https://xkcd.com/1479/) something what should be obvious\n\n[same link](https://xkcd.com/1479/)\n\nA link to an [SVG](https://shapes.tmpx.space/vol_01/out/9.svg)\n",
         "toRelativeDir": "test/posts",
-        "lastExportDate": 1698170367961,
-        "imageInBody": [],
-        "imageInMeta": [],
-        "copyGlob": {},
-        "linkStats": [
-            {
-                "text": "[Cueball is debugging](https://xkcd.com/1479/)",
-                "url": "[Cueball is debugging](https://xkcd.com/1479/)",
-                "type": "internalNotFound"
-            },
-            {
-                "text": "[same link](https://xkcd.com/1479/)",
-                "url": "[same link](https://xkcd.com/1479/)",
-                "type": "internalNotFound"
-            },
-            {
-                "text": "[SVG](https://shapes.tmpx.space/vol_01/out/9.svg)",
-                "url": "[SVG](https://shapes.tmpx.space/vol_01/out/9.svg)",
-                "type": "internalNotFound"
-            }
-        ]
+        "lastExportDate": 1698174150863,
+        "copyGlob": {}
     },
     "posts1/post1.md": {
         "file": {
@@ -198,17 +141,17 @@
             "outlinks": [],
             "inlinks": [
                 {
-                    "path": "posts1/subfolder/sub-note1.md",
-                    "embed": false,
-                    "type": "file"
-                },
-                {
                     "path": "posts1/post2-link-test-to-subfolder.md",
                     "embed": false,
                     "type": "file"
                 },
                 {
                     "path": "index.md",
+                    "embed": false,
+                    "type": "file"
+                },
+                {
+                    "path": "posts1/subfolder/sub-note1.md",
                     "embed": false,
                     "type": "file"
                 }
@@ -220,34 +163,27 @@
             "tasks": [],
             "ctime": "2023-10-24T08:46:52.308+02:00",
             "cday": "2023-10-24T00:00:00.000+02:00",
-            "mtime": "2023-10-24T19:59:34.281+02:00",
+            "mtime": "2023-10-24T21:02:40.635+02:00",
             "mday": "2023-10-24T00:00:00.000+02:00",
-            "size": 70,
+            "size": 43,
             "starred": false,
             "frontmatter": {
-                "blog": "test",
-                "links": "0",
-                "embedLinks": "0"
+                "blog": "test"
             },
             "ext": "md"
         },
         "frontMatter": {
-            "blog": "test",
-            "links": "0",
-            "embedLinks": "0"
+            "blog": "test"
         },
         "from": "posts1/post1.md",
         "newFileName": "2023-10-24-post1",
         "to": "/home/symunona/tmp/bulk-exporter-unit-test/test/posts/2023-10-24-post1..md",
         "toRelative": "test/posts/2023-10-24-post1..md",
-        "md5": "98f06917638e0759799ba6ee115f0a5e",
-        "content": "---\nblog: test\nlinks: \"0\"\nembedLinks: \"0\"\n---\nThis is the first entry.",
+        "md5": "809614c911c46856e598dbe556701968",
+        "content": "---\nblog: test\n---\nThis is the first entry.",
         "toRelativeDir": "test/posts",
-        "lastExportDate": 1698170374281,
-        "imageInBody": [],
-        "imageInMeta": [],
-        "copyGlob": {},
-        "linkStats": []
+        "lastExportDate": 1698174160635,
+        "copyGlob": {}
     },
     "posts1/post2-link-test-to-subfolder.md": {
         "file": {
@@ -293,62 +229,31 @@
             "tasks": [],
             "ctime": "2023-10-24T08:47:05.208+02:00",
             "cday": "2023-10-24T00:00:00.000+02:00",
-            "mtime": "2023-10-24T19:59:40.093+02:00",
+            "mtime": "2023-10-24T21:02:46.639+02:00",
             "mday": "2023-10-24T00:00:00.000+02:00",
-            "size": 413,
+            "size": 397,
             "starred": false,
             "frontmatter": {
                 "blog": "test",
                 "internalLinks": "5",
-                "links": "5",
-                "embedLinks": "0"
+                "links": "5"
             },
             "ext": "md"
         },
         "frontMatter": {
             "blog": "test",
             "internalLinks": "5",
-            "links": "5",
-            "embedLinks": "0"
+            "links": "5"
         },
         "from": "posts1/post2-link-test-to-subfolder.md",
         "newFileName": "2023-10-24-post2-link-test-to-subfolder",
         "to": "/home/symunona/tmp/bulk-exporter-unit-test/test/posts/2023-10-24-post2-link-test-to-subfolder..md",
         "toRelative": "test/posts/2023-10-24-post2-link-test-to-subfolder..md",
-        "md5": "9852e4082f163d2084b972c5d6b45a56",
-        "content": "---\nblog: test\ninternalLinks: \"5\"\nlinks: \"5\"\nembedLinks: \"0\"\n---\nThis is the second entry.\n\n[Obsidian Link To a folder down](obsidian://open?vault=bulk-export-test&file=posts1%2Fsubfolder%2Fsub-note1)\n\n[Absolute Link To a folder down](posts1/subfolder/sub-note1)\n\n[Relative Link to a Folder down](subfolder/sub-note1)\n\nDouble Square Bracket Links\n[[post1]]\n\n[[test file with spaces and embedded double quotes]]\n\n\n",
+        "md5": "9846e43ca1c5c45ee3b71d3845ae8142",
+        "content": "---\nblog: test\ninternalLinks: \"5\"\nlinks: \"5\"\n---\nThis is the second entry.\n\n[Obsidian Link To a folder down](obsidian://open?vault=bulk-export-test&file=posts1%2Fsubfolder%2Fsub-note1)\n\n[Absolute Link To a folder down](posts1/subfolder/sub-note1)\n\n[Relative Link to a Folder down](subfolder/sub-note1)\n\nDouble Square Bracket Links\n[[post1]]\n\n[[test file with spaces and embedded double quotes]]\n\n\n",
         "toRelativeDir": "test/posts",
-        "lastExportDate": 1698170380093,
-        "imageInBody": [],
-        "imageInMeta": [],
-        "copyGlob": {},
-        "linkStats": [
-            {
-                "text": "[Obsidian Link To a folder down](obsidian://open?vault=bulk-export-test&file=posts1%2Fsubfolder%2Fsub-note1)",
-                "url": "[Obsidian Link To a folder down](obsidian://open?vault=bulk-export-test&file=posts1%2Fsubfolder%2Fsub-note1)",
-                "type": "internalNotFound"
-            },
-            {
-                "text": "[Absolute Link To a folder down](posts1/subfolder/sub-note1)",
-                "url": "[Absolute Link To a folder down](posts1/subfolder/sub-note1)",
-                "type": "internalNotFound"
-            },
-            {
-                "text": "[Relative Link to a Folder down](subfolder/sub-note1)",
-                "url": "[Relative Link to a Folder down](subfolder/sub-note1)",
-                "type": "internalNotFound"
-            },
-            {
-                "text": "[[post1]]",
-                "url": "[[post1]]",
-                "type": "internalNotFound"
-            },
-            {
-                "text": "[[test file with spaces and embedded double quotes]]",
-                "url": "[[test file with spaces and embedded double quotes]]",
-                "type": "internalNotFound"
-            }
-        ]
+        "lastExportDate": 1698174166639,
+        "copyGlob": {}
     },
     "posts1/subfolder/embedded asset tests.md": {
         "file": {
@@ -384,6 +289,12 @@
                     "type": "file",
                     "display": "asset-path-absolute",
                     "embed": true
+                },
+                {
+                    "path": "assets/18.png",
+                    "type": "file",
+                    "display": "18.png",
+                    "embed": true
                 }
             ],
             "inlinks": [],
@@ -394,91 +305,39 @@
             "tasks": [],
             "ctime": "2023-10-24T08:56:02.428+02:00",
             "cday": "2023-10-24T00:00:00.000+02:00",
-            "mtime": "2023-10-24T19:56:11.999+02:00",
-            "mday": "2023-10-24T00:00:00.000+02:00",
-            "size": 468,
+            "mtime": "2023-10-25T11:08:13.080+02:00",
+            "mday": "2023-10-25T00:00:00.000+02:00",
+            "size": 534,
             "starred": false,
             "frontmatter": {
                 "blog": "test",
-                "externalLinks": "2",
-                "internalLinks": "3",
                 "links": "0",
-                "embedLinks": "7"
+                "internalLinks": "0",
+                "externalLinks": "0",
+                "attachments": "8",
+                "internalAttachments": "5",
+                "externalAttachments": "3"
             },
             "ext": "md"
         },
         "frontMatter": {
             "blog": "test",
-            "externalLinks": "2",
-            "internalLinks": "3",
             "links": "0",
-            "embedLinks": "7"
+            "internalLinks": "0",
+            "externalLinks": "0",
+            "attachments": "8",
+            "internalAttachments": "5",
+            "externalAttachments": "3"
         },
         "from": "posts1/subfolder/embedded asset tests.md",
         "newFileName": "2023-10-24-embedded-asset-tests",
         "to": "/home/symunona/tmp/bulk-exporter-unit-test/test/posts/2023-10-24-embedded-asset-tests..md",
         "toRelative": "test/posts/2023-10-24-embedded-asset-tests..md",
-        "md5": "da371da13df8f4a86151c22fc9c859aa",
-        "content": "---\nblog: test\nexternalLinks: \"2\"\ninternalLinks: \"3\"\nlinks: \"0\"\nembedLinks: \"7\"\n---\n\nI am going to embed a picture from the internet:\n\n![](https://imgs.xkcd.com/comics/nihilism.png)\n\n![heist with a title](https://imgs.xkcd.com/comics/heist_2x.png)\n\nAsset missing:\n![](1991_and_2021_2x.png)\n\nFind it anywhere in the vault\n![](assets/18-88399fdcf82e54c15ebbaabe86ff3e5e.png)\n\n\n\n![Asset path relative](../../assets/assets/18-88399fdcf82e54c15ebbaabe86ff3e5e.png)\n![asset-path-absolute](assets/assets/18-88399fdcf82e54c15ebbaabe86ff3e5e.png)\n\n![](https://www.youtube.com/watch?v=MBRqu0YOH14)\n",
+        "md5": "8a4243cfafeb2edafc2a9f3b3bc4653a",
+        "content": "---\nblog: test\nlinks: \"0\"\ninternalLinks: \"0\"\nexternalLinks: \"0\"\nattachments: \"8\"\ninternalAttachments: \"5\"\nexternalAttachments: \"3\"\n---\n\nI am going to embed a picture from the internet:\n\n![](https://imgs.xkcd.com/comics/nihilism.png)\n\n![heist with a title](https://imgs.xkcd.com/comics/heist_2x.png)\n\nAsset missing:\n![](1991_and_2021_2x.png)\n\nFind it anywhere in the vault\n![](18.png)\n\n\n\n![Asset path relative](../../assets/18.png)\n![asset-path-absolute](assets/18.png)\n\t![[18.png]]\n\n\n\n![](https://www.youtube.com/watch?v=MBRqu0YOH14)\n",
         "toRelativeDir": "test/posts",
-        "lastExportDate": 1698170171999,
-        "imageInBody": [
-            {
-                "originalPath": "https://imgs.xkcd.com/comics/nihilism.png",
-                "type": "body",
-                "status": "webLink",
-                "count": 0
-            },
-            {
-                "originalPath": "https://imgs.xkcd.com/comics/heist_2x.png",
-                "type": "body",
-                "status": "webLink",
-                "count": 0
-            },
-            {
-                "originalPath": "1991_and_2021_2x.png",
-                "type": "body",
-                "status": "assetNotFound",
-                "count": 0
-            },
-            {
-                "originalPath": "18.png",
-                "type": "body",
-                "status": "alreadyExists",
-                "count": 3
-            },
-            {
-                "originalPath": "../../assets/18.png",
-                "type": "body",
-                "status": "alreadyExists",
-                "count": 0
-            },
-            {
-                "originalPath": "assets/18.png",
-                "type": "body",
-                "status": "alreadyExists",
-                "count": 0
-            }
-        ],
-        "imageInMeta": [],
-        "copyGlob": {},
-        "linkStats": [
-            {
-                "text": "[heist with a title](https://imgs.xkcd.com/comics/heist_2x.png)",
-                "url": "[heist with a title](https://imgs.xkcd.com/comics/heist_2x.png)",
-                "type": "internalNotFound"
-            },
-            {
-                "text": "[Asset path relative](../../assets/assets/18-88399fdcf82e54c15ebbaabe86ff3e5e.png)",
-                "url": "[Asset path relative](../../assets/assets/18-88399fdcf82e54c15ebbaabe86ff3e5e.png)",
-                "type": "internalNotFound"
-            },
-            {
-                "text": "[asset-path-absolute](assets/assets/18-88399fdcf82e54c15ebbaabe86ff3e5e.png)",
-                "url": "[asset-path-absolute](assets/assets/18-88399fdcf82e54c15ebbaabe86ff3e5e.png)",
-                "type": "internalNotFound"
-            }
-        ]
+        "lastExportDate": 1698224893080,
+        "copyGlob": {}
     },
     "posts1/subfolder/sub-note1.md": {
         "file": {
@@ -523,52 +382,31 @@
             "tasks": [],
             "ctime": "2023-10-24T08:48:31.837+02:00",
             "cday": "2023-10-24T00:00:00.000+02:00",
-            "mtime": "2023-10-24T19:59:11.733+02:00",
+            "mtime": "2023-10-24T21:03:34.188+02:00",
             "mday": "2023-10-24T00:00:00.000+02:00",
-            "size": 305,
+            "size": 289,
             "starred": false,
             "frontmatter": {
                 "blog": "test",
                 "internalLinks": "3",
-                "links": "3",
-                "embedLinks": "0"
+                "links": "3"
             },
             "ext": "md"
         },
         "frontMatter": {
             "blog": "test",
             "internalLinks": "3",
-            "links": "3",
-            "embedLinks": "0"
+            "links": "3"
         },
         "from": "posts1/subfolder/sub-note1.md",
         "newFileName": "2023-10-24-sub-note1",
         "to": "/home/symunona/tmp/bulk-exporter-unit-test/test/posts/2023-10-24-sub-note1..md",
         "toRelative": "test/posts/2023-10-24-sub-note1..md",
-        "md5": "8e0ebe64ecf5288cf0e36aeb4ee7157f",
-        "content": "---\nblog: test\ninternalLinks: \"3\"\nlinks: \"3\"\nembedLinks: \"0\"\n---\nI want to be linked properly.\n\n[Obsidian Link To a folder up](obsidian://open?vault=bulk-export-test&file=posts1%2Fpost1)\n\n[Absolute Link To a folder up](posts1/post1)\n\n[Relative Link to a Folder up](../post1)\n\nAll of the above should work.",
+        "md5": "e75cbc3fa5ec77e523ad762aa8e5bd5f",
+        "content": "---\nblog: test\ninternalLinks: \"3\"\nlinks: \"3\"\n---\nI want to be linked properly.\n\n[Obsidian Link To a folder up](obsidian://open?vault=bulk-export-test&file=posts1%2Fpost1)\n\n[Absolute Link To a folder up](posts1/post1)\n\n[Relative Link to a Folder up](../post1)\n\nAll of the above should work.",
         "toRelativeDir": "test/posts",
-        "lastExportDate": 1698170351733,
-        "imageInBody": [],
-        "imageInMeta": [],
-        "copyGlob": {},
-        "linkStats": [
-            {
-                "text": "[Obsidian Link To a folder up](obsidian://open?vault=bulk-export-test&file=posts1%2Fpost1)",
-                "url": "[Obsidian Link To a folder up](obsidian://open?vault=bulk-export-test&file=posts1%2Fpost1)",
-                "type": "internalNotFound"
-            },
-            {
-                "text": "[Absolute Link To a folder up](posts1/post1)",
-                "url": "[Absolute Link To a folder up](posts1/post1)",
-                "type": "internalNotFound"
-            },
-            {
-                "text": "[Relative Link to a Folder up](../post1)",
-                "url": "[Relative Link to a Folder up](../post1)",
-                "type": "internalNotFound"
-            }
-        ]
+        "lastExportDate": 1698174214188,
+        "copyGlob": {}
     },
     "posts1/subfolder/test file with spaces and embedded double quotes.md": {
         "file": {
@@ -609,53 +447,81 @@
             "tasks": [],
             "ctime": "2023-10-24T15:28:45.915+02:00",
             "cday": "2023-10-24T00:00:00.000+02:00",
-            "mtime": "2023-10-24T16:15:05.522+02:00",
-            "mday": "2023-10-24T00:00:00.000+02:00",
-            "size": 152,
+            "mtime": "2023-10-25T11:09:18.876+02:00",
+            "mday": "2023-10-25T00:00:00.000+02:00",
+            "size": 148,
             "starred": false,
             "frontmatter": {
                 "blog": "test",
-                "internalLinks": "0",
-                "embedLinks": "2",
-                "links": "0"
+                "attachments": "2",
+                "internalAttachments": "2"
             },
             "ext": "md"
         },
         "frontMatter": {
             "blog": "test",
-            "internalLinks": "0",
-            "embedLinks": "2",
-            "links": "0"
+            "attachments": "2",
+            "internalAttachments": "2"
         },
         "from": "posts1/subfolder/test file with spaces and embedded double quotes.md",
         "newFileName": "2023-10-24-test-file-with-spaces-and-embedded-double-quotes",
         "to": "/home/symunona/tmp/bulk-exporter-unit-test/test/posts/2023-10-24-test-file-with-spaces-and-embedded-double-quotes..md",
         "toRelative": "test/posts/2023-10-24-test-file-with-spaces-and-embedded-double-quotes..md",
-        "md5": "63ef4f69cdca2689a7385bee78c64cc6",
-        "content": "---\nblog: test\ninternalLinks: \"0\"\nembedLinks: \"2\"\nlinks: \"0\"\n---\nWhat do you do with this?\n\nEmbedded link: \n\n![[index#h2]]\n\nEmbedded image:\n![[assets/18-88399fdcf82e54c15ebbaabe86ff3e5e.png]]\n",
+        "md5": "2c34ea2bf95728c0b982320a5472e998",
+        "content": "---\nblog: test\nattachments: \"2\"\ninternalAttachments: \"2\"\n---\nWhat do you do with this?\n\nEmbedded link: \n\n![[index#h2]]\n\nEmbedded image:\n![[18.png]]\n",
         "toRelativeDir": "test/posts",
-        "lastExportDate": 1698156905522,
-        "imageInBody": [
-            {
-                "originalPath": "18.png",
-                "type": "body",
-                "status": "alreadyExists",
-                "count": 1
-            }
-        ],
-        "imageInMeta": [],
-        "copyGlob": {},
-        "linkStats": [
-            {
-                "text": "[[index#h2]]",
-                "url": "[[index#h2]]",
-                "type": "internalNotFound"
+        "lastExportDate": 1698224958876,
+        "copyGlob": {}
+    },
+    "posts1/header-image-test.md": {
+        "file": {
+            "path": "posts1/header-image-test.md",
+            "folder": "posts1",
+            "name": "header-image-test",
+            "link": {
+                "path": "posts1/header-image-test.md",
+                "embed": false,
+                "type": "file"
             },
-            {
-                "text": "[[assets/18-88399fdcf82e54c15ebbaabe86ff3e5e.png]]",
-                "url": "[[assets/18-88399fdcf82e54c15ebbaabe86ff3e5e.png]]",
-                "type": "internalNotFound"
-            }
-        ]
+            "outlinks": [],
+            "inlinks": [],
+            "etags": [],
+            "tags": [],
+            "aliases": [],
+            "lists": [],
+            "tasks": [],
+            "ctime": "2023-10-25T11:26:50.735+02:00",
+            "cday": "2023-10-25T00:00:00.000+02:00",
+            "mtime": "2023-10-25T11:38:38.541+02:00",
+            "mday": "2023-10-25T00:00:00.000+02:00",
+            "size": 164,
+            "starred": false,
+            "frontmatter": {
+                "blog": "test",
+                "image": "assets/18.png",
+                "secondImage": "19.png",
+                "svg": "2018-activeet.svg",
+                "jpg": "2022-thermo.jpg",
+                "headerAttachments": "4"
+            },
+            "ext": "md"
+        },
+        "frontMatter": {
+            "blog": "test",
+            "image": "assets/18.png",
+            "secondImage": "19.png",
+            "svg": "2018-activeet.svg",
+            "jpg": "2022-thermo.jpg",
+            "headerAttachments": "4"
+        },
+        "from": "posts1/header-image-test.md",
+        "newFileName": "2023-10-25-header-image-test",
+        "to": "/home/symunona/tmp/bulk-exporter-unit-test/test/posts/2023-10-25-header-image-test..md",
+        "toRelative": "test/posts/2023-10-25-header-image-test..md",
+        "md5": "5f896a634dbdeb081e6c05eacdf742dc",
+        "content": "---\nblog: test\nimage: assets/18.png\nsecondImage: 19.png\nsvg: 2018-activeet.svg\njpg: 2022-thermo.jpg\nheaderAttachments: \"4\"\n---\nI am having some images in the header",
+        "toRelativeDir": "test/posts",
+        "lastExportDate": 1698226718541,
+        "copyGlob": {}
     }
 }

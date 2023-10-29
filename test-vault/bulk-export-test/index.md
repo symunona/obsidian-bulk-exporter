@@ -3,7 +3,6 @@ blog: test
 index: "true"
 internalLinks: "6"
 links: "6"
-embedLinks: "0"
 ---
 # h1
 I want to link [[post1]] and [anywhere subfolder find by title](post1), then [posts1/post1](posts1/post1)

@@ -2,7 +2,7 @@
 blog: test
 internalLinks: "3"
 links: "3"
-embedLinks: "0"
+lvl: one
 ---
 I want to be linked properly.
 

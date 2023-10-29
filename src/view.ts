@@ -7,6 +7,9 @@ import { getIcon } from "./obsidian-api-helpers/get-icon";
 import openSettingsPage from "./obsidian-api-helpers/open-settings-page";
 import BulkExporterPlugin from "./main";
 import { ExportMap } from "./models/export-properties";
+import { BulkExportSettings } from "./models/bulk-export-settings";
+import { ButtonWithLoader } from "./utils/button-with-loader";
+import { Select } from "./utils/select";
 
 export const META_DATA_VIEW_TYPE = "bulk-exporter-preview";
 
@@ -79,6 +82,7 @@ export class BulkExporterView extends ItemView {
 			cls: "top-right-button-container",
 		});
 
+
 		this.refreshButton = this.topRightMenuContainer.createEl("button", {title: 'Refresh'});
 		this.refreshButton.append(getIcon("refresh-cw"));
 		this.refreshButton.addEventListener("click", () => {
@@ -101,50 +105,43 @@ export class BulkExporterView extends ItemView {
 		this.exportButton = this.topRightMenuContainer.createEl("button", {
 			text: "Export ...",
 		});
-		const folderIcon = getIcon("folder-input");
-		const loaderIcon = getIcon("loader-2");
-		const exclamationIcon = getIcon("alert-circle");
-		exclamationIcon.classList.add('error')
-		loaderIcon.classList.add('spin')
-		this.exportButton.append(folderIcon);
-		this.exportButton.addEventListener("click", async () => {
-			if (
-				this.lastFoundFileList &&
-				Object.keys(this.lastFoundFileList).length
-			) {
-				folderIcon.remove()
-				exclamationIcon.remove()
-				this.exportButton.append(loaderIcon)
-				this.exportButton.disabled = true
-				try{
+
+		new ButtonWithLoader(this.topRightMenuContainer,
+			{domElementInfo: {text: 'Export...'}},
+			async ()=>{
+				if (
+					this.lastFoundFileList &&
+					Object.keys(this.lastFoundFileList).length
+				) {
 					await this.exporter.searchAndExport();
-					this.exportButton.append(folderIcon)
-				} catch (e) {
-					this.exportButton.append(exclamationIcon)
-					error(e?.message || 'Something went wrong with the export, see log!')
-					this.settingsHeader.style.display = 'block';
-					this.log.style.display = 'block'
-				} finally {
-					this.exportButton.disabled = false
-					loaderIcon.remove()
+					this.log.scrollIntoView();
+				} else {
+					new Notice("Hmmm... Nothing to export.");
 				}
+			}, (e)=>{
+				error(e?.message || 'Something went wrong with the export, see log!')
+				this.settingsHeader.style.display = 'block';
+				this.log.style.display = 'block'
+			})
 
-				this.log.scrollIntoView();
-			} else {
-				new Notice("Hmmm... Nothing to export.");
-			}
-		});
-
-		this.header.createEl("h4", { text: "Bulk Exporter Preview" });
+		const h = this.header.createEl("h4", { text: "Bulk Exporter Preview" });
+		this.renderSelector(h)
 
 		this.refresh();
 	}
 
+	exportOne(setting: BulkExportSettings){
+
+	}
+
 	async refresh() {
+		if (this.exportTable) this.exportTable.remove()
 		try {
-			const results = await this.exporter.searchFilesToExport();
-			this.lastFoundFileList = results;
-			this.renderPreviewTable(results);
+			const results = await this.exporter.searchAll();
+			// this.lastFoundFileList = results;
+			results.forEach((result)=>{
+				this.renderPreviewTable(result);
+			})
 		} catch (e) {
 			this.settingsHeader.style.display = "block";
 			console.error(e)
@@ -156,12 +153,21 @@ export class BulkExporterView extends ItemView {
 	 * @param results
 	 */
 	renderPreviewTable(results: ExportMap) {
-		if (this.exportTable) this.exportTable.remove()
+		// if (this.exportTable) this.exportTable.remove()
 		this.exportTable = new ExportTableRender(
 			this.results,
 			results,
 			this.plugin
 		);
+	}
+
+	renderSelector(root: HTMLElement){
+		const selectItems = this.plugin.settings.items.map((setting, i)=>{
+			return {text: setting.name, value: String(i)}})
+
+		new Select(root, selectItems, (evt, selectedId)=>{
+			this.plugin.settings.selected = parseInt(selectedId);
+		})
 	}
 
 	renderSettings(root: HTMLElement) {
@@ -175,11 +181,12 @@ export class BulkExporterView extends ItemView {
 					return;
 				}
 				const tr = settingsRoot.createEl("tr");
-				const value = this.plugin.settings[settingKey] as string;
-				// const keyE =
-				tr.createEl("td", { text: settingKey + ": " });
-				// const valueE =
-				tr.createEl("td", { text: value });
+
+				// const value = this.plugin.settings.items[this.plugin.settings.selected][settingKey] as string;
+				// // const keyE =
+				// tr.createEl("td", { text: settingKey + ": " });
+				// // const valueE =
+				// tr.createEl("td", { text: value });
 			}
 		);
 	}

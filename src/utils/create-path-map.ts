@@ -15,12 +15,12 @@ export function createPathMap(
 	settings: BulkExportSettings
 ): ExportMap {
 	const foundFileMap: { [key: string]: ExportProperties } = {};
-	const targetRoot = settings.outputFolder;
+	const targetRoot = settings.outputFolder || '';
 
 	queryResults.map(([link, fileDescriptor]) => {
 
 		try {
-			const targetPath = getTargetPath(fileDescriptor, settings);
+			const {targetPath} = getTargetPaths(fileDescriptor, settings);
 
 			const newFileName = basename(targetPath);
 			const extension = fileDescriptor.path.substring(fileDescriptor.path.lastIndexOf('.'))
@@ -30,11 +30,11 @@ export function createPathMap(
 				frontMatter: fileDescriptor.frontmatter,
 				from: fileDescriptor.path,
 				newFileName: newFileName,
-				to: join(targetRoot, targetPath + "." + extension),
+				toAbsoluteFs: join(targetRoot, targetPath + "." + extension),
 				toRelative: targetPath + "." + extension,
 				md5: "",
 				content: "",
-				toRelativeDir: path.parse(targetPath).dir,
+				toRelativeToExportDirRoot: path.parse(targetPath).dir,
 				lastExportDate: 0,
 			};
 			foundFileMap[fileDescriptor.path] = newExportPropertyItem;
@@ -58,7 +58,7 @@ export function createPathMap(
  * @param settings
  * @returns
  */
-function getTargetPath(
+function getTargetPaths(
 	fileDescriptor: SMarkdownPage,
 	settings: BulkExportSettings
 ) {
@@ -93,10 +93,14 @@ function getTargetPath(
 	// Serious black magic here: use the outputFormat string to evaluate.
 	try {
 		const scopedEval = new ScopedEval();
-		return scopedEval.eval("`" + settings.outputFormat + "`", fileMetaData);
+		return {
+			targetPath: scopedEval.eval("`" + settings.outputFormat + "`", fileMetaData),
+			// relativeRoot: scopedEval.eval("`" + settings.relativeFileRoot + "`", fileMetaData)
+		}
 	} catch (e) {
 		console.error(e);
 		error(e);
+		throw e
 	}
 }
 

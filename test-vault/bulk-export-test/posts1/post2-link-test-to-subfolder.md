@@ -2,7 +2,6 @@
 blog: test
 internalLinks: "5"
 links: "5"
-embedLinks: "0"
 ---
 This is the second entry.
 

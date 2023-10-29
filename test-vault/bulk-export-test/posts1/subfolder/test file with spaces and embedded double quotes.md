@@ -1,8 +1,8 @@
 ---
 blog: test
-internalLinks: "0"
-embedLinks: "2"
-links: "0"
+attachments: "2"
+internalAttachments: "2"
+lvl: two
 ---
 What do you do with this?
 

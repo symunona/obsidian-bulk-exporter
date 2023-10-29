@@ -2,7 +2,7 @@
 blog: test
 links: "3"
 externalLinks: "3"
-embedLinks: "0"
+lvl: one
 ---
 I want to test external links:
 

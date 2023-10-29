@@ -2,8 +2,9 @@ import { openFileByPath } from "src/obsidian-api-helpers/file-by-path";
 import { getIcon } from "src/obsidian-api-helpers/get-icon";
 import { ExportProperties } from "src/models/export-properties";
 import BulkExporterPlugin from "src/main";
-import { AttachmentStat } from "./get-markdown-attachments";
+
 import { log } from "src/utils/log";
+import { AttachmentLink, LinkType } from "./get-links-and-attachments";
 
 /**
  * I want great logging per file, with all the info.
@@ -51,17 +52,17 @@ export function exportedLogEntry(
             fileExportProperties.linkStats?.forEach((linkStat) => {
                 const link = linkStatContainer.createDiv({
                     cls: 'pull-in clickable',
-                    text: `${linkStat.type} `
+                    text: `${linkStat.linkType} `
                 })
-                const linkText = link.createEl('a', { text: linkStat.text || linkStat.original || linkStat.url, title: linkStat.original + ' -> ' + linkStat.newUrl })
+                const linkText = link.createEl('a', { text: linkStat.text || linkStat.originalPath || linkStat.newPath, title: linkStat.originalPath + ' -> ' + linkStat.newPath })
                 linkText.append(getIcon('external-link'))
 
                 linkText.addEventListener('click', (evt) => {
                     evt.stopPropagation();
-                    if (linkStat.type === 'external') {
-                        window.open(linkStat.url)
+                    if (linkStat.linkType === LinkType.external) {
+                        window.open(linkStat.originalPath)
                     } else {
-                        openFileByPath(plugin, linkStat.url)
+                        openFileByPath(plugin, linkStat.originalPath)
                     }
                 })
             })
@@ -117,13 +118,13 @@ export function exportedLogEntry(
     log(root);
 }
 
-function fileAssetElementCreator(asset: AttachmentStat, errorCount: number, plugin: BulkExporterPlugin) {
+function fileAssetElementCreator(asset: AttachmentLink, errorCount: number, plugin: BulkExporterPlugin) {
     const assetElement = createEl('a', {
         cls: 'clickable-link',
         title: asset.newPath,
         text: `${asset.originalPath || asset.newPath}`
     })
-    if (asset.count > 1) {
+    if (asset.count && asset.count > 1) {
         assetElement.innerText += ` (${asset.count})`
     }
     assetElement.classList.add('pull-in')

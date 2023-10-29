@@ -11,24 +11,21 @@ import { normalizeQuery } from "src/utils/normalize-query";
 import { createPathMap } from "src/utils/create-path-map";
 import BulkExporterPlugin from "src/main";
 import { Md5 } from "ts-md5";
-import {
-	AttachmentStat,
-	replaceImageLinks, replaceImageLinksInMetaData,
-} from "./get-markdown-attachments";
 import { FileListItemWrapper } from "src/ui/file-list-export-indicator";
 import {
 	ExportGroupMap,
 	ExportMap,
 	ExportProperties,
 } from "src/models/export-properties";
-import {  isArray, isString, sortBy } from "underscore";
-import { GlobMap, copyGlob } from "./globCopy";
-import { replaceLocalLinks } from "./replace-local-links";
+// import { replaceLocalLinks } from "./replace-local-links";
 import { exportedLogEntry } from "./export-log";
 import { join, normalize } from "path";
 import { runShellCommand } from "src/utils/runner";
 import { getDataViewApi } from "src/utils/data-view-api";
 import { SMarkdownPage } from "obsidian-dataview";
+import { collectAssets } from "./collect-assets";
+import { sortBy } from "underscore";
+import { BulkExportSettings } from "src/models/bulk-export-settings";
 
 export class Exporter {
 	plugin: BulkExporterPlugin;
@@ -40,29 +37,45 @@ export class Exporter {
 		this.display = new FileListItemWrapper(plugin);
 	}
 
+
+	async searchAll(){
+		return await Promise.all(this.plugin.settings.items.map((setting)=>
+			this.searchFilesToExport(setting)
+		))
+	}
+
+	async searchAndExportAll(){
+		return Promise.all(this.plugin.settings.items.map((setting)=>
+			this.searchAndExport(setting)
+		))
+	}
+
 	registerUpdates() {
 		this.plugin.registerEvent(
 			this.plugin.app.metadataCache.on(
 				// @ts-ignore
 				"dataview:metadata-change",
 				(type: string, file: SMarkdownPage) => {
-					// If this was already a file, see if it got updated!
-					const previouslyExported =
-						this.plugin.settings.lastExport[file.path];
-					if (previouslyExported) {
-						// we are updating this.
-						this.display.updateElementStatus(previouslyExported);
-					} else {
-						// File is not yet added to the list. This can be due
-						// to not matching the filter in the previous search.
-						// If a user is adding new metadata, we COULD match
-						// that against a DataView filter, but I did not yet look into that.
-						// One way could be to do the full search, and see if it's
-						// in the map, but I find that too wasteful.
-						// For now, if the user clicks on the Preview,
-						// we do the search again, which updates the sidebar too.
-						// This is good enough for me, but feel free to contribute :)
-					}
+					this.plugin.settings.items.forEach((settings) => {
+						// If this was already a file, see if it got updated!
+						const previouslyExported =
+							settings.lastExport[file.path];
+						if (previouslyExported) {
+							// we are updating this.
+							this.display.updateElementStatus(previouslyExported);
+						} else {
+							// File is not yet added to the list. This can be due
+							// to not matching the filter in the previous search.
+							// If a user is adding new metadata, we COULD match
+							// that against a DataView filter, but I did not yet look into that.
+							// One way could be to do the full search, and see if it's
+							// in the map, but I find that too wasteful.
+							// For now, if the user clicks on the Preview,
+							// we do the search again, which updates the sidebar too.
+							// This is good enough for me, but feel free to contribute :)
+						}
+					})
+
 				}
 			)
 		);
@@ -73,11 +86,11 @@ export class Exporter {
 	 * 2.- Updates file-explorer plugin with the proper exported status icons.
 	 * @returns
 	 */
-	async searchFilesToExport(): Promise<ExportMap> {
+	async searchFilesToExport(settings: BulkExportSettings): Promise<ExportMap> {
 		const dataViewApi = getDataViewApi()
 		if (dataViewApi) {
 			const initialQuery = normalizeQuery(
-				this.plugin.settings.exportQuery
+				settings.exportQuery
 			);
 			const data = await dataViewApi.query(initialQuery);
 
@@ -90,8 +103,8 @@ export class Exporter {
 				// console.warn(exportFileMap)
 				log(
 					`Found ${data.value.values.length} files for`,
-					` filter: '${this.plugin.settings.exportQuery}'`,
-					` organized by: '${this.plugin.settings.outputFormat}'`
+					` filter: '${settings.exportQuery}'`,
+					` organized by: '${settings.outputFormat}'`
 				);
 
 				if (data.value && data.value.type === "table") {
@@ -112,14 +125,14 @@ export class Exporter {
 			throw new Error("Dataview plugin to be installed.");
 		}
 	}
-	async searchAndExport() {
-		const results = await this.searchFilesToExport();
+	async searchAndExport(settings: BulkExportSettings) {
+		const results = await this.searchFilesToExport(settings);
 		// Uncomment this for the actual object info!
 		console.warn("Found files to export: ", results);
-		if (this.plugin.settings.draftField){
-			Object.keys(results).map(path=>{
+		if (settings.draftField) {
+			Object.keys(results).map(path => {
 				const fileMetaData = results[path].frontMatter;
-				if (fileMetaData[this.plugin.settings.draftField]){
+				if (fileMetaData[settings.draftField]) {
 					delete results[path]
 				}
 			})
@@ -127,6 +140,7 @@ export class Exporter {
 
 		const lastExport = await exportSelection(
 			results,
+			settings,
 			this.plugin
 		);
 
@@ -139,10 +153,10 @@ export class Exporter {
 		console.log(lastExport)
 
 		// Save the last export map so we can see what's already exported.
-		this.plugin.settings.lastExport = lastExport
+		settings.lastExport = lastExport
 
 		this.plugin.saveSettings();
-		this.display.applyStatusIcons(this.plugin.settings.lastExport);
+		this.display.applyStatusIcons(settings.lastExport);
 	}
 }
 
@@ -157,7 +171,7 @@ export function getGroups(
 	const ret: { [key: string]: Array<ExportProperties> } = {}
 
 	Object.keys(fileMap).forEach((filePath) => {
-		const dir = fileMap[filePath].toRelativeDir as string;
+		const dir = fileMap[filePath].toRelativeToExportDirRoot as string;
 		if (!ret[dir]) { ret[dir] = [] }
 		ret[dir].push(fileMap[filePath])
 	})
@@ -173,12 +187,13 @@ export function getGroups(
  */
 export async function exportSelection(
 	fileList: ExportMap,
+	settings: BulkExportSettings,
 	plugin: BulkExporterPlugin
 ): Promise<ExportMap> {
 	const start = new Date();
 	// Check if target directory exists
-	const outputFolder = plugin.settings.outputFolder;
-	const outputPathMap: {[path: string]: Array<ExportProperties>} = {}
+	const outputFolder = settings.outputFolder;
+	const outputPathMap: { [path: string]: Array<ExportProperties> } = {}
 	log("=============================");
 	log("Export to " + outputFolder);
 
@@ -187,15 +202,17 @@ export async function exportSelection(
 		log("Created new target folder: " + outputFolder);
 	}
 
-	// If emptying target folder is set, remove all the folders that are to be exporter.
-	// Doing it this way, the root of the folder remains intact.
-	if (plugin.settings.emptyTargetFolder){
-		Object.keys(getGroups(fileList)).forEach((path)=>{
-			const targetDir = join(normalize(outputFolder), path);
-			if (existsSync(targetDir)) {
-				rmSync(targetDir, { recursive: true, force: true });
-			}
-		})
+	// If emptying target folder is set, remove all files and folders within.
+	if (settings.emptyTargetFolder) {
+		console.warn('deleting folder', settings.outputFolder)
+		existsSync(settings.outputFolder)
+		rmSync(settings.outputFolder, { recursive: true, force: true });
+	// 	Object.keys(getGroups(fileList)).forEach((path) => {
+	// 		const targetDir = join(normalize(outputFolder), path);
+	// 		if (existsSync(targetDir)) {
+	// 			rmSync(targetDir, { recursive: true, force: true });
+	// 		}
+	// 	})
 	}
 
 	for (const fileIndex in fileList) {
@@ -211,17 +228,17 @@ export async function exportSelection(
 			exportProperties.file?.mtime
 		).getTime();
 
-		outputPathMap[exportProperties.toRelativeDir] = outputPathMap[exportProperties.toRelativeDir] || []
-		outputPathMap[exportProperties.toRelativeDir].push(exportProperties)
+		outputPathMap[exportProperties.toRelativeToExportDirRoot] = outputPathMap[exportProperties.toRelativeToExportDirRoot] || []
+		outputPathMap[exportProperties.toRelativeToExportDirRoot].push(exportProperties)
 	}
 
 	exportedLogEntry(outputPathMap, plugin)
 
-	if (plugin.settings.shell && plugin.settings.shell.trim()){
-		log('Starting shell script ', plugin.settings.shell)
+	if (settings.shell && settings.shell.trim()) {
+		log('Starting shell script ', settings.shell)
 		const shellStart = new Date()
-		await runShellCommand(plugin.settings.shell)
-		log('Finished shell script! ', (new Date().getTime() - shellStart.getTime())/1000, 's')
+		await runShellCommand(settings.shell)
+		log('Finished shell script! ', (new Date().getTime() - shellStart.getTime()) / 1000, 's')
 	}
 
 	new Notice("Exported to " + outputFolder);
@@ -239,7 +256,7 @@ export async function convertAndCopy(
 	allFileListMap: ExportMap,
 	plugin: BulkExporterPlugin
 ) {
-	const targetDir = join(normalize(rootPath), fileExportProperties.toRelativeDir);
+	const targetDir = join(normalize(rootPath), fileExportProperties.toRelativeToExportDirRoot);
 	const fileDescriptor = fileExportProperties.file;
 
 	if (!existsSync(targetDir)) {
@@ -253,10 +270,10 @@ export async function convertAndCopy(
 	fileExportProperties.md5 = Md5.hashStr(fileContent);
 
 	await collectAssets(fileExportProperties, plugin);
-	fileExportProperties.linkStats = replaceLocalLinks(fileExportProperties, allFileListMap);
+	// fileExportProperties.linkStats = replaceLocalLinks(fileExportProperties, allFileListMap);
 
 	writeFileSync(
-		fileExportProperties.to,
+		fileExportProperties.toAbsoluteFs,
 		fileExportProperties.content,
 		"utf-8"
 	);
@@ -264,59 +281,3 @@ export async function convertAndCopy(
 	return fileExportProperties;
 }
 
-
-/**
- * This function assumes, that we have the file content loaded into the
- * `content`
- * parameter within fileExportProperties, and overwrites that, removing/
- * moving the references further described in get-markdown-attachments.ts.
- * @param fileExportProperties file being processed
- * @param settings to retrieve assetPath
- * @param plugin
- * @returns
- */
-async function collectAssets(
-	fileExportProperties: ExportProperties,
-	plugin: BulkExporterPlugin
-) {
-	const imageLinkListInBody: Array<AttachmentStat> = [], imageLinkListInMeta: Array<AttachmentStat> = [];
-	// Look for images!
-	const imageLinkListInBodyMap = await replaceImageLinks(
-		fileExportProperties,
-		plugin
-	);
-	Object.keys(imageLinkListInBodyMap).map((key)=>{
-		imageLinkListInBody.push(imageLinkListInBodyMap[key])
-	})
-
-	const imageLinkListInMetaMap = await replaceImageLinksInMetaData(
-		fileExportProperties,
-		plugin
-	);
-	Object.keys(imageLinkListInMetaMap).map((key)=>{
-		imageLinkListInMeta.push(imageLinkListInMetaMap[key])
-	})
-
-	const frontMatterData = fileExportProperties.frontMatter;
-
-	const filesCopied: GlobMap = {}
-	if (frontMatterData && frontMatterData.copy) {
-		// const relativeRoot = parse(fileExportProperties.from).dir
-		// log(`[glob] [${fileExportProperties.newFileName}.md] has a copy property.
-		// Looking for file matches here: ${relativeRoot}`);
-		// Iterate every file that matches the regex.
-		if (isArray(frontMatterData.copy)) {
-			for(let i = 0; i < frontMatterData.copy.length; i++){
-				const globPattern = frontMatterData.copy[i]
-				filesCopied[globPattern] = await copyGlob(fileExportProperties, globPattern, plugin)
-			}
-		} else if (isString(frontMatterData.copy)) {
-			filesCopied[frontMatterData.copy] = await copyGlob(fileExportProperties, frontMatterData.copy, plugin)
-		}
-	}
-	fileExportProperties.imageInBody = imageLinkListInBody;
-	fileExportProperties.imageInMeta = imageLinkListInMeta;
-	fileExportProperties.copyGlob = filesCopied
-
-	return fileExportProperties
-}
