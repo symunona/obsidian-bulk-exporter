@@ -2,6 +2,7 @@ import { App, PluginSettingTab, Setting } from "obsidian";
 
 import BulkExporterPlugin, { DEFAULT_SETTINGS } from "src/main";
 import { BulkExportSettings } from "src/models/bulk-export-settings";
+import { ConfirmModal } from "src/ui/confirm-modal";
 
 export class OutputSettingTab extends PluginSettingTab {
 	plugin: BulkExporterPlugin;
@@ -40,7 +41,7 @@ export class OutputSettingTab extends PluginSettingTab {
 		this.buttons = this.plugin.settings.items.map((setting, index) =>
 			this.createButton(setting)
 		)
-		this.buttons.map((e)=>this.header.append(e))
+		this.buttons.map((e) => this.header.append(e))
 
 		const addBtn = this.header.createEl('button', { cls: 'tab-header add-element', text: '+' })
 		addBtn.addEventListener('click', () => {
@@ -49,11 +50,18 @@ export class OutputSettingTab extends PluginSettingTab {
 			newSetting.groupOpenMap = {}
 			newSetting.lastExport = {}
 			this.plugin.settings.items.push(newSetting)
-			addBtn.parentNode?.insertBefore(this.createButton(newSetting), addBtn)
-
+			const newBtn = this.createButton(newSetting)
+			this.buttons.push(newBtn)
+			addBtn.parentNode?.insertBefore(newBtn, addBtn)
+			this.selectSetting(newSetting)
 		})
+		this.selectSetting()
+	}
 
-		if (this.plugin.settings.items.length === 0) {
+	selectSetting(setting?: BulkExportSettings) {
+		if (setting) {
+			this.renderSettingsPage(this.tabs, setting)
+		} else if (this.plugin.settings.items.length === 0) {
 			// Create default
 			this.plugin.settings.items.push(Object.assign({}, DEFAULT_SETTINGS))
 			this.renderSettingsPage(this.tabs, this.plugin.settings.items[0])
@@ -70,7 +78,7 @@ export class OutputSettingTab extends PluginSettingTab {
 		const button = createEl('button', { cls: 'tab-header', text: setting.name || 'no-name' })
 		button.addEventListener('click', async () => {
 			this.plugin.settings.selected = this.plugin.settings.items.indexOf(setting)
-			this.renderSettingsPage(this.tabs, setting)
+			this.selectSetting(setting)
 			await this.plugin.saveSettings();
 		})
 		return button
@@ -79,6 +87,7 @@ export class OutputSettingTab extends PluginSettingTab {
 	renderSettingsPage(containerEl: HTMLElement, settings: BulkExportSettings) {
 		containerEl.empty();
 
+		this.plugin.settings.selected = this.plugin.settings.items.indexOf(settings)
 		this.buttons.forEach((b) => b.classList.remove('active'))
 		this.buttons[this.plugin.settings.selected].classList.add('active')
 
@@ -86,17 +95,17 @@ export class OutputSettingTab extends PluginSettingTab {
 			.setName("Name of the export set")
 			.addText((text) =>
 				text
-				.setPlaceholder('default')
-				.setValue(settings.name)
-				.onChange(async (value) => {
-					settings.name = value
-					this.buttons[this.plugin.settings.selected].setText(settings.name)
-					await this.plugin.saveSettings();
-				})
-		);
+					.setPlaceholder('default')
+					.setValue(settings.name)
+					.onChange(async (value) => {
+						settings.name = value
+						this.buttons[this.plugin.settings.selected].setText(settings.name)
+						await this.plugin.saveSettings();
+					})
+			);
 
 		new Setting(containerEl)
-			.setName("Export Folder")
+			.setName("Export Target Folder")
 			.setDesc("Which folder do you want to export converted markdown files with their assets?")
 			.addText((text) =>
 				text
@@ -123,20 +132,6 @@ export class OutputSettingTab extends PluginSettingTab {
 					.setValue(settings.exportQuery)
 					.onChange(async (value) => {
 						settings.exportQuery = value;
-						await this.plugin.saveSettings();
-					})
-			);
-
-		new Setting(containerEl)
-			.setName("Draft Field")
-			.setDesc("If provided, files that have this field in their front matter will be shown on the file tree and the export preview, but will not get actually exported.")
-			.addText((text) =>
-				text
-					.setPlaceholder("key of the meta value, like draft")
-					.setValue(settings.draftField)
-					.onChange(async (value) => {
-						settings.draftField = value.trim();
-						// TODO: validate! Can I validate?
 						await this.plugin.saveSettings();
 					})
 			);
@@ -174,19 +169,38 @@ export class OutputSettingTab extends PluginSettingTab {
 					})
 			);
 
+
+		containerEl.createEl('h2', { text: 'Preview' })
+
 		new Setting(containerEl)
-			.setName("Run Script After Export")
-			.setDesc("Place here anything you want to run after the export is done. Uses child_process.spawn.")
+			.setName("Draft Field")
+			.setDesc("If provided, files that have this field in their front matter will be shown on the file tree and the export preview, but will not get actually exported.")
 			.addText((text) =>
 				text
-					.setPlaceholder("shell script path")
-					.setValue(settings.shell)
+					.setPlaceholder("key of the meta value, like draft")
+					.setValue(settings.draftField)
 					.onChange(async (value) => {
-						settings.shell = value;
+						settings.draftField = value.trim();
 						// TODO: validate! Can I validate?
 						await this.plugin.saveSettings();
 					})
 			);
+
+
+		new Setting(containerEl)
+			.setName("Visible Columns")
+			.setDesc("Same as clicking on the eye icon")
+			.addText((text) =>
+				text
+					.setPlaceholder("*")
+					.setValue(settings.headerFieldsToShow.join(', '))
+					.onChange(async (value) => {
+						settings.headerFieldsToShow = value.split(',').map(v=>v.trim()).filter(v=>v);
+						await this.plugin.saveSettings();
+					})
+			);
+
+
 
 		containerEl.createEl('h2', { text: 'Attachments and Links' })
 
@@ -203,6 +217,7 @@ export class OutputSettingTab extends PluginSettingTab {
 					})
 			);
 
+
 		new Setting(containerEl)
 			.setName("Attachment / Asset folder name")
 			.setDesc("Relative to the file's export path, or absolute, to the file's Attachment and link root above.")
@@ -218,16 +233,39 @@ export class OutputSettingTab extends PluginSettingTab {
 			);
 
 
-		if (this.plugin.settings.items.length > 1){
+
+		containerEl.createEl('h2', { text: '' })
+
+		new Setting(containerEl)
+			.setName("Run Script After Export")
+			.setDesc("Place here anything you want to run after the export is done. Uses child_process.spawn.")
+			.addText((text) =>
+				text
+					.setPlaceholder("shell script path")
+					.setValue(settings.shell)
+					.onChange(async (value) => {
+						settings.shell = value;
+						// TODO: validate! Can I validate?
+						await this.plugin.saveSettings();
+					})
+			);
+
+
+		if (this.plugin.settings.items.length > 1) {
 			containerEl.createEl('hr')
-			const deleteButton = containerEl.createEl('button', {text: 'Delete this Export Settings', cls: 'danger'})
-			deleteButton.addEventListener('click', ()=>{
-				this.plugin.settings.items.splice(this.plugin.settings.selected, 1)
-				this.plugin.saveSettings()
-				this.
+			const deleteButton = containerEl.createEl('button', { text: 'Delete this Export Settings', cls: 'danger' })
+			deleteButton.addEventListener('click', () => {
+				new ConfirmModal(this.plugin.app, {
+					okClass: 'danger',
+					okText: 'Delete',
+					okCallback: () => {
+						this.plugin.settings.items.splice(this.plugin.settings.selected, 1)
+						this.plugin.saveSettings()
+						this.buttons[this.plugin.settings.selected].remove()
+						this.selectSetting()
+					}
+				}).open()
 			})
 		}
-
-		// Should have an example preview here
 	}
 }

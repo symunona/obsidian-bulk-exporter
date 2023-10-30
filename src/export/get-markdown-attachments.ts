@@ -15,7 +15,7 @@
  * - if yes, replace the link with their new address
  * - if no, make them plain text.
  *
- *  Images:
+ *  Images/attachments:
  * - find all the embedded images
  * - if they are linked from the web, just ignore
  * - if they are from local refs
@@ -27,10 +27,11 @@ import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "fs";
 import { basename, dirname, join } from "path";
 import BulkExporterPlugin from "../main";
 import { ExportProperties } from "../models/export-properties";
-import replaceAll, { matchAll } from "../utils/replace-all";
 import { Md5 } from "ts-md5";
 import { AttachmentLink } from "./get-links-and-attachments";
 import { BulkExportSettings } from "src/models/bulk-export-settings";
+import { getAssetPaths } from "src/utils/asset-and-link-paths";
+import replaceAll from "src/utils/replace-all";
 
 export const ATTACHMENT_URL_REGEXP = /!\[\[((.*?)\.(\w+))\]\]/g;
 export const MARKDOWN_ATTACHMENT_URL_REGEXP = /!\[(.*?)\]\(((.*?)\.(\w+))\)/g;
@@ -49,69 +50,78 @@ export function collectAndReplaceHeaderAttachments(
 	exportProperties: ExportProperties,
 	attachments: AttachmentLink[]
 ) {
-	// "text" is the YAML key here.
 	attachments.forEach((attachment) => {
 		// Is coming from the meta, and is it an ignore key like copy?
 		if (attachment.source === 'frontMatter' && META_KEY_IGNORE_LIST.indexOf(attachment.text) > -1) { return; }
 
 		saveAttachmentToLocation(plugin, settings, attachment, exportProperties)
 
-		attachment.token.content = `${attachment.text}: ${attachment.newPath}`
+		// Replace the links in the header.
+		if (attachment.newPath) {
+			const contentSplitByHrDashes = exportProperties.content.split('\n---\n')
+
+			// This is not pretty, but it works.
+			let frontMatterPart = contentSplitByHrDashes.shift() || ''
+			frontMatterPart = replaceAll(attachment.originalPath, frontMatterPart, attachment.newPath)
+			contentSplitByHrDashes.unshift(frontMatterPart)
+			exportProperties.content = contentSplitByHrDashes.join('\n---\n')
+		}
 	})
 }
 
-function saveAttachmentToLocation(
+export function collectAndReplaceInlineAttachments(
+	plugin: BulkExporterPlugin,
+	settings: BulkExportSettings,
+	exportProperties: ExportProperties,
+	attachments: AttachmentLink[]
+) {
+	// "text" is the YAML key here.
+	attachments.forEach((attachment) => {
+		saveAttachmentToLocation(plugin, settings, attachment, exportProperties)
+		// I have experimented with this a lot.
+		// @see comments in getLinksAndAttachments.
+		// I normalized before exportProperties.content to only have []() style links.
+		exportProperties.content = replaceAll(`](${attachment.originalPath})`, exportProperties.content, `](${attachment.newPath})`)
+	})
+}
+
+async function saveAttachmentToLocation(
 	plugin: BulkExporterPlugin,
 	settings: BulkExportSettings,
 	attachment: AttachmentLink,
 	exportProperties: ExportProperties
 ) {
-	const assetFolderName = settings.assetPath || 'assets'
-
 	const imageLink = decodeURI(attachment.originalPath);
-	const imageLinkMd5 = Md5.hashStr(imageLink);
+
 	const imageName = basename(imageLink);
+
 	const imageNameWithoutExtension = imageName.substring(0, imageName.lastIndexOf("."));
 	const imageExtension = imageName.substring(imageName.lastIndexOf("."));
 
 	// Find the file in the vault
-	// QUESTION: Is this the best way to do this? Is this the same endpoint that the link resolver uses?
+	// QUESTION: Is this the best way to do this?
+	// Is this the same endpoint that the link resolver uses?
 	const asset = plugin.app.metadataCache.getFirstLinkpathDest(imageLink, exportProperties.from);
 
 	if (!asset) {
 		// For now, let's settle with "asset not found"
 		attachment.error = "Asset not found!"
 		attachment.status = "assetNotFound"
+		// console.error('asset not found', asset)
+
+		return
 	}
 
-	////// --------------------------------------------------------------------------------------------
-	////// --------------------------------------------------------------------------------------------
-	////// --------------------------------------------------------------------------------------------
-	// I need to find a generic way to have separate roots for separate blogs.
-	// I am starting to think that the best way is to just have a per/blog settings page.
-	// Currently, I have a huge hustle with putting the attachments relative to their page's place, while
-	// what I could be doing is just have a root /assets folder in which everything goes and everything references
-	// that.
+	const { toDir, toDirRelative } = getAssetPaths(exportProperties, settings)
 
-	const {
-		targetAbsolute,
-		targetRelative
-	} = getAssetPaths(exportProperties, settings)
+	const imageLinkMd5 = Md5.hashStr(asset.path);
+	const imageTargetFileName = imageNameWithoutExtension + "-" + imageLinkMd5 + imageExtension;
 
-	const filePath = asset !== null
-		? asset.path
-		: join(dirname(exportProperties.from), imageLink);
+	// Calculate the link within the markdown file, using the target's relative path!
+	const documentLink = join(toDirRelative, imageTargetFileName);
+	attachment.newPath = documentLink;
 
-	// Create asset dir if not exists
-	const toDir = dirname(exportProperties.toAbsoluteFs);
-	const imageTargetFileName =
-		imageNameWithoutExtension + "-" + imageLinkMd5 + imageExtension;
-	const documentLink = join(assetFolderName, imageTargetFileName);
-	const assetAbsoluteTarget = join(
-		toDir,
-		assetFolderName,
-		imageTargetFileName
-	);
+	const assetAbsoluteTarget = join(toDir, imageTargetFileName);
 	const absoluteTargetDir = dirname(assetAbsoluteTarget);
 
 	if (!existsSync(absoluteTargetDir)) {
@@ -119,24 +129,11 @@ function saveAttachmentToLocation(
 		mkdirSync(absoluteTargetDir, { recursive: true });
 	}
 
-	if (!asset) {
-		return { str, count: 0, status: 'assetNotFound' };
-	}
-
-	// Update the content with the new asset URL.
-
-	const count: number = matchAll(urlEncodedImageLink, str)?.length || 0
-
-	str = replaceAll(
-		urlEncodedImageLink,
-		str,
-		documentLink
-	);
-
 	// If we have a local system, use a simple copy, if we
 	// have a cloud store, export the binary.
 	if (existsSync(assetAbsoluteTarget)) {
-		return { str, count, status: 'alreadyExists' };
+		// Target file already exists, no need to copy.
+		return
 	}
 
 	// @ts-ignore : simple way to figure out if we are on the cloud I guess.
@@ -145,306 +142,11 @@ function saveAttachmentToLocation(
 	if (basePath) {
 		const fullAssetPath = join(
 			basePath,
-			filePath
+			asset.path
 		);
 		copyFileSync(fullAssetPath, assetAbsoluteTarget);
 	} else {
 		const assetContent = await plugin.app.vault.readBinary(asset);
 		writeFileSync(assetAbsoluteTarget, Buffer.from(assetContent));
-	}
-	return {
-		str, count, status: 'success', imageAttachment: {
-			originalPath: filePath,
-			newPath: imageTargetFileName,
-			count: 0
-		}
-	}
-}
-
-
-export async function replaceOneImageLink(
-	str: string,
-	urlEncodedImageLink: string,
-	exportProperties: ExportProperties,
-	// used for: plugin.settings, reading binary
-	plugin: BulkExporterPlugin): Promise<ReplaceOneResult> {
-
-	const assetFolderName = plugin.settings.assetPath || 'assets'
-
-	const imageLink = decodeURI(urlEncodedImageLink);
-	const imageLinkMd5 = Md5.hashStr(imageLink);
-	const imageName = basename(imageLink);
-	const imageNameWithoutExtension = imageName.substring(
-		0,
-		imageName.lastIndexOf(".")
-	);
-	const imageExtension = imageName.substring(imageName.lastIndexOf("."));
-
-	const asset = plugin.app.metadataCache.getFirstLinkpathDest(
-		imageLink,
-		exportProperties.from
-	);
-
-	const filePath =
-		asset !== null
-			? asset.path
-			: join(dirname(exportProperties.from), imageLink);
-
-	// filter markdown link eg: http://xxx.png
-	// If this is an external url and we have the importFromWeb true, download the resource.
-	if (urlEncodedImageLink.startsWith("http")) {
-		return { str, count: 0, status: 'webLink' };
-	}
-
-	// Create asset dir if not exists
-	const toDir = dirname(exportProperties.toAbsoluteFs);
-	const imageTargetFileName =
-		imageNameWithoutExtension + "-" + imageLinkMd5 + imageExtension;
-	const documentLink = join(assetFolderName, imageTargetFileName);
-	const assetAbsoluteTarget = join(
-		toDir,
-		assetFolderName,
-		imageTargetFileName
-	);
-	const absoluteTargetDir = dirname(assetAbsoluteTarget);
-
-	if (!existsSync(absoluteTargetDir)) {
-		// Create new group-by asset folder
-		mkdirSync(absoluteTargetDir, { recursive: true });
-	}
-
-	if (!asset) {
-		return { str, count: 0, status: 'assetNotFound' };
-	}
-
-	// Update the content with the new asset URL.
-
-	const count: number = matchAll(urlEncodedImageLink, str)?.length || 0
-
-	str = replaceAll(
-		urlEncodedImageLink,
-		str,
-		documentLink
-	);
-
-	// If we have a local system, use a simple copy, if we
-	// have a cloud store, export the binary.
-	if (existsSync(assetAbsoluteTarget)) {
-		return { str, count, status: 'alreadyExists' };
-	}
-
-	// @ts-ignore : simple way to figure out if we are on the cloud I guess.
-	const basePath = plugin.app.vault.adapter.basePath;
-
-	if (basePath) {
-		const fullAssetPath = join(
-			basePath,
-			filePath
-		);
-		copyFileSync(fullAssetPath, assetAbsoluteTarget);
-	} else {
-		const assetContent = await plugin.app.vault.readBinary(asset);
-		writeFileSync(assetAbsoluteTarget, Buffer.from(assetContent));
-	}
-	return {
-		str, count, status: 'success', imageAttachment: {
-			originalPath: filePath,
-			newPath: imageTargetFileName,
-			count: 0
-		}
-	}
-}
-
-
-
-
-/**
- * Does not yet support pulling external images in, it just leaves them in place.
- */
-export async function replaceImageLinks(
-	exportProperties: ExportProperties,
-	plugin: BulkExporterPlugin
-) {
-
-	let str = exportProperties.content;
-
-	for (const index in imageLinks) {
-		const urlEncodedImageLink =
-			imageLinks[index][imageLinks[index].length - 3];
-		const results = await replaceOneImageLink(str, urlEncodedImageLink, exportProperties, plugin);
-		str = results.str
-
-		list[urlEncodedImageLink] = list[urlEncodedImageLink] || {
-			originalPath: urlEncodedImageLink,
-			newPath: results.imageAttachment?.newPath || list[urlEncodedImageLink]?.newPath,
-			type: 'body',
-			status: results.status,
-			count: 0
-		}
-		list[urlEncodedImageLink].count += results.count
-	}
-	exportProperties.content = str
-	return list
-}
-
-
-
-
-
-
-// /**
-//  * If a meta property is referencing an image, do copy that over too!
-//  * Not having a better way to do this: just regex for a no-space value
-//  * ending with .(png|jpe?g|gif|webp)
-//  *
-//  * @param exportProperties
-//  * @param plugin
-//  * @returns
-//  */
-
-
-// export async function replaceImageLinksInMetaData(
-// 	exportProperties: ExportProperties,
-// 	plugin: BulkExporterPlugin
-// ) {
-// 	const frontMatterData = exportProperties.frontMatter;
-// 	const list :{ [originalUrl: string]: AttachmentLink} = {};
-// 	let str = exportProperties.content;
-
-// 	for (let key in frontMatterData) {
-// 		if (META_KEY_IGNORE_LIST.indexOf(key) > -1){ continue }
-// 		const value = frontMatterData[key]
-// 		if (isArray(value)) {
-// 			value.forEach(async (imageUrl: string) => {
-// 				const isImage: boolean = isImageUrl(imageUrl)
-// 				if (isImage) {
-// 					const results = await replaceOneImageLink(str, imageUrl, exportProperties, plugin);
-// 					str = results.str
-
-// 					list[imageUrl] = list[imageUrl] || {
-// 						originalPath: imageUrl,
-// 						newPath: results.imageAttachment?.newPath || list[imageUrl]?.newPath,
-// 						type: 'frontMatter',
-// 						status: results.status,
-// 						count: 0
-// 					}
-// 					list[imageUrl].count += results.count
-// 				}
-// 			})
-// 		}
-// 		else if (isString(value)) {
-// 			const imageUrl = value
-// 			const isImage: boolean = isImageUrl(imageUrl)
-// 			if (isImage) {
-// 				const results = await replaceOneImageLink(str, value, exportProperties, plugin);
-// 				str = results.str
-// 				list[imageUrl] = list[imageUrl] || {
-// 					originalPath: imageUrl,
-// 					newPath: results.imageAttachment?.newPath || list[imageUrl]?.newPath,
-// 					type: 'frontMatter',
-// 					status: results.status,
-// 					count: 0
-// 				}
-// 				list[imageUrl].count += results.count
-// 			}
-// 		}
-// 	}
-
-// 	exportProperties.content = str
-// 	return list
-// }
-
-
-
-export async function replaceOneImageLink(
-	str: string,
-	urlEncodedImageLink: string,
-	exportProperties: ExportProperties,
-	// used for: plugin.settings, reading binary
-	plugin: BulkExporterPlugin): Promise<ReplaceOneResult> {
-
-	const assetFolderName = plugin.settings.assetPath || 'assets'
-
-	const imageLink = decodeURI(urlEncodedImageLink);
-	const imageLinkMd5 = Md5.hashStr(imageLink);
-	const imageName = basename(imageLink);
-	const imageNameWithoutExtension = imageName.substring(
-		0,
-		imageName.lastIndexOf(".")
-	);
-	const imageExtension = imageName.substring(imageName.lastIndexOf("."));
-
-	const asset = plugin.app.metadataCache.getFirstLinkpathDest(
-		imageLink,
-		exportProperties.from
-	);
-
-	const filePath =
-		asset !== null
-			? asset.path
-			: join(dirname(exportProperties.from), imageLink);
-
-	// filter markdown link eg: http://xxx.png
-	// If this is an external url and we have the importFromWeb true, download the resource.
-	if (urlEncodedImageLink.startsWith("http")) {
-		return { str, count: 0, status: 'webLink' };
-	}
-
-	// Create asset dir if not exists
-	const toDir = dirname(exportProperties.toAbsoluteFs);
-	const imageTargetFileName =
-		imageNameWithoutExtension + "-" + imageLinkMd5 + imageExtension;
-	const documentLink = join(assetFolderName, imageTargetFileName);
-	const assetAbsoluteTarget = join(
-		toDir,
-		assetFolderName,
-		imageTargetFileName
-	);
-	const absoluteTargetDir = dirname(assetAbsoluteTarget);
-
-	if (!existsSync(absoluteTargetDir)) {
-		// Create new group-by asset folder
-		mkdirSync(absoluteTargetDir, { recursive: true });
-	}
-
-	if (!asset) {
-		return { str, count: 0, status: 'assetNotFound' };
-	}
-
-	// Update the content with the new asset URL.
-
-	const count: number = matchAll(urlEncodedImageLink, str)?.length || 0
-
-	str = replaceAll(
-		urlEncodedImageLink,
-		str,
-		documentLink
-	);
-
-	// If we have a local system, use a simple copy, if we
-	// have a cloud store, export the binary.
-	if (existsSync(assetAbsoluteTarget)) {
-		return { str, count, status: 'alreadyExists' };
-	}
-
-	// @ts-ignore : simple way to figure out if we are on the cloud I guess.
-	const basePath = plugin.app.vault.adapter.basePath;
-
-	if (basePath) {
-		const fullAssetPath = join(
-			basePath,
-			filePath
-		);
-		copyFileSync(fullAssetPath, assetAbsoluteTarget);
-	} else {
-		const assetContent = await plugin.app.vault.readBinary(asset);
-		writeFileSync(assetAbsoluteTarget, Buffer.from(assetContent));
-	}
-	return {
-		str, count, status: 'success', imageAttachment: {
-			originalPath: filePath,
-			newPath: imageTargetFileName,
-			count: 0
-		}
 	}
 }

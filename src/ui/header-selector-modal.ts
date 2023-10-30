@@ -1,5 +1,6 @@
 import { Modal, Setting } from "obsidian";
 import BulkExporterPlugin from "src/main";
+import { BulkExportSettings } from "src/models/bulk-export-settings";
 
 export class HeaderFieldSelectorModal extends Modal {
   result: Array<string>;
@@ -10,13 +11,15 @@ export class HeaderFieldSelectorModal extends Modal {
   preview: HTMLInputElement;
   plugin: BulkExporterPlugin;
   toggleWrapper: HTMLElement;
+  settings: BulkExportSettings;
 
-  constructor(plugin: BulkExporterPlugin, headerFields: Array<string>, onSubmit: (result: Array<string>) => void) {
+  constructor(plugin: BulkExporterPlugin, settings: BulkExportSettings, headerFields: Array<string>, onSubmit: (result: Array<string>) => void) {
     super(plugin.app);
     this.plugin = plugin
     this.onSubmit = onSubmit;
+    this.enabled = settings.headerFieldsToShow;
+    this.settings = settings
     this.headerFields = headerFields
-    this.enabled = plugin.settings.headerFieldsToShow;
   }
 
   onOpen() {
@@ -47,7 +50,7 @@ export class HeaderFieldSelectorModal extends Modal {
         this.close();
 
         this.enabled = this.preview.value.split(',').map((s)=>s.trim());
-        this.plugin.settings.headerFieldsToShow = this.preview.value.split(',').map((s)=>s.trim());
+        this.settings.headerFieldsToShow = this.preview.value.split(',').map((s)=>s.trim()).filter(s=>s);
         this.plugin.saveSettings()
         this.onSubmit(this.enabled);
       }));
@@ -79,7 +82,6 @@ export class HeaderFieldSelectorModal extends Modal {
   }
 
   onClose() {
-    let { contentEl } = this;
-    contentEl.empty();
+    this.contentEl.empty();
   }
 }

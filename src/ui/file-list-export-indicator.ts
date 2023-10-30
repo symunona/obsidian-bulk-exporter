@@ -10,7 +10,6 @@ export class FileListItemWrapper {
 
 	constructor(plugin: BulkExporterPlugin) {
 		this.plugin = plugin;
-		this.settings = this.plugin.settings;
 	}
 
 	/**
@@ -38,8 +37,7 @@ export class FileListItemWrapper {
 	/**
 	 * Adds an icon before the name element in file-explorer view
 	 */
-	async applyStatusIcons(fileMap: ExportMap) {
-		const settings = (await this.plugin.loadData()) || {};
+	async applyStatusIcons(fileMap: ExportMap, settings: BulkExportSettings) {
 		const lastExport = settings.lastExport || {};
 		const fileExplorers =
 			this.plugin.app.workspace.getLeavesOfType("file-explorer");
@@ -60,7 +58,8 @@ export class FileListItemWrapper {
 							fileItemElement,
 							path,
 							lastExport[path],
-							fileMap[path].frontMatter
+							fileMap[path].frontMatter,
+							settings
 						);
 					}
 				}
@@ -68,8 +67,8 @@ export class FileListItemWrapper {
 		});
 	}
 
-	updateElementStatus(exportProperties: ExportProperties) {
-		const lastExport = this.settings.lastExport || {};
+	updateElementStatus(exportProperties: ExportProperties, settings: BulkExportSettings) {
+		const lastExport = settings.lastExport || {};
 		const fileExplorers =
 			this.plugin.app.workspace.getLeavesOfType("file-explorer");
 
@@ -97,7 +96,8 @@ export class FileListItemWrapper {
 				fileItemElement,
 				exportProperties.from,
 				lastExport[exportProperties.from],
-				exportProperties.frontMatter
+				exportProperties.frontMatter,
+				settings
 			);
 		});
 	}
@@ -106,7 +106,8 @@ export class FileListItemWrapper {
 		element: HTMLElement,
 		path: string,
 		alreadyExported: ExportProperties,
-		frontMatter: { [key: string]: any }
+		frontMatter: { [key: string]: any },
+		settings: BulkExportSettings
 	) {
 		let iconSpanAddedAlready = element.querySelector(".export-plugin-icon");
 
@@ -123,15 +124,14 @@ export class FileListItemWrapper {
 		iconSpanAddedAlready.innerHTML = "";
 
 		if (
-			this.plugin.settings.draftField &&
+			settings.draftField &&
 			frontMatter &&
-			frontMatter[this.plugin.settings.draftField]
+			frontMatter[settings.draftField]
 		) {
 			iconSpanAddedAlready.classList.add("grey");
 			iconSpanAddedAlready.append(getIcon("file-plus"));
 			// @ts-ignore - this is a DOM Element, I have no clue why id would not have a title attr prop...
-			iconSpanAddedAlready.title = "Draft";
-
+			iconSpanAddedAlready.title = "Draft - " + settings.name;
 			return;
 		}
 
@@ -140,7 +140,7 @@ export class FileListItemWrapper {
 			iconSpanAddedAlready.classList.add("lime");
 			iconSpanAddedAlready.append(getIcon("file-plus"));
 			// @ts-ignore - this is a DOM Element, I have no clue why id would not have a title attr prop...
-			iconSpanAddedAlready.title = "New - Added After Last Export";
+			iconSpanAddedAlready.title = "New - Added After Last Export - " + settings.name;
 		} else {
 			// Is the content up to date?
 			const file = this.plugin.app.metadataCache.getFirstLinkpathDest(
@@ -157,12 +157,12 @@ export class FileListItemWrapper {
 				iconSpanAddedAlready.classList.add("green");
 				iconSpanAddedAlready.append(getIcon("check-circle"));
 				// @ts-ignore
-				iconSpanAddedAlready.title = "Up to date";
+				iconSpanAddedAlready.title = "Up to date - " + settings.name;
 			} else {
 				iconSpanAddedAlready.classList.add("orange");
 				iconSpanAddedAlready.append(getIcon("file-plus"));
 				// @ts-ignore
-				iconSpanAddedAlready.title = "Modified Since Last Export";
+				iconSpanAddedAlready.title = "Modified Since Last Export - " + settings.name;
 			}
 		}
 	}

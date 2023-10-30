@@ -21,7 +21,6 @@ export function createPathMap(
 
 		try {
 			const {targetPath} = getTargetPaths(fileDescriptor, settings);
-
 			const newFileName = basename(targetPath);
 			const extension = fileDescriptor.path.substring(fileDescriptor.path.lastIndexOf('.'))
 
@@ -30,8 +29,8 @@ export function createPathMap(
 				frontMatter: fileDescriptor.frontmatter,
 				from: fileDescriptor.path,
 				newFileName: newFileName,
-				toAbsoluteFs: join(targetRoot, targetPath + "." + extension),
-				toRelative: targetPath + "." + extension,
+				toAbsoluteFs: join(targetRoot, targetPath + extension),
+				toRelative: targetPath + extension,
 				md5: "",
 				content: "",
 				toRelativeToExportDirRoot: path.parse(targetPath).dir,

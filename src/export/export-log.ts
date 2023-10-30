@@ -9,8 +9,6 @@ import { AttachmentLink, LinkType } from "./get-links-and-attachments";
 /**
  * I want great logging per file, with all the info.
  * For easy debugging and preserving sanity.
- * @param fileExportProperties
- * @param linkStats
  * @param allAssetsExported
  * @param plugin
  */

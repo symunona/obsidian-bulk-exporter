@@ -1,10 +1,11 @@
 import BulkExporterPlugin from "src/main";
-import { ExportProperties } from "src/models/export-properties";
-// import { collectAndReplaceHeaderAttachments } from "./get-markdown-attachments";
+import { ExportMap, ExportProperties } from "src/models/export-properties";
+import { collectAndReplaceHeaderAttachments, collectAndReplaceInlineAttachments } from "./get-markdown-attachments";
 import { isArray, isString } from "underscore";
 import { GlobMap, copyGlob } from "./globCopy";
 import { getLinksAndAttachments } from "./get-links-and-attachments";
-import {  } from "./replace-local-links";
+import { replaceLocalLinks } from "./replace-local-links";
+import { BulkExportSettings } from "src/models/bulk-export-settings";
 
 /**
  * This function assumes, that we have the file content loaded into the
@@ -17,31 +18,27 @@ import {  } from "./replace-local-links";
  * @param plugin
  * @returns
  */
-export async function collectAssets(
+export async function collectAssetsReplaceLinks(
 	fileExportProperties: ExportProperties,
+	allFileListMap: ExportMap,
+	settings: BulkExportSettings,
 	plugin: BulkExporterPlugin
 ) {
-    // const linksAndAttachments = getLinksAndAttachments(fileExportProperties.content)
+	const linksAndAttachments = getLinksAndAttachments(fileExportProperties.content)
+	fileExportProperties.linksAndAttachments = linksAndAttachments
+	fileExportProperties.content = linksAndAttachments.markdownReplacedWikiStyleLinks
 
-    // collectAndReplaceHeaderAttachments(plugin, plugin.settings, fileExportProperties, linksAndAttachments.internalAttachments)
+	// console.warn(fileExportProperties.newFileName, linksAndAttachments)
 
-	// Look for images!
-	// const imageLinkListInBodyMap = await replaceImageLinks(
-	// 	fileExportProperties,
+	collectAndReplaceHeaderAttachments(plugin, settings, fileExportProperties, linksAndAttachments.internalHeaderAttachments)
+	collectAndReplaceInlineAttachments(plugin, settings, fileExportProperties, linksAndAttachments.internalAttachments)
 
-	// 	plugin
-	// );
-	// Object.keys(imageLinkListInBodyMap).map((key)=>{
-	// 	imageLinkListInBody.push(imageLinkListInBodyMap[key])
-	// })
-
-	// const imageLinkListInMetaMap = await replaceImageLinksInMetaData(
-	// 	fileExportProperties,
-	// 	plugin
-	// );
-	// Object.keys(imageLinkListInMetaMap).map((key)=>{
-	// 	imageLinkListInMeta.push(imageLinkListInMetaMap[key])
-	// })
+	replaceLocalLinks(
+		fileExportProperties,
+		linksAndAttachments.internalLinks,
+		allFileListMap,
+		plugin
+	);
 
 	const frontMatterData = fileExportProperties.frontMatter;
 
@@ -52,7 +49,7 @@ export async function collectAssets(
 		// Looking for file matches here: ${relativeRoot}`);
 		// Iterate every file that matches the regex.
 		if (isArray(frontMatterData.copy)) {
-			for(let i = 0; i < frontMatterData.copy.length; i++){
+			for (let i = 0; i < frontMatterData.copy.length; i++) {
 				const globPattern = frontMatterData.copy[i]
 				filesCopied[globPattern] = await copyGlob(fileExportProperties, globPattern, plugin)
 			}
@@ -60,8 +57,7 @@ export async function collectAssets(
 			filesCopied[frontMatterData.copy] = await copyGlob(fileExportProperties, frontMatterData.copy, plugin)
 		}
 	}
-	// fileExportProperties.imageInBody = imageLinkListInBody;
-	// fileExportProperties.imageInMeta = imageLinkListInMeta;
+
 	fileExportProperties.copyGlob = filesCopied
 
 	return fileExportProperties

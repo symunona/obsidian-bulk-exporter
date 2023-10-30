@@ -3,6 +3,7 @@ blog: test
 internalLinks: "3"
 links: "3"
 lvl: one
+draft: "true"
 ---
 I want to be linked properly.
 

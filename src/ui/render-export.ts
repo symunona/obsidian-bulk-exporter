@@ -15,6 +15,8 @@ import { getMetaFields } from "src/utils/folder-meta";
 import BulkExporterPlugin from "src/main";
 import { without } from "underscore";
 import { HeaderFieldSelectorModal } from "./header-selector-modal";
+import { BulkExportSettings } from "src/models/bulk-export-settings";
+import { LinkParseResults } from "src/export/get-links-and-attachments";
 
 const OVERWRITE_LOCALE = 'hu-HU'
 
@@ -32,28 +34,31 @@ export class ExportTableRender {
 	plugin: BulkExporterPlugin;
 	draftField: string;
 	fieldsToRender: Array<string>;
+	settings: BulkExportSettings;
 
 	constructor(
 		leaf: HTMLElement,
 		exportMap: ExportMap,
+		settings: BulkExportSettings,
 		plugin: BulkExporterPlugin
 	) {
 		const resultListEl = leaf.createEl("div", {
 			cls: "nav-files-container meta-data-view-table-container",
 		});
 
-		this.leaf = resultListEl;
-		this.plugin = plugin;
+		this.leaf = resultListEl
+		this.settings = settings
+		this.plugin = plugin
 		this.exportMap = exportMap
 		this.groupMap = getGroups(exportMap)
 		this.metaKeysToShow = getMetaFields(exportMap)
 		this.metaFields = ['fileName'].concat(Object.keys(this.metaKeysToShow))
 
 		// Put the draftField to the beginning, next to the filename.
-		if (this.plugin.settings.draftField) {
-			delete this.metaKeysToShow[this.plugin.settings.draftField]
-			this.draftField = this.plugin.settings.draftField;
-			this.metaFields = ['fileName', this.plugin.settings.draftField].concat(Object.keys(this.metaKeysToShow))
+		if (this.settings.draftField) {
+			delete this.metaKeysToShow[this.settings.draftField]
+			this.draftField = this.settings.draftField;
+			this.metaFields = ['fileName', this.settings.draftField].concat(Object.keys(this.metaKeysToShow))
 		}
 
 		this.metaFieldsWithoutFileName = without(this.metaFields, 'fileName')
@@ -62,23 +67,20 @@ export class ExportTableRender {
 	}
 
 	render() {
-		if (this.plugin.settings.headerFieldsToShow?.length){
-			this.fieldsToRender = this.plugin.settings.headerFieldsToShow
+		if (this.settings.headerFieldsToShow?.length) {
+			this.fieldsToRender = this.settings.headerFieldsToShow
 		} else {
 			this.fieldsToRender = this.metaFieldsWithoutFileName
 		}
 
 		this.leaf.innerHTML = ''
+		const preHeader = this.leaf.createEl('h2', { text: this.settings.name })
 		const tableRoot = this.leaf.createEl('table', { cls: "dataview table-view-table" });
 		const tableHead = tableRoot.createEl('thead', { cls: "table-view-thead" })
 		const tableHeadTr = tableHead.createEl('tr', { cls: "table-view-tr-header" })
 
-		const fileNameTh = tableHeadTr.createEl('th', {
-			cls: 'table-view-th',
-			attr: { 'data-column-id': 'fileName' },
-		})
 
-		const editHeaderFieldsLink = fileNameTh.createEl('span', {cls: 'clickable'})
+		const editHeaderFieldsLink = preHeader.createEl('span', { cls: 'clickable table-header-editor' })
 		editHeaderFieldsLink.append(getIcon('eye'));
 
 		// Header
@@ -90,8 +92,8 @@ export class ExportTableRender {
 			tableHeadTh.createSpan({ text: name })
 		})
 
-		editHeaderFieldsLink.addEventListener('click', ()=>{
-			new HeaderFieldSelectorModal(this.plugin, this.metaFields, ()=>{
+		editHeaderFieldsLink.addEventListener('click', () => {
+			new HeaderFieldSelectorModal(this.plugin, this.settings, this.metaFields, () => {
 				this.render();
 			}).open();
 		})
@@ -109,19 +111,15 @@ export class ExportTableRender {
 	renderFileRow(tableBodyRoot: HTMLElement, item: ExportProperties) {
 		const metaData = item.frontMatter;
 		const group = item.toRelativeToExportDirRoot
-		const isOpen = (this.plugin.settings.groupOpenMap || {})[group]
+		const isOpen = (this.settings.groupOpenMap || {})[group]
 		const fileItemRow = tableBodyRoot.createEl('tr', {
 			cls: "nav-file tree-item meta-data-table-file-row",
 			attr: { 'data-path': item.toRelativeToExportDirRoot, style: isOpen ? '' : 'display: none' }
 		});
-		if (this.plugin.settings.draftField && metaData[this.plugin.settings.draftField]) {
+		if (this.settings.draftField && metaData[this.settings.draftField]) {
 			fileItemRow.classList.add('draft')
 		}
 
-		const linkTd = fileItemRow.createEl('td', {
-			cls: 'nav-file-title is-clickable tree-item-self reveal-link',
-		})
-		// linkTd.append(getIcon('external-link'))
 
 		fileItemRow.addEventListener('click', () => {
 			revealInFolder(this.plugin, item.from)
@@ -133,19 +131,20 @@ export class ExportTableRender {
 		})
 
 		this.fieldsToRender.forEach((metaKey) => {
-		if (metaKey ==='fileName'){
+			if (metaKey === 'fileName') {
 				this.renderMetaCell(fileItemRow, metaKey, item.newFileName)
+			} else if (metaKey === 'debug') {
+				this.debug(fileItemRow, item)
 			} else {
 				this.renderMetaCell(fileItemRow, metaKey, metaData[metaKey])
 			}
 		})
 	}
 
-
 	renderFolderHeaderRow(tableBodyRoot: HTMLElement, group: string, exportGroupMap: ExportGroupMap) {
 		const pathHeader = tableBodyRoot.createEl('tr', { cls: "table-sub-header tree-item" });
 
-		const isOpen = (this.plugin.settings.groupOpenMap || {})[group]
+		const isOpen = (this.settings.groupOpenMap || {})[group]
 
 		// TODO: get the full path of the folder here
 		const pathHeaderTd = pathHeader.createEl('td', {
@@ -176,8 +175,8 @@ export class ExportTableRender {
 		pathHeaderTd.classList.toggle('is-collapsed')
 		const isOpen = !pathHeaderTd.classList.contains('is-collapsed')
 
-		this.plugin.settings.groupOpenMap = this.plugin.settings.groupOpenMap || {}
-		this.plugin.settings.groupOpenMap[group] = isOpen
+		this.settings.groupOpenMap = this.settings.groupOpenMap || {}
+		this.settings.groupOpenMap[group] = isOpen
 		this.plugin.saveSettings()
 
 		const elements = tableBodyRoot.querySelectorAll(`.meta-data-table-file-row[data-path="${group}"]`)
@@ -190,10 +189,10 @@ export class ExportTableRender {
 		const allInFolder = list.length
 		const metadataWrapper = createSpan({ cls: 'metadata' })
 
-		if (this.plugin.settings.draftField) {
+		if (this.settings.draftField) {
 			const draftsInFolder = this.countDraftsInFolder(list)
 			const publishedInFolder = allInFolder - draftsInFolder;
-			if (draftsInFolder > 0){
+			if (draftsInFolder > 0) {
 				metadataWrapper.title = 'Published / Draft = ' + allInFolder;
 				metadataWrapper.createSpan({
 					text: String(publishedInFolder),
@@ -215,7 +214,7 @@ export class ExportTableRender {
 
 	countDraftsInFolder(list: ExportProperties[]): number {
 		return list.filter((e) => {
-			return Boolean(e.frontMatter[this.plugin.settings.draftField])
+			return Boolean(e.frontMatter[this.settings.draftField])
 		}).length
 	}
 
@@ -234,16 +233,18 @@ export class ExportTableRender {
 		} else if ((typeof (value) === 'string') && isHttpUrl(value.trim())) {
 			createLink(td, value, '🔗 ' + new URL(value).hostname, value)
 			// There is no space in it: can be a date or a string.
+		} else if ((typeof (value) === 'string') && isNumber(value)) {
+			td.createSpan({ text: value, cls: 'number' })
 		} else if (value && (typeof (value) === 'string') && value.indexOf(' ') === -1) {
 			// Try if this is a date
 			if (isValidDate(new Date(value))) {
 				const date = new Date(value)
 				let display = date.toLocaleDateString(OVERWRITE_LOCALE)
 				// Smart hide time, if it's just a date
-				if (!(date.getUTCHours() === 0 && date.getMinutes() === 0)) {
+				if (!(date.getHours() === 0 && date.getMinutes() === 0)) {
 					display += ' ' + date.toLocaleTimeString()
 				}
-				td.createSpan({ cls: 'meta-value', text: display, attr: { title: value } })
+				td.createSpan({ cls: 'meta-value date', text: display, attr: { title: value } })
 			} else {
 				td.createSpan({ text: value })
 			}
@@ -265,9 +266,54 @@ export class ExportTableRender {
 		}
 	}
 
-	remove(){
+	debug(root: HTMLElement, item: ExportProperties) {
+		if (!item.linksAndAttachments) { return }
+
+		const td = root.createEl('td', { cls: 'debug clickable' })
+
+		const debugInfo = getDebugInfo(item.linksAndAttachments)
+		const errors = debugInfo.internalAttachmentsError.length ||
+			debugInfo.internalHeaderAttachmentsError.length ||
+			debugInfo.internalLinksError.length;
+
+		if (errors){
+			root.classList.add('warn')
+		}
+
+		const bugButton = td.createSpan({ title: JSON.stringify(debugInfo, null, 2) })
+		bugButton.append(getIcon('bug'))
+
+		bugButton.addEventListener('click', () => {
+			console.warn(debugInfo)
+		})
+	}
+
+
+	remove() {
 		this.leaf.remove();
 	}
+}
+
+function getDebugInfo(linksAndAttachments: LinkParseResults) {
+	const internalLinksError = linksAndAttachments.internalLinks
+		.filter((l) => l.error)
+		.map(l => l.normalizedOriginalPath + ' - ' + l.error)
+	const internalAttachmentsError = linksAndAttachments.internalAttachments
+		.filter((l) => l.error)
+		.map(l => l.normalizedOriginalPath + ' - ' + l.error)
+	const internalHeaderAttachmentsError = linksAndAttachments.internalHeaderAttachments
+		.filter((l) => l.error)
+		.map(l => l.normalizedOriginalPath + ' - ' + l.error)
+
+	return {
+		internalLinksError,
+		internalAttachmentsError,
+		internalHeaderAttachmentsError
+	}
+}
+
+function isNumber(string: string) {
+	return string.match(/^[0-9]+\.?[0-9]*$/)
 }
 
 function isValidDate(date: Date) {

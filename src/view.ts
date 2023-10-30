@@ -1,4 +1,4 @@
-import { ItemView, Notice, WorkspaceLeaf } from "obsidian";
+import { ItemView, WorkspaceLeaf } from "obsidian";
 
 import { error, log, setLogOutput } from "./utils/log";
 import { Exporter } from "./export/exporter";
@@ -20,7 +20,7 @@ export const MAX_META_VALUE_LENGTH_TO_DISPLAY = 20;
 export class BulkExporterView extends ItemView {
 	header: HTMLElement;
 	error: HTMLElement;
-	results: HTMLElement;
+	resultsContainer: HTMLElement;
 	exportButton: HTMLButtonElement;
 	topRightMenuContainer: HTMLDivElement;
 	log: HTMLDivElement;
@@ -33,6 +33,7 @@ export class BulkExporterView extends ItemView {
 	logButton: HTMLButtonElement;
 	clearLogButton: HTMLButtonElement;
 	exportTable: ExportTableRender;
+	lastFoundFileLists: { setting: BulkExportSettings; results: ExportMap; }[];
 
 	constructor(leaf: WorkspaceLeaf, plugin: BulkExporterPlugin) {
 		super(leaf);
@@ -64,15 +65,14 @@ export class BulkExporterView extends ItemView {
 		this.settingsHeader = container.createDiv();
 		this.settingsHeader.style.display = "none";
 
-		this.renderSettings(this.settingsHeader);
 		this.error = container.createDiv();
-		this.results = container.createDiv();
+		this.resultsContainer = container.createDiv();
 
 		// Logging
 		this.log = this.settingsHeader.createDiv();
-		this.clearLogButton = this.log.createEl('button', {text: 'Clear', cls: 'clear-log-button'})
-		this.clearLogButton.addEventListener('click', ()=>{
-			this.log.querySelectorAll('.log-entry').forEach(e=>e.remove())
+		this.clearLogButton = this.log.createEl('button', { text: 'Clear', cls: 'clear-log-button' })
+		this.clearLogButton.addEventListener('click', () => {
+			this.log.querySelectorAll('.log-entry').forEach(e => e.remove())
 		})
 
 		setLogOutput(this.log);
@@ -83,68 +83,83 @@ export class BulkExporterView extends ItemView {
 		});
 
 
-		this.refreshButton = this.topRightMenuContainer.createEl("button", {title: 'Refresh'});
+		this.refreshButton = this.topRightMenuContainer.createEl("button", { title: 'Refresh' });
 		this.refreshButton.append(getIcon("refresh-cw"));
 		this.refreshButton.addEventListener("click", () => {
 			this.refresh();
 		});
 
-		this.logButton = this.topRightMenuContainer.createEl("button", {title: 'Show Log'});
+		this.logButton = this.topRightMenuContainer.createEl("button", { title: 'Show Log' });
 		this.logButton.append(getIcon("bug"));
 		this.logButton.addEventListener("click", () => {
 			this.settingsHeader.style.display =
 				this.settingsHeader.style.display === "none" ? "block" : "none";
 		});
 
-		this.settingsButton = this.topRightMenuContainer.createEl("button", {title: 'Open Plugin Settings'});
+		this.settingsButton = this.topRightMenuContainer.createEl("button", { title: 'Open Plugin Settings' });
 		this.settingsButton.append(getIcon("settings"));
 		this.settingsButton.addEventListener("click", () => {
 			openSettingsPage("bulk-exporter", this.plugin);
 		});
 
-		this.exportButton = this.topRightMenuContainer.createEl("button", {
-			text: "Export ...",
-		});
 
 		new ButtonWithLoader(this.topRightMenuContainer,
-			{domElementInfo: {text: 'Export...'}},
-			async ()=>{
-				if (
-					this.lastFoundFileList &&
-					Object.keys(this.lastFoundFileList).length
-				) {
-					await this.exporter.searchAndExport();
-					this.log.scrollIntoView();
+			{
+				domElementInfo: { text: 'Export ' }
+			},
+			async () => {
+
+				if (this.plugin.settings.preview === 'all') {
+					try {
+						this.resultsContainer.innerText = '';
+						const list = await this.exporter.searchAndExportAll();
+						list.forEach(({ setting, results }) => {
+							this.renderPreviewTable(results, setting);
+						})
+
+					} catch (e) {
+						this.settingsHeader.style.display = "block";
+						console.error(e)
+					}
 				} else {
-					new Notice("Hmmm... Nothing to export.");
+					const selectedIndex = parseInt(this.plugin.settings.preview)
+					const setting = this.plugin.settings.items[selectedIndex]
+					await this.exporter.searchAndExport(setting)
 				}
-			}, (e)=>{
+			}, (e) => {
 				error(e?.message || 'Something went wrong with the export, see log!')
 				this.settingsHeader.style.display = 'block';
 				this.log.style.display = 'block'
 			})
 
-		const h = this.header.createEl("h4", { text: "Bulk Exporter Preview" });
-		this.renderSelector(h)
+		const h = this.header.createEl("h4");
+		if (this.plugin.settings.items.length > 1) {
+			this.renderSelector(h)
+		} else {
+			h.setText('Bulk Exporter Preview ' + this.plugin.settings.items[0].name)
+		}
 
 		this.refresh();
 	}
 
-	exportOne(setting: BulkExportSettings){
-
-	}
-
 	async refresh() {
-		if (this.exportTable) this.exportTable.remove()
-		try {
-			const results = await this.exporter.searchAll();
-			// this.lastFoundFileList = results;
-			results.forEach((result)=>{
-				this.renderPreviewTable(result);
-			})
-		} catch (e) {
-			this.settingsHeader.style.display = "block";
-			console.error(e)
+		this.resultsContainer.innerText = '';
+		if (this.plugin.settings.preview === 'all') {
+			try {
+				const results = await this.exporter.searchAll();
+				// this.lastFoundFileLists = results;
+				results.forEach(({ setting, results }) => {
+					this.renderPreviewTable(results, setting);
+				})
+			} catch (e) {
+				this.settingsHeader.style.display = "block";
+				console.error(e)
+			}
+		} else {
+			const selectedIndex = parseInt(this.plugin.settings.preview)
+			const setting = this.plugin.settings.items[selectedIndex]
+			const results = await this.exporter.searchFilesToExport(setting)
+			this.renderPreviewTable(results, setting);
 		}
 	}
 
@@ -152,44 +167,34 @@ export class BulkExporterView extends ItemView {
 	 * Group by the exported folder and order by one of the fields
 	 * @param results
 	 */
-	renderPreviewTable(results: ExportMap) {
-		// if (this.exportTable) this.exportTable.remove()
+	renderPreviewTable(results: ExportMap, settings: BulkExportSettings) {
 		this.exportTable = new ExportTableRender(
-			this.results,
+			this.resultsContainer,
 			results,
+			settings,
 			this.plugin
 		);
 	}
 
-	renderSelector(root: HTMLElement){
-		const selectItems = this.plugin.settings.items.map((setting, i)=>{
-			return {text: setting.name, value: String(i)}})
-
-		new Select(root, selectItems, (evt, selectedId)=>{
-			this.plugin.settings.selected = parseInt(selectedId);
+	renderSelector(root: HTMLElement) {
+		const selectItems = this.plugin.settings.items.map((setting, i) => {
+			return { text: setting.name, value: String(i) }
 		})
-	}
 
-	renderSettings(root: HTMLElement) {
-		const settingsRoot = root.createEl("table");
-		Object.keys(this.plugin.settings).forEach(
-			(settingKey: keyof typeof this.plugin.settings) => {
-				// Do not render every property.
-				if (
-					["lastExport"].indexOf(settingKey) > -1
-				) {
-					return;
-				}
-				const tr = settingsRoot.createEl("tr");
+		selectItems.unshift({ text: '-- All --', value: 'all' })
 
-				// const value = this.plugin.settings.items[this.plugin.settings.selected][settingKey] as string;
-				// // const keyE =
-				// tr.createEl("td", { text: settingKey + ": " });
-				// // const valueE =
-				// tr.createEl("td", { text: value });
+		new Select(root, selectItems, (evt, selectedId) => {
+			this.plugin.settings.preview = selectedId === 'all' ? 'all' : selectedId
+			if (selectedId === 'all') {
+				this.resultsContainer.innerText = '';
+			} else {
+				this.plugin.settings.selected = parseInt(selectedId);
 			}
-		);
+			this.refresh()
+			this.plugin.saveSettings()
+		}, { value: this.plugin.settings.preview })
 	}
+
 
 	async onClose() {
 		// Nothing to clean up.

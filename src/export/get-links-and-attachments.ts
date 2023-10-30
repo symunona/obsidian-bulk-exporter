@@ -20,6 +20,7 @@ export type AttachmentLinkStatus = 'success' | 'webLink' | 'assetNotFound' | 'al
 export interface AttachmentLink {
     text: string,
     originalPath: string
+    normalizedOriginalPath: string
     newPath?: string
     source: Sources
     status?: AttachmentLinkStatus
@@ -31,6 +32,7 @@ export interface AttachmentLink {
 
 
 export type LinkParseResults = {
+    markdownReplacedWikiStyleLinks: string,
     parsedMarkdown: Array<Token>,
     links: Array<AttachmentLink>,
     attachments: Array<AttachmentLink>,
@@ -42,15 +44,23 @@ export type LinkParseResults = {
     externalHeaderAttachments: Array<AttachmentLink>
 }
 
+/**
+ * Using a markdown-it parser to find links and attachments, as it's much more reliable
+ * than anything I could achieve with regex.
+ *
+ * First, it normalizes all the links from [[]] to [](), then runs the parser, and finally
+ * extracts all the links and attachments.
+ * @param markdown
+ * @returns
+ */
 export function getLinksAndAttachments(markdown: string): LinkParseResults {
     markdown = replaceDoubleBracketLinks(markdown)
     const parsedMarkdown = md.parse(markdown, {})
-    // const flat = flattenTokenReferences(parsedMarkdown);
-
     const links = extractLinks(parsedMarkdown)
     const attachments = extractAttachments(parsedMarkdown)
     const headerAttachments = extractHeaderAttachments(parsedMarkdown)
     return {
+        markdownReplacedWikiStyleLinks: markdown,
         parsedMarkdown,
         links,
         attachments,
@@ -82,20 +92,26 @@ export function replaceDoubleBracketLinks(markdown: string): string {
     return markdown
 }
 
-
-function extractHeaderAttachments(flatMarkdown: Token[]): Array<AttachmentLink> {
-    const headerOpen = flatMarkdown.find((t)=>t.type === 'heading_open');
-    if (!headerOpen) {throw new Error('Invalid YAML: No header content? This should never happen...')}
-    const headerContentToken = flatMarkdown[flatMarkdown.indexOf(headerOpen) + 1]
-    if (!headerContentToken.children) {throw new Error('Invalid YAML: YAML header should have lines...')}
+/**
+ * Given the parsed markdown files, it digs out FrontMatter, then looks
+ * for links ending with asset extensions.
+ * @param markdown
+ * @returns
+ */
+function extractHeaderAttachments(markdown: Token[]): Array<AttachmentLink> {
+    const headerOpen = markdown.find((t) => t.type === 'heading_open');
+    if (!headerOpen) { throw new Error('Invalid YAML: No header content? This should never happen...') }
+    const headerContentToken = markdown[markdown.indexOf(headerOpen) + 1]
+    if (!headerContentToken.children) { throw new Error('Invalid YAML: YAML header should have lines...') }
     const lineTokens = headerContentToken.children.filter((l) => l.type === 'text')
 
-    const keyValuePairs : {[key: string]: {value: string, token: Token}} = {}
+    const keyValuePairs: { [key: string]: { value: string, token: Token } } = {}
+
     lineTokens.forEach((lineToken) => {
         if (!lineToken.content) { throw new Error('Empty line?') }
         const keyValueSplitArray = lineToken.content.split(':')
         const key = keyValueSplitArray.shift()
-        if (!key) {throw new Error('Invalid YAML: no key value in line')}
+        if (!key) { throw new Error('Invalid YAML: no key value in line') }
         const value = keyValueSplitArray.join(':')
         keyValuePairs[key] = {
             value,
@@ -104,16 +120,17 @@ function extractHeaderAttachments(flatMarkdown: Token[]): Array<AttachmentLink> 
     })
 
     const ret: Array<AttachmentLink> = []
-    Object.keys(keyValuePairs).forEach((key)=> {
+    Object.keys(keyValuePairs).forEach((key) => {
         const valueAndToken = keyValuePairs[key]
 
         const imageValue = valueAndToken.value.trim()
             .toLocaleLowerCase().match(IMAGE_MATCHER)
 
-        if (imageValue){
+        if (imageValue) {
             ret.push({
                 originalPath: imageValue[0],
-                linkType: getTypeofUrl(imageValue[0]),
+                normalizedOriginalPath: normalizeUrl(imageValue[0]),
+                linkType: getTypeofUrl(normalizeUrl(imageValue[0])),
                 source: "frontMatter",
                 text: key,
                 token: valueAndToken.token
@@ -136,7 +153,8 @@ export function extractAttachments(tokens: Token[], attachments: AttachmentLink[
             attachments.push({
                 text: token.attrGet('alt') || '',
                 originalPath: url,
-                linkType: getTypeofUrl(url),
+                normalizedOriginalPath: normalizeUrl(url),
+                linkType: getTypeofUrl(normalizeUrl(url)),
                 source: "body",
                 token: token
             });
@@ -162,7 +180,8 @@ export function extractLinks(tokens: Token[], links: AttachmentLink[] = []) {
                 links.push({
                     text: linkTextToken.content,
                     originalPath: url,
-                    linkType: getTypeofUrl(url),
+                    normalizedOriginalPath: normalizeUrl(url),
+                    linkType: getTypeofUrl(normalizeUrl(url)),
                     source: 'body',
                     token: token
                 });
@@ -173,6 +192,17 @@ export function extractLinks(tokens: Token[], links: AttachmentLink[] = []) {
     return links
 }
 
+function normalizeUrl(url: string) {
+    if (url.startsWith("obsidian://")) {
+        // Just grab the file value from the link.
+        const fileLink = decodeURIComponent(
+            url.substring(url.indexOf("&file=") + 6)
+        );
+        url = fileLink;
+    }
+    return url
+}
+
 function getTypeofUrl(url: string) {
     if (url.startsWith('http')) {
         return LinkType.external
@@ -180,3 +210,6 @@ function getTypeofUrl(url: string) {
         return LinkType.internal
     }
 }
+
+
+normalizeUrl

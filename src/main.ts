@@ -83,6 +83,7 @@ export default class BulkExporterPlugin extends Plugin {
 			if (!(storedData.items instanceof Array)) {
 				this.settings = {
 					selected: 0,
+					preview: 'all',
 					items: Object.assign(
 						{},
 						DEFAULT_SETTINGS,
@@ -91,18 +92,18 @@ export default class BulkExporterPlugin extends Plugin {
 				}
 			}
 			else {
-				this.settings = Object.assign({items: [], selected: 0}, storedData);
+				this.settings = Object.assign({items: [], selected: 0, preview: 'all'}, storedData);
 				if (!this.settings.items.length) {
 					this.settings.items.push(Object.assign({}, DEFAULT_SETTINGS))
 				}
 			}
 		} else {
 			this.settings = {
+				preview: 'all',
 				items: [
 					Object.assign({}, DEFAULT_SETTINGS)], selected: 0
 			}
 		}
-		console.warn(this.settings)
 	}
 
 	async saveSettings() {

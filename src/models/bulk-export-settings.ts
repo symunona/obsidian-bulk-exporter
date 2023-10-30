@@ -20,5 +20,6 @@ export interface BulkExportSettings {
 
 export interface BulkExportSettingsList {
 	items: Array<BulkExportSettings>,
-	selected: number
+	selected: number,
+	preview: string
 }

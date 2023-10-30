@@ -57,6 +57,7 @@ tr:hover .data-view-meta-key.undefined {background: var(--text-selection); opaci
 
 .meta-data-view .top-right-button-container{ float: right; }
 .meta-data-view .top-right-button-container button{ vertical-align: top; margin-left: 10px; }
+.meta-data-view .top-right-button-container button svg{ margin-left: 7px; }
 
 .meta-data-view .log{
     font-family: monospace; margin-top: 20px; margin-bottom: 20px;
@@ -81,6 +82,19 @@ tr:hover .data-view-meta-key.undefined {background: var(--text-selection); opaci
 .meta-data-view .meta-data-table-file-row td.reveal-link { width: 32px; padding-left: 5px; background-color: transparent; }
 .meta-data-view .meta-data-table-file-row .reveal-link svg{ visibility: hidden; cursor: pointer;}
 .meta-data-view .meta-data-table-file-row:hover .reveal-link svg{ visibility: visible;}
+.meta-data-view .number { display: block; width: 100%; text-align: right; }
+
+.meta-data-view .warn {background-color: #92901422; }
+.meta-data-view .debug {text-align: center }
+
+.meta-data-view .meta-data-view-table-container h2:hover .table-header-editor { visibility: visible; }
+.meta-data-view .table-header-editor { visibility: hidden; padding: 10px }
+
+.meta-data-view h4 select {
+    font-size: 20px;
+    -webkit-appearance: auto;
+    appearance: auto;
+}
 
 .meta-data-view button[disabled]{ opacity: 0.6; }
 
@@ -112,5 +126,7 @@ tr:hover .data-view-meta-key.undefined {background: var(--text-selection); opaci
 }
 .bulk-export-settings button.tab-header.active {background: var(--interactive-accent); color: var(--text-on-accent)}
 
+.bulk-export-confirm .footer{ text-align: right; padding-top: 20px; }
+.bulk-export-confirm button.yes { float: right }
 .bulk-export-confirm button.danger,
 .bulk-export-settings button.danger { background-color: var(--color-red); color: var(--text-on-accent);}

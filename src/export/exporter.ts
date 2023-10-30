@@ -3,7 +3,6 @@
  */
 import { existsSync, mkdirSync, writeFileSync } from "fs";
 import { Notice } from "obsidian";
-import { rmSync } from "fs";
 
 import { error, log } from "src/utils/log";
 
@@ -17,15 +16,15 @@ import {
 	ExportMap,
 	ExportProperties,
 } from "src/models/export-properties";
-// import { replaceLocalLinks } from "./replace-local-links";
 import { exportedLogEntry } from "./export-log";
 import { join, normalize } from "path";
 import { runShellCommand } from "src/utils/runner";
 import { getDataViewApi } from "src/utils/data-view-api";
 import { SMarkdownPage } from "obsidian-dataview";
-import { collectAssets } from "./collect-assets";
+import { collectAssetsReplaceLinks } from "./collect-assets";
 import { sortBy } from "underscore";
 import { BulkExportSettings } from "src/models/bulk-export-settings";
+import { rmDirContent } from "src/utils/delete-folder-content";
 
 export class Exporter {
 	plugin: BulkExporterPlugin;
@@ -38,16 +37,28 @@ export class Exporter {
 	}
 
 
-	async searchAll(){
-		return await Promise.all(this.plugin.settings.items.map((setting)=>
-			this.searchFilesToExport(setting)
-		))
+	async searchAll(): Promise<Array<{setting: BulkExportSettings, results: ExportMap}>>{
+		const ret = []
+		for (let item = 0; item < this.plugin.settings.items.length; item++){
+			const setting = this.plugin.settings.items[item];
+			ret.push({
+				results: await this.searchFilesToExport(setting),
+				setting
+			})
+		}
+		return ret
 	}
 
 	async searchAndExportAll(){
-		return Promise.all(this.plugin.settings.items.map((setting)=>
-			this.searchAndExport(setting)
-		))
+		const ret = []
+		for (let item = 0; item < this.plugin.settings.items.length; item++){
+			const setting = this.plugin.settings.items[item];
+			ret.push({
+				results: await this.searchAndExport(setting),
+				setting
+			})
+		}
+		return ret
 	}
 
 	registerUpdates() {
@@ -56,13 +67,13 @@ export class Exporter {
 				// @ts-ignore
 				"dataview:metadata-change",
 				(type: string, file: SMarkdownPage) => {
-					this.plugin.settings.items.forEach((settings) => {
+					this.plugin.settings.items.forEach((setting) => {
 						// If this was already a file, see if it got updated!
 						const previouslyExported =
-							settings.lastExport[file.path];
+							setting.lastExport[file.path];
 						if (previouslyExported) {
 							// we are updating this.
-							this.display.updateElementStatus(previouslyExported);
+							this.display.updateElementStatus(previouslyExported, setting);
 						} else {
 							// File is not yet added to the list. This can be due
 							// to not matching the filter in the previous search.
@@ -98,7 +109,7 @@ export class Exporter {
 				const exportFileMap = createPathMap(
 					// @ts-ignore
 					data.value.values,
-					this.plugin.settings
+					settings
 				);
 				// console.warn(exportFileMap)
 				log(
@@ -108,7 +119,7 @@ export class Exporter {
 				);
 
 				if (data.value && data.value.type === "table") {
-					this.display.applyStatusIcons(exportFileMap);
+					this.display.applyStatusIcons(exportFileMap, settings);
 
 					return exportFileMap;
 				} else {
@@ -128,7 +139,7 @@ export class Exporter {
 	async searchAndExport(settings: BulkExportSettings) {
 		const results = await this.searchFilesToExport(settings);
 		// Uncomment this for the actual object info!
-		console.warn("Found files to export: ", results);
+		// console.warn("Found files to export: ", results);
 		if (settings.draftField) {
 			Object.keys(results).map(path => {
 				const fileMetaData = results[path].frontMatter;
@@ -145,18 +156,18 @@ export class Exporter {
 		);
 
 		// Save the export properties, but do not save the whole content, just the MD5 hash.
-		// Object.keys(lastExport).forEach((absoluteFilePath)=>{
-		// 	const exportProperties = lastExport[absoluteFilePath]
-		// 	exportProperties.content = "";
-		// 	exportProperties.file = null;
-		// })
-		console.log(lastExport)
+		Object.keys(lastExport).forEach((absoluteFilePath)=>{
+			const exportProperties = lastExport[absoluteFilePath]
+			exportProperties.content = "";
+			exportProperties.file = undefined;
+		})
 
 		// Save the last export map so we can see what's already exported.
 		settings.lastExport = lastExport
 
 		this.plugin.saveSettings();
-		this.display.applyStatusIcons(settings.lastExport);
+		this.display.applyStatusIcons(settings.lastExport, settings);
+		return results
 	}
 }
 
@@ -204,15 +215,7 @@ export async function exportSelection(
 
 	// If emptying target folder is set, remove all files and folders within.
 	if (settings.emptyTargetFolder) {
-		console.warn('deleting folder', settings.outputFolder)
-		existsSync(settings.outputFolder)
-		rmSync(settings.outputFolder, { recursive: true, force: true });
-	// 	Object.keys(getGroups(fileList)).forEach((path) => {
-	// 		const targetDir = join(normalize(outputFolder), path);
-	// 		if (existsSync(targetDir)) {
-	// 			rmSync(targetDir, { recursive: true, force: true });
-	// 		}
-	// 	})
+		rmDirContent(settings.outputFolder)
 	}
 
 	for (const fileIndex in fileList) {
@@ -221,6 +224,7 @@ export async function exportSelection(
 			outputFolder,
 			exportProperties,
 			fileList,
+			settings,
 			plugin
 		);
 
@@ -254,6 +258,7 @@ export async function convertAndCopy(
 	rootPath: string,
 	fileExportProperties: ExportProperties,
 	allFileListMap: ExportMap,
+	settings: BulkExportSettings,
 	plugin: BulkExporterPlugin
 ) {
 	const targetDir = join(normalize(rootPath), fileExportProperties.toRelativeToExportDirRoot);
@@ -269,8 +274,7 @@ export async function convertAndCopy(
 
 	fileExportProperties.md5 = Md5.hashStr(fileContent);
 
-	await collectAssets(fileExportProperties, plugin);
-	// fileExportProperties.linkStats = replaceLocalLinks(fileExportProperties, allFileListMap);
+	await collectAssetsReplaceLinks(fileExportProperties, allFileListMap, settings, plugin);
 
 	writeFileSync(
 		fileExportProperties.toAbsoluteFs,

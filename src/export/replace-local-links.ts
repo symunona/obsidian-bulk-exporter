@@ -1,101 +1,74 @@
 import { ExportMap, ExportProperties } from "../models/export-properties";
-import { log, warn } from "console";
-import { dirname, join } from "path";
+import { warn } from "console";
 import replaceAll from "../utils/replace-all";
-import { getLinksAndAttachments } from "./get-links-and-attachments";
-
-export type LinkType = 'external' | 'internalFound' | 'internalNotFound';
-
-export interface LinkStat {
-	text: string
-	url: string
-	// type: LinkType,
-	original?: string,
-	newUrl?: string
-}
-
-
+import { AttachmentLink } from "./get-links-and-attachments";
+import BulkExporterPlugin from "src/main";
 
 /**
  * Supports obsidian: formatted links, replaces exportProperties' content.
  * @param exportProperties
  * @param allFileListMap
  */
-// export function replaceLocalLinks(
-// 	exportProperties: ExportProperties,
-// 	allFileListMap: ExportMap
-// ) {
-// 	const linksAndAttachments = getLinksAndAttachments(exportProperties.content);
-// 	const linkStats: Array<LinkStat> = []
+export function replaceLocalLinks(
+	exportProperties: ExportProperties,
+	links: Array<AttachmentLink>,
+	allFileListMap: ExportMap,
+	plugin: BulkExporterPlugin
+) {
+	for (const index in links) {
+		const link = links[index]
+		const original = link.originalPath;
+		const title = link.text;
 
-// 	for (const index in linksAndAttachments) {
-// 		const original = linksAndAttachments[index][0].trim();
-// 		const linkUrlEncrypted = linksAndAttachments[index][linksAndAttachments[index].length - 2];
-// 		let link = decodeURI(linkUrlEncrypted);
+		// See if this link exists in the vault!
+		const linkedDocument = plugin.app.metadataCache.getFirstLinkpathDest(
+			decodeURIComponent(link.normalizedOriginalPath),
+			exportProperties.from
+		);
 
-// 		const title = linksAndAttachments[index][1];
+		if (!linkedDocument) {
+			link.error = "Internal Link Not Found at all!"
+			exportProperties.content = replaceAll(
+				`[${title}](${original})`,
+				exportProperties.content,
+				`${title}`
+			);
+			warn('Internal link not found! Removing. ', title, original)
+			continue
 
-// 		// EXTERNAL link
-// 		if (link.startsWith("http")) {
-// 			log("Skipping URL", title, link);
-// 			// linkStats.push({ text: title, url: link, type: "external" })
-// 			continue;
-// 		}
+		}
+		const path = linkedDocument.path
 
-// 		// Internal link, starting with obsidian://
-// 		if (link.startsWith("obsidian://")) {
-// 			// Just grab the file value from the link.
-// 			const fileLink = decodeURIComponent(
-// 				link.substring(link.indexOf("&file=") + 6)
-// 			);
-// 			link = fileLink;
-// 		}
+		// Replace all links that point to other markdown files.
+		// If not found, send a warning.
+		if (allFileListMap[path]) {
+			const newFilePath = allFileListMap[path].toRelative;
 
-// 		// Get the dir of the file being exported
-// 		const fromDir = dirname(exportProperties.from);
-// 		// Guess where the file may be, the file's relative position.
-// 		const linkWithMd = link + ".md";
-// 		const guessRelative = join(fromDir, linkWithMd);
+			// Remove the extension!
+			const newLink = newFilePath.substring(
+				0,
+				newFilePath.lastIndexOf(".")
+			);
+			// There are spaces in the URL, normalize it!
+			if (newLink.indexOf(' ') > -1) {
+				newLink.split('/').map((urlPart) => encodeURIComponent(urlPart))
+			}
 
-// 		// Replace all links that point to other markdown files.
-// 		// If not found, send a warning.
-// 		if (allFileListMap[linkWithMd]) {
-// 			const newFilePath = allFileListMap[linkWithMd].toRelative;
-// 			// Remove the extension!
-// 			const newLink = newFilePath.substring(
-// 				0,
-// 				newFilePath.lastIndexOf(".")
-// 			);
-// 			// linkStats.push({ text: title, url: link, type: "internalFound", original, newUrl: newLink })
-// 			const newLinkWithTitle = `[${title}](${newLink})`;
-// 			exportProperties.content = replaceAll(
-// 				original,
-// 				exportProperties.content,
-// 				newLinkWithTitle
-// 			);
-// 		} else if (allFileListMap[guessRelative]) {
-// 			const newFilePath = allFileListMap[guessRelative].toRelative;
-// 			// Remove the extension!
-// 			const newLink = newFilePath.substring(
-// 				0,
-// 				newFilePath.lastIndexOf(".")
-// 			);
-// 			const newLinkWithTitle = `[${title}](${newLink})`;
-// 			// linkStats.push({ text: title, url: link, type: "internalFound", original, newUrl: newLink })
-// 			exportProperties.content = replaceAll(
-// 				original,
-// 				exportProperties.content,
-// 				newLinkWithTitle
-// 			);
-// 		} else {
-// 			warn("Local link not found, removing!", link, title);
-// 			// linkStats.push({ text: title, url: link, type: "internalNotFound" })
-// 			exportProperties.content = replaceAll(
-// 				original,
-// 				exportProperties.content,
-// 				`${title}`
-// 			);
-// 		}
-// 	}
-// 	return linkStats;
-// }
+			const newLinkWithTitle = `[${title}](${newLink})`;
+			exportProperties.content = replaceAll(
+				`[${title}](${original})`,
+				exportProperties.content,
+				newLinkWithTitle);
+		} else {
+			// Removed as it's pointing to a file that's not being exported.
+			warn("Internal link not found in output, removing!", original, title, path);
+			link.error = "Internal Link FOUND but not public."
+
+			exportProperties.content = replaceAll(
+				`[${title}](${original})`,
+				exportProperties.content,
+				`${title}`
+			);
+		}
+	}
+}
