@@ -1,0 +1,18 @@
+{
+  "outputFolder": "tmp/bulk-exporter-test2",
+  "exportQuery": "blog",
+  "emptyTargetFolder": true,
+  "draftField": "draft",
+  "assetPath": "assets",
+  "outputFormat": "${blog}/${index || root ? fileName : 'posts/' + (date_published?d(date_published).date:created.date) + '-' + slug }",
+  "lastExport": {},
+  "shell": "",
+  "headerFieldsToShow": [
+    "title",
+    "fileName"
+  ],
+  "groupOpenMap": {
+    "tech": true,
+    "tech/posts": true
+  }
+}

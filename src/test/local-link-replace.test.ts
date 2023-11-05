@@ -47,13 +47,3 @@ describe('getLinksAndAttachments', () => {
     })
 
 })
-
-describe('getAssetFolder', () => {
-
-})
-
-//
-
-describe('getLinkRoot', ()=>{
-
-})

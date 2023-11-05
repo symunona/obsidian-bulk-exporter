@@ -6,17 +6,20 @@
 import { Notice } from "obsidian";
 import { revealInFolder } from "../obsidian-api-helpers/file-explorer";
 import { getIcon } from "../obsidian-api-helpers/get-icon";
-import { createLink, isHttpUrl } from "../utils/url";
+import { createLink, isHttpUrl } from "./url";
 import { openFileByPath } from "src/obsidian-api-helpers/file-by-path";
 import { URL } from "url";
 import { getGroups } from "src/export/exporter";
 import { ExportGroupMap, ExportMap, ExportProperties } from "src/models/export-properties";
-import { getMetaFields } from "src/utils/folder-meta";
+import { getMetaFields } from "src/utils/indexing/folder-meta";
 import BulkExporterPlugin from "src/main";
 import { without } from "underscore";
 import { HeaderFieldSelectorModal } from "./header-selector-modal";
 import { BulkExportSettings } from "src/models/bulk-export-settings";
-import { LinkParseResults } from "src/export/get-links-and-attachments";
+import openSettingsPage from "src/obsidian-api-helpers/open-settings-page";
+import { showFolderInSystemBrowserAbsolute } from "src/obsidian-api-helpers/show-in-folder";
+import { join } from "path";
+import { statusIcon } from "./status-icon";
 
 const OVERWRITE_LOCALE = 'hu-HU'
 
@@ -32,7 +35,7 @@ export class ExportTableRender {
 	metaFields: Array<string>
 	metaFieldsWithoutFileName: Array<string>
 	plugin: BulkExporterPlugin;
-	draftField: string;
+	isPublishedField: string;
 	fieldsToRender: Array<string>;
 	settings: BulkExportSettings;
 
@@ -55,10 +58,10 @@ export class ExportTableRender {
 		this.metaFields = ['fileName'].concat(Object.keys(this.metaKeysToShow))
 
 		// Put the draftField to the beginning, next to the filename.
-		if (this.settings.draftField) {
-			delete this.metaKeysToShow[this.settings.draftField]
-			this.draftField = this.settings.draftField;
-			this.metaFields = ['fileName', this.settings.draftField].concat(Object.keys(this.metaKeysToShow))
+		if (this.settings.isPublishedField) {
+			delete this.metaKeysToShow[this.settings.isPublishedField]
+			this.isPublishedField = this.settings.isPublishedField;
+			this.metaFields = ['fileName', this.settings.isPublishedField].concat(Object.keys(this.metaKeysToShow))
 		}
 
 		this.metaFieldsWithoutFileName = without(this.metaFields, 'fileName')
@@ -79,9 +82,37 @@ export class ExportTableRender {
 		const tableHead = tableRoot.createEl('thead', { cls: "table-view-thead" })
 		const tableHeadTr = tableHead.createEl('tr', { cls: "table-view-tr-header" })
 
+		tableHeadTr.createEl('th', {
+			cls: 'table-view-th debug-column',
+			attr: { 'data-column-id': 'fileName' },
+		})
 
-		const editHeaderFieldsLink = preHeader.createEl('span', { cls: 'clickable table-header-editor' })
+		const preHeaderButtons = preHeader.createSpan({ cls: 'table-header-buttons' })
+		const editHeaderFieldsLink = preHeaderButtons.createEl('span', {
+			cls: 'clickable table-header-link',
+			title: 'Edit Visible Header Fields'
+		})
 		editHeaderFieldsLink.append(getIcon('eye'));
+
+		const editSettingsLink = preHeaderButtons.createEl('span', {
+			cls: 'clickable table-header-link',
+			title: 'Edit Export Settings'
+		})
+		editSettingsLink.append(getIcon('settings'));
+		editSettingsLink.addEventListener('click', () => {
+			this.plugin.settings.selected = this.plugin.settings.items.indexOf(this.settings)
+			openSettingsPage("bulk-exporter", this.plugin);
+		})
+
+		const openOutputFolderLink = preHeaderButtons.createEl('span', {
+			cls: 'clickable table-header-link',
+			title: 'Open Output Folder'
+		})
+		openOutputFolderLink.append(getIcon('folder-open'));
+		openOutputFolderLink.addEventListener('click', () => {
+			const outputFolder = join(process.cwd(), this.settings.outputFolder) + '/'
+			showFolderInSystemBrowserAbsolute(this.plugin, outputFolder)
+		})
 
 		// Header
 		this.fieldsToRender.forEach((name) => {
@@ -116,9 +147,15 @@ export class ExportTableRender {
 			cls: "nav-file tree-item meta-data-table-file-row",
 			attr: { 'data-path': item.toRelativeToExportDirRoot, style: isOpen ? '' : 'display: none' }
 		});
-		if (this.settings.draftField && metaData[this.settings.draftField]) {
+		if (this.settings.isPublishedField && !metaData[this.settings.isPublishedField]) {
 			fileItemRow.classList.add('draft')
 		}
+
+		const linkTd = fileItemRow.createEl('td', {
+			cls: 'nav-file-title tree-item-self debug-column',
+		})
+
+		statusIcon(linkTd, item, this.settings, this.plugin)
 
 
 		fileItemRow.addEventListener('click', () => {
@@ -133,8 +170,6 @@ export class ExportTableRender {
 		this.fieldsToRender.forEach((metaKey) => {
 			if (metaKey === 'fileName') {
 				this.renderMetaCell(fileItemRow, metaKey, item.newFileName)
-			} else if (metaKey === 'debug') {
-				this.debug(fileItemRow, item)
 			} else {
 				this.renderMetaCell(fileItemRow, metaKey, metaData[metaKey])
 			}
@@ -189,7 +224,7 @@ export class ExportTableRender {
 		const allInFolder = list.length
 		const metadataWrapper = createSpan({ cls: 'metadata' })
 
-		if (this.settings.draftField) {
+		if (this.settings.isPublishedField) {
 			const draftsInFolder = this.countDraftsInFolder(list)
 			const publishedInFolder = allInFolder - draftsInFolder;
 			if (draftsInFolder > 0) {
@@ -214,7 +249,7 @@ export class ExportTableRender {
 
 	countDraftsInFolder(list: ExportProperties[]): number {
 		return list.filter((e) => {
-			return Boolean(e.frontMatter[this.settings.draftField])
+			return Boolean(e.frontMatter[this.settings.isPublishedField])
 		}).length
 	}
 
@@ -266,51 +301,13 @@ export class ExportTableRender {
 		}
 	}
 
-	debug(root: HTMLElement, item: ExportProperties) {
-		if (!item.linksAndAttachments) { return }
-
-		const td = root.createEl('td', { cls: 'debug clickable' })
-
-		const debugInfo = getDebugInfo(item.linksAndAttachments)
-		const errors = debugInfo.internalAttachmentsError.length ||
-			debugInfo.internalHeaderAttachmentsError.length ||
-			debugInfo.internalLinksError.length;
-
-		if (errors){
-			root.classList.add('warn')
-		}
-
-		const bugButton = td.createSpan({ title: JSON.stringify(debugInfo, null, 2) })
-		bugButton.append(getIcon('bug'))
-
-		bugButton.addEventListener('click', () => {
-			console.warn(debugInfo)
-		})
-	}
-
 
 	remove() {
 		this.leaf.remove();
 	}
 }
 
-function getDebugInfo(linksAndAttachments: LinkParseResults) {
-	const internalLinksError = linksAndAttachments.internalLinks
-		.filter((l) => l.error)
-		.map(l => l.normalizedOriginalPath + ' - ' + l.error)
-	const internalAttachmentsError = linksAndAttachments.internalAttachments
-		.filter((l) => l.error)
-		.map(l => l.normalizedOriginalPath + ' - ' + l.error)
-	const internalHeaderAttachmentsError = linksAndAttachments.internalHeaderAttachments
-		.filter((l) => l.error)
-		.map(l => l.normalizedOriginalPath + ' - ' + l.error)
 
-	return {
-		internalLinksError,
-		internalAttachmentsError,
-		internalHeaderAttachmentsError
-	}
-}
 
 function isNumber(string: string) {
 	return string.match(/^[0-9]+\.?[0-9]*$/)

@@ -53,7 +53,7 @@ export function replaceLocalLinks(
 			if (newLink.indexOf(' ') > -1) {
 				newLink.split('/').map((urlPart) => encodeURIComponent(urlPart))
 			}
-
+			link.newPath = newLink
 			const newLinkWithTitle = `[${title}](${newLink})`;
 			exportProperties.content = replaceAll(
 				`[${title}](${original})`,
@@ -62,7 +62,7 @@ export function replaceLocalLinks(
 		} else {
 			// Removed as it's pointing to a file that's not being exported.
 			warn("Internal link not found in output, removing!", original, title, path);
-			link.error = "Internal Link FOUND but not public."
+			link.error = "Internal Link FOUND but not public, removed!"
 
 			exportProperties.content = replaceAll(
 				`[${title}](${original})`,

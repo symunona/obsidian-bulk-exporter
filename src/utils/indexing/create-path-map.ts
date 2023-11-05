@@ -1,8 +1,8 @@
-import { BulkExportSettings } from "../models/bulk-export-settings";
+import { BulkExportSettings } from "../../models/bulk-export-settings";
 import path, { basename, join } from "path";
-import normalizeFileName from "./normalize-file-name";
+import normalizeFileName from "../normalize-file-name";
 import { ExportMap, ExportProperties } from "src/models/export-properties";
-import { error } from "./log";
+import { error } from "../log";
 import ScopedEval from "scoped-eval";
 import { SMarkdownPage } from "obsidian-dataview";
 

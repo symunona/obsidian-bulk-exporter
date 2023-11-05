@@ -27,7 +27,7 @@ export interface AttachmentLink {
     error?: string,
     count?: number,
     linkType: LinkType,
-    token: Token
+    token?: Token
 }
 
 
@@ -58,7 +58,7 @@ export function getLinksAndAttachments(markdown: string): LinkParseResults {
     const parsedMarkdown = md.parse(markdown, {})
     const links = extractLinks(parsedMarkdown)
     const attachments = extractAttachments(parsedMarkdown)
-    const headerAttachments = extractHeaderAttachments(parsedMarkdown)
+    const headerAttachments = extractHeaderAttachments(markdown)
     return {
         markdownReplacedWikiStyleLinks: markdown,
         parsedMarkdown,
@@ -98,24 +98,23 @@ export function replaceDoubleBracketLinks(markdown: string): string {
  * @param markdown
  * @returns
  */
-function extractHeaderAttachments(markdown: Token[]): Array<AttachmentLink> {
-    const headerOpen = markdown.find((t) => t.type === 'heading_open');
-    if (!headerOpen) { throw new Error('Invalid YAML: No header content? This should never happen...') }
-    const headerContentToken = markdown[markdown.indexOf(headerOpen) + 1]
-    if (!headerContentToken.children) { throw new Error('Invalid YAML: YAML header should have lines...') }
-    const lineTokens = headerContentToken.children.filter((l) => l.type === 'text')
+function extractHeaderAttachments(content: string): Array<AttachmentLink> {
+    const contentSplitByHrDashes = content.split('\n---\n')
+    // This is not pretty, but it works.
+    const frontMatterPart = contentSplitByHrDashes.shift() || ''
 
-    const keyValuePairs: { [key: string]: { value: string, token: Token } } = {}
+    const keyValuePairs: { [key: string]: { value: string, key: string } } = {}
 
-    lineTokens.forEach((lineToken) => {
-        if (!lineToken.content) { throw new Error('Empty line?') }
-        const keyValueSplitArray = lineToken.content.split(':')
-        const key = keyValueSplitArray.shift()
-        if (!key) { throw new Error('Invalid YAML: no key value in line') }
-        const value = keyValueSplitArray.join(':')
-        keyValuePairs[key] = {
-            value,
-            token: lineToken
+    frontMatterPart.split('\n').forEach((line)=>{
+        if (line.indexOf(':') > 0){
+            if (!line) { throw new Error('Empty line?') }
+            const keyValueSplitArray = line.split(':')
+            const key = keyValueSplitArray.shift()
+            if (!key) { throw new Error('Invalid YAML: no key value in line') }
+            const value = keyValueSplitArray.join(':')
+            keyValuePairs[key] = {
+                key, value
+            }
         }
     })
 
@@ -132,8 +131,7 @@ function extractHeaderAttachments(markdown: Token[]): Array<AttachmentLink> {
                 normalizedOriginalPath: normalizeUrl(imageValue[0]),
                 linkType: getTypeofUrl(normalizeUrl(imageValue[0])),
                 source: "frontMatter",
-                text: key,
-                token: valueAndToken.token
+                text: key
             })
         }
     })

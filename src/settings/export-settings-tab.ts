@@ -1,7 +1,7 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
 
-import BulkExporterPlugin, { DEFAULT_SETTINGS } from "src/main";
-import { BulkExportSettings } from "src/models/bulk-export-settings";
+import BulkExporterPlugin from "src/main";
+import { BulkExportSettings, DEFAULT_SETTINGS } from "src/models/bulk-export-settings";
 import { ConfirmModal } from "src/ui/confirm-modal";
 
 export class OutputSettingTab extends PluginSettingTab {
@@ -79,7 +79,7 @@ export class OutputSettingTab extends PluginSettingTab {
 		button.addEventListener('click', async () => {
 			this.plugin.settings.selected = this.plugin.settings.items.indexOf(setting)
 			this.selectSetting(setting)
-			await this.plugin.saveSettings();
+			await this.plugin.saveSettingsWithRefresh();
 		})
 		return button
 	}
@@ -99,8 +99,8 @@ export class OutputSettingTab extends PluginSettingTab {
 					.setValue(settings.name)
 					.onChange(async (value) => {
 						settings.name = value
-						this.buttons[this.plugin.settings.selected].setText(settings.name)
-						await this.plugin.saveSettings();
+						this.buttons[this.plugin.settings.selected].setText(settings.name || '-- no name --')
+						await this.plugin.saveSettingsWithRefresh();
 					})
 			);
 
@@ -113,7 +113,7 @@ export class OutputSettingTab extends PluginSettingTab {
 					.setValue(settings.outputFolder)
 					.onChange(async (value) => {
 						settings.outputFolder = value;
-						await this.plugin.saveSettings();
+						await this.plugin.saveSettingsWithRefresh();
 					})
 			);
 
@@ -132,7 +132,7 @@ export class OutputSettingTab extends PluginSettingTab {
 					.setValue(settings.exportQuery)
 					.onChange(async (value) => {
 						settings.exportQuery = value;
-						await this.plugin.saveSettings();
+						await this.plugin.saveSettingsWithRefresh();
 					})
 			);
 
@@ -152,7 +152,7 @@ export class OutputSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						settings.outputFormat = value;
 						// TODO: validate! Can I validate?
-						await this.plugin.saveSettings();
+						await this.plugin.saveSettingsWithRefresh();
 					})
 			);
 
@@ -165,7 +165,7 @@ export class OutputSettingTab extends PluginSettingTab {
 					.setValue(settings.emptyTargetFolder)
 					.onChange(async (value) => {
 						settings.emptyTargetFolder = value;
-						await this.plugin.saveSettings();
+						await this.plugin.saveSettingsWithRefresh();
 					})
 			);
 
@@ -173,16 +173,16 @@ export class OutputSettingTab extends PluginSettingTab {
 		containerEl.createEl('h2', { text: 'Preview' })
 
 		new Setting(containerEl)
-			.setName("Draft Field")
-			.setDesc("If provided, files that have this field in their front matter will be shown on the file tree and the export preview, but will not get actually exported.")
+			.setName("Published Field / Drafts")
+			.setDesc("If provided, files that DO NOT have this field in their front matter will be shown on the file tree and the export preview, but will not get actually exported.")
 			.addText((text) =>
 				text
 					.setPlaceholder("key of the meta value, like draft")
-					.setValue(settings.draftField)
+					.setValue(settings.isPublishedField)
 					.onChange(async (value) => {
-						settings.draftField = value.trim();
+						settings.isPublishedField = value.trim();
 						// TODO: validate! Can I validate?
-						await this.plugin.saveSettings();
+						await this.plugin.saveSettingsWithRefresh();
 					})
 			);
 
@@ -196,7 +196,7 @@ export class OutputSettingTab extends PluginSettingTab {
 					.setValue(settings.headerFieldsToShow.join(', '))
 					.onChange(async (value) => {
 						settings.headerFieldsToShow = value.split(',').map(v=>v.trim()).filter(v=>v);
-						await this.plugin.saveSettings();
+						await this.plugin.saveSettingsWithRefresh();
 					})
 			);
 
@@ -213,7 +213,7 @@ export class OutputSettingTab extends PluginSettingTab {
 					.setValue(settings.absoluteAssets)
 					.onChange(async (value) => {
 						settings.absoluteAssets = value;
-						await this.plugin.saveSettings();
+						await this.plugin.saveSettingsWithRefresh();
 					})
 			);
 
@@ -228,7 +228,7 @@ export class OutputSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						settings.assetPath = value;
 						// TODO: validate! Can I validate?
-						await this.plugin.saveSettings();
+						await this.plugin.saveSettingsWithRefresh();
 					})
 			);
 
@@ -246,7 +246,7 @@ export class OutputSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						settings.shell = value;
 						// TODO: validate! Can I validate?
-						await this.plugin.saveSettings();
+						await this.plugin.saveSettingsWithRefresh();
 					})
 			);
 
@@ -260,7 +260,7 @@ export class OutputSettingTab extends PluginSettingTab {
 					okText: 'Delete',
 					okCallback: () => {
 						this.plugin.settings.items.splice(this.plugin.settings.selected, 1)
-						this.plugin.saveSettings()
+						this.plugin.saveSettingsWithRefresh()
 						this.buttons[this.plugin.settings.selected].remove()
 						this.selectSetting()
 					}

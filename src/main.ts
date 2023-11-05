@@ -1,24 +1,11 @@
 import { Plugin } from "obsidian";
 import { BulkExporterView, META_DATA_VIEW_TYPE } from "src/view";
-
 import { Exporter } from "./export/exporter";
-import { BulkExportSettings, BulkExportSettingsList } from "./models/bulk-export-settings";
+import { BulkExportSettingsList } from "./models/bulk-export-settings";
 import { OutputSettingTab } from "./settings/export-settings-tab";
+import { parseSavedSettingsData } from "./utils/data-parser";
+import { debounce } from "underscore";
 
-export const DEFAULT_SETTINGS: BulkExportSettings = {
-	name: "export set",
-	outputFolder: "output",
-	exportQuery: "blog",
-	emptyTargetFolder: false,
-	draftField: '',
-	assetPath: "assets",
-	outputFormat: '${blog}/${slug}',
-	lastExport: {},
-	shell: '',
-	headerFieldsToShow: [],
-	groupOpenMap: {},
-	absoluteAssets: false
-};
 
 export default class BulkExporterPlugin extends Plugin {
 	settings: BulkExportSettingsList;
@@ -77,38 +64,24 @@ export default class BulkExporterPlugin extends Plugin {
 	}
 
 	async loadSettings() {
-		const storedData = await this.loadData()
-		if (storedData) {
-			// Backward Compatibility: if it's not an array, it's the old BulkExportSettings.
-			if (!(storedData.items instanceof Array)) {
-				this.settings = {
-					selected: 0,
-					preview: 'all',
-					items: Object.assign(
-						{},
-						DEFAULT_SETTINGS,
-						storedData
-					)
-				}
-			}
-			else {
-				this.settings = Object.assign({items: [], selected: 0, preview: 'all'}, storedData);
-				if (!this.settings.items.length) {
-					this.settings.items.push(Object.assign({}, DEFAULT_SETTINGS))
-				}
-			}
-		} else {
-			this.settings = {
-				preview: 'all',
-				items: [
-					Object.assign({}, DEFAULT_SETTINGS)], selected: 0
-			}
-		}
+		this.settings = parseSavedSettingsData(await this.loadData())
 	}
 
 	async saveSettings() {
 		await this.saveData(this.settings);
 	}
+
+	async saveSettingsWithRefresh(){
+		await this.saveSettings()
+		this.debouncedRefresh()
+	}
+
+	debouncedRefresh = debounce(()=>{
+		if (this.app.workspace.getLeavesOfType(META_DATA_VIEW_TYPE)?.length){
+			const view = this.app.workspace.getLeavesOfType(META_DATA_VIEW_TYPE)[0].view as BulkExporterView;
+			view.refresh()
+		}
+	}, 1000)
 
 	async activateView() {
 		this.app.workspace.detachLeavesOfType(META_DATA_VIEW_TYPE);

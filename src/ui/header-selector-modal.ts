@@ -29,7 +29,8 @@ export class HeaderFieldSelectorModal extends Modal {
 
     this.preview = contentEl.createEl('input',{
         value: this.enabled.join(', '),
-        cls: 'meta-data-header-selector-input'
+        cls: 'meta-data-header-selector-input',
+        placeholder: '*'
     })
 
     this.preview.addEventListener('change', () => {

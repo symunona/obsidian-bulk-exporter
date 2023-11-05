@@ -8,8 +8,8 @@ import openSettingsPage from "./obsidian-api-helpers/open-settings-page";
 import BulkExporterPlugin from "./main";
 import { ExportMap } from "./models/export-properties";
 import { BulkExportSettings } from "./models/bulk-export-settings";
-import { ButtonWithLoader } from "./utils/button-with-loader";
-import { Select } from "./utils/select";
+import { ButtonWithLoader } from "./ui/button-with-loader";
+import { Select } from "./ui/select";
 
 export const META_DATA_VIEW_TYPE = "bulk-exporter-preview";
 

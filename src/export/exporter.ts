@@ -7,7 +7,7 @@ import { Notice } from "obsidian";
 import { error, log } from "src/utils/log";
 
 import { normalizeQuery } from "src/utils/normalize-query";
-import { createPathMap } from "src/utils/create-path-map";
+import { createPathMap } from "src/utils/indexing/create-path-map";
 import BulkExporterPlugin from "src/main";
 import { Md5 } from "ts-md5";
 import { FileListItemWrapper } from "src/ui/file-list-export-indicator";
@@ -18,7 +18,7 @@ import {
 } from "src/models/export-properties";
 import { exportedLogEntry } from "./export-log";
 import { join, normalize } from "path";
-import { runShellCommand } from "src/utils/runner";
+import { runShellCommand } from "src/utils/shell-runner";
 import { getDataViewApi } from "src/utils/data-view-api";
 import { SMarkdownPage } from "obsidian-dataview";
 import { collectAssetsReplaceLinks } from "./collect-assets";
@@ -140,17 +140,20 @@ export class Exporter {
 		const results = await this.searchFilesToExport(settings);
 		// Uncomment this for the actual object info!
 		// console.warn("Found files to export: ", results);
-		if (settings.draftField) {
+		let toBeExported : ExportMap = {}
+		if (settings.isPublishedField) {
 			Object.keys(results).map(path => {
 				const fileMetaData = results[path].frontMatter;
-				if (fileMetaData[settings.draftField]) {
-					delete results[path]
+				if (fileMetaData[settings.isPublishedField]) {
+					toBeExported[path] = results[path]
 				}
 			})
+		} else {
+			toBeExported = results;
 		}
 
 		const lastExport = await exportSelection(
-			results,
+			toBeExported,
 			settings,
 			this.plugin
 		);
@@ -164,6 +167,7 @@ export class Exporter {
 
 		// Save the last export map so we can see what's already exported.
 		settings.lastExport = lastExport
+		console.warn(settings.name, lastExport)
 
 		this.plugin.saveSettings();
 		this.display.applyStatusIcons(settings.lastExport, settings);
@@ -209,7 +213,7 @@ export async function exportSelection(
 	log("Export to " + outputFolder);
 
 	if (!existsSync(outputFolder)) {
-		mkdirSync(outputFolder);
+		mkdirSync(outputFolder, { recursive: true });
 		log("Created new target folder: " + outputFolder);
 	}
 

@@ -41,7 +41,6 @@ export class FileListItemWrapper {
 		const lastExport = settings.lastExport || {};
 		const fileExplorers =
 			this.plugin.app.workspace.getLeavesOfType("file-explorer");
-		this.clean();
 		// Each open file explorer.
 		fileExplorers.forEach((fileExplorer) => {
 			// @ts-ignore: the type of this is obstructed, as it's an internal plugin.
@@ -124,9 +123,9 @@ export class FileListItemWrapper {
 		iconSpanAddedAlready.innerHTML = "";
 
 		if (
-			settings.draftField &&
+			settings.isPublishedField &&
 			frontMatter &&
-			frontMatter[settings.draftField]
+			(!settings.isPublishedField || !frontMatter[settings.isPublishedField])
 		) {
 			iconSpanAddedAlready.classList.add("grey");
 			iconSpanAddedAlready.append(getIcon("file-plus"));

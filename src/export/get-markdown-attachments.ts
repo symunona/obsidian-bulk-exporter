@@ -30,7 +30,7 @@ import { ExportProperties } from "../models/export-properties";
 import { Md5 } from "ts-md5";
 import { AttachmentLink } from "./get-links-and-attachments";
 import { BulkExportSettings } from "src/models/bulk-export-settings";
-import { getAssetPaths } from "src/utils/asset-and-link-paths";
+import { getAssetPaths } from "src/utils/indexing/asset-and-link-paths";
 import replaceAll from "src/utils/replace-all";
 
 export const ATTACHMENT_URL_REGEXP = /!\[\[((.*?)\.(\w+))\]\]/g;
@@ -58,6 +58,7 @@ export function collectAndReplaceHeaderAttachments(
 
 		// Replace the links in the header.
 		if (attachment.newPath) {
+			// Poor man's yaml splitter.
 			const contentSplitByHrDashes = exportProperties.content.split('\n---\n')
 
 			// This is not pretty, but it works.

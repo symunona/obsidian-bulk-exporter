@@ -35,6 +35,7 @@ export class ButtonWithLoader {
         loadingIcon.classList.add('spin')
         errorIcon.style.display = 'none'
         button.append(icon, loadingIcon, errorIcon)
+        button.classList.add('with-icon')
 
         button.addEventListener('click', async (evt)=> {
             icon.style.display = 'none'
