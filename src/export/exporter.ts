@@ -111,7 +111,6 @@ export class Exporter {
 					data.value.values,
 					settings
 				);
-				// console.warn(exportFileMap)
 				log(
 					`Found ${data.value.values.length} files for`,
 					` filter: '${settings.exportQuery}'`,
@@ -167,7 +166,7 @@ export class Exporter {
 
 		// Save the last export map so we can see what's already exported.
 		settings.lastExport = lastExport
-		console.warn(settings.name, lastExport)
+		// console.warn(settings.name, lastExport)
 
 		this.plugin.saveSettings();
 		this.display.applyStatusIcons(settings.lastExport, settings);

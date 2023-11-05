@@ -126,6 +126,8 @@ export class BulkExporterView extends ItemView {
 					const setting = this.plugin.settings.items[selectedIndex]
 					await this.exporter.searchAndExport(setting)
 				}
+
+				await this.refresh()
 			}, (e) => {
 				error(e?.message || 'Something went wrong with the export, see log!')
 				this.settingsHeader.style.display = 'block';

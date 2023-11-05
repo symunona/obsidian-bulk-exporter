@@ -92,7 +92,7 @@ async function saveAttachmentToLocation(
 	attachment: AttachmentLink,
 	exportProperties: ExportProperties
 ) {
-	const imageLink = decodeURI(attachment.originalPath);
+	const imageLink = decodeURIComponent(attachment.originalPath);
 
 	const imageName = basename(imageLink);
 
@@ -108,8 +108,6 @@ async function saveAttachmentToLocation(
 		// For now, let's settle with "asset not found"
 		attachment.error = "Asset not found!"
 		attachment.status = "assetNotFound"
-		// console.error('asset not found', asset)
-
 		return
 	}
 

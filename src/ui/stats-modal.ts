@@ -7,7 +7,7 @@ import { getIcon } from "src/obsidian-api-helpers/get-icon";
 const LINK_LISTS = [
   'internalLinks',
   'externalLinks',
-  'attachments',
+  'internalAttachments',
   'internalAttachments',
   'externalAttachments',
   'headerAttachments'
@@ -28,6 +28,32 @@ export class StatsModal extends Modal {
     contentEl.createEl("h1", { text: this.item.file?.path })
 
     const content = contentEl.createDiv({ cls: 'content' })
+    this.linkStats(content)
+    this.globStats(content)
+  }
+
+
+  globStats(content: HTMLElement){
+    if (this.item.copyGlob){
+      content.createEl('h2', 'bopy raw files')
+      Object.keys(this.item.copyGlob).forEach((selector)=>{
+        const groupDiv = content.createDiv()
+        groupDiv.createEl('h3', { text: selector })
+
+        // @ts-ignore
+        if (this.item.copyGlob[selector] && this.item.copyGlob[selector].length){
+          // @ts-ignore
+          this.item.copyGlob[selector].forEach((link: AttachmentLink) => {
+            this.renderLink(link, groupDiv)
+          })
+        } else {
+          groupDiv.createSpan({text: 'no files found'})
+        }
+    })
+    }
+  }
+
+  linkStats(content: HTMLElement) {
     LINK_LISTS.forEach((linkOrAttachmentGroupKey) => {
       // @ts-ignore
       if (this.item.linksAndAttachments && this.item.linksAndAttachments[linkOrAttachmentGroupKey]) {
@@ -38,29 +64,33 @@ export class StatsModal extends Modal {
           groupDiv.createEl('h3', { text: linkOrAttachmentGroupKey })
 
           linkGroup.forEach((link: AttachmentLink) => {
-            const linkDisplay = groupDiv.createDiv({
-              cls: link.error ? 'error link' : (link.newPath? 'success link' : 'link')
-            })
-            linkDisplay.createEl('a', {
-              text: link.text,
-              title: link.normalizedOriginalPath,
-              cls: 'title',
-              href: link.originalPath
-            })
-            linkDisplay.createSpan({ text: link.normalizedOriginalPath, cls: 'url'})
-            if (link.newPath) {
-              linkDisplay.createSpan({ text: `=> ${link.newPath}`, cls: 'replaced' })
-            }
-            if (link.error) {
-              linkDisplay.createDiv({ cls: 'error', text: link.error })
-              linkDisplay.prepend(getIcon('alert-triangle'));
-            } else if (link.newPath) {
-              linkDisplay.prepend(getIcon('check'));
-            }
+            this.renderLink(link, groupDiv)
           })
         }
       }
     })
+  }
+
+  renderLink(link: AttachmentLink, groupDiv: HTMLElement){
+    const linkDisplay = groupDiv.createDiv({
+      cls: link.error ? 'error link' : (link.newPath? 'success link' : 'link')
+    })
+    linkDisplay.createEl('a', {
+      text: link.text,
+      title: link.normalizedOriginalPath,
+      cls: 'title',
+      href: link.originalPath
+    })
+    linkDisplay.createSpan({ text: link.normalizedOriginalPath, cls: 'url'})
+    if (link.newPath) {
+      linkDisplay.createSpan({ text: `=> ${link.newPath}`, cls: 'replaced' })
+    }
+    if (link.error) {
+      linkDisplay.createDiv({ cls: 'error', text: link.error })
+      linkDisplay.prepend(getIcon('alert-triangle'));
+    } else if (link.newPath) {
+      linkDisplay.prepend(getIcon('check'));
+    }
   }
 
   onClose() {

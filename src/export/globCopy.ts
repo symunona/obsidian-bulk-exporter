@@ -10,9 +10,9 @@ import { ExportProperties } from "src/models/export-properties"
 
 import { globSync } from 'glob'
 import { join, parse } from "path"
-import { cpSync, existsSync, mkdirSync, stat, statSync } from "fs"
+import { cpSync, existsSync, mkdirSync, statSync } from "fs"
 import { Plugin } from "obsidian"
-import { AttachmentLink } from "./get-markdown-attachments"
+import { AttachmentLink, LinkType } from "./get-links-and-attachments"
 
 export interface GlobMap { [glob: string]: Array<AttachmentLink> }
 
@@ -41,8 +41,11 @@ export async function copyGlob(fileExportProperties: ExportProperties, globStrin
                     count: 0,
                     newPath: toAbsolutePath,
                     originalPath: relativeFileName,
+                    normalizedOriginalPath: relativeFileName,
                     status: 'success',
-                    type: 'folder'
+                    text: relativeFileName,
+                    source: "globCopy",
+                    linkType: LinkType.internal
                 })
             }
 
@@ -53,7 +56,11 @@ export async function copyGlob(fileExportProperties: ExportProperties, globStrin
                     count: 1,
                     newPath: exportTargetDir,
                     originalPath: relativeFileName,
-                    status: 'success'
+                    status: 'success',
+                    normalizedOriginalPath: relativeFileName,
+                    text: relativeFileName,
+                    source: "globCopy",
+                    linkType: LinkType.internal
                 })
             } catch(e){
                 console.error(e)
@@ -61,8 +68,12 @@ export async function copyGlob(fileExportProperties: ExportProperties, globStrin
                     count: 1,
                     newPath: toAbsolutePath,
                     originalPath: relativeFileName,
+                    normalizedOriginalPath: relativeFileName,
                     status: 'error',
-                    error: e.message
+                    error: e.message,
+                    text: relativeFileName,
+                    source: "globCopy",
+                    linkType: LinkType.internal
                 })
             }
         } else if (fileStats.isDirectory()){
