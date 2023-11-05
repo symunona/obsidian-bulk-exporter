@@ -96,7 +96,7 @@ export function exportedLogEntry(
                         const fileAssetElement = fileAssetElementCreator(asset, errorCount, plugin)
                         errorCount = fileAssetElement.errorCount
                         if (errorCount > 0) { console.error(asset) }
-                        if (asset.type === 'folder') {
+                        if (asset.source === 'folder') {
                             globGroupContainer.append(createSpan('[Folder] '))
                         }
                         globGroupContainer.append(fileAssetElement.assetElement)
