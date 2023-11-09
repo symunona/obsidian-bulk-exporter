@@ -22,8 +22,8 @@ test('JEST test', () => {
 
 describe('getLinksAndAttachments', () => {
     test('gets  all the links from index file', () => {
-        const { links } = getLinksAndAttachments(indexMd.content)
-        expect(links.length).toBe(parseInt(indexMd.frontMatter['internalLinks']))
+        const { internalLinks } = getLinksAndAttachments(indexMd.content)
+        expect(internalLinks.length).toBe(parseInt(indexMd.frontMatter['internalLinks']))
 
     })
 

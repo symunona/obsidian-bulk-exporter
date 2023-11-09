@@ -161,6 +161,7 @@ export class Exporter {
 		Object.keys(lastExport).forEach((absoluteFilePath)=>{
 			const exportProperties = lastExport[absoluteFilePath]
 			exportProperties.content = "";
+			exportProperties.outputContent = "";
 			exportProperties.file = undefined;
 		})
 
@@ -273,15 +274,16 @@ export async function convertAndCopy(
 	if (!fileDescriptor) { throw new Error('Null Error') }
 
 	const fileContent = await plugin.app.vault.adapter.read(fileDescriptor.path);
-	fileExportProperties.content = fileContent;
+	fileExportProperties.outputContent = fileExportProperties.content = fileContent;
 
 	fileExportProperties.md5 = Md5.hashStr(fileContent);
 
+	// This populates fileExportProperties.outputContent
 	await collectAssetsReplaceLinks(fileExportProperties, allFileListMap, settings, plugin);
 
 	writeFileSync(
 		fileExportProperties.toAbsoluteFs,
-		fileExportProperties.content,
+		fileExportProperties.outputContent,
 		"utf-8"
 	);
 

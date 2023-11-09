@@ -74,7 +74,7 @@ export function getLinksAndAttachments(markdown: string): LinkParseResults {
 }
 
 /**
- * Instead of trying to hack double bracket into markdown.it parser library, I just pre-process
+ * Instead of trying to hack double bracket into markdown.it parser library, I juost pre-process
  * all the links to standard []() notation.
  * @param markdown
  * @returns
@@ -83,9 +83,15 @@ export function replaceDoubleBracketLinks(markdown: string): string {
     const results = markdown.match(DOUBLE_BRACKET_LINK_MATCHER)
     if (results) {
         results.forEach((link) => {
-            const linkTarget = link.substring(2, link.length - 2)
-            const standardLinkStyle = `[${linkTarget}](${encodeURIComponent(linkTarget)})`
-            // console.warn(link, '->', standardLinkStyle)
+            let linkTarget = link.substring(2, link.length - 2)
+            let text = linkTarget
+            // Support for [[link|text]] styled wiki links.
+            const linkParts = linkTarget.split('|')
+            if (linkParts.length > 1 && linkParts[0].trim()){
+                linkTarget = linkParts.shift() || ''
+                text = linkParts.join('|')
+            }
+            const standardLinkStyle = `[${text}](${encodeURIComponent(linkTarget)})`
             markdown = replaceAll(link, markdown, standardLinkStyle)
         })
     }

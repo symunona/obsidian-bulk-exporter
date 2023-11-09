@@ -33,6 +33,7 @@ export function createPathMap(
 				toRelative: targetPath + extension,
 				md5: "",
 				content: "",
+				outputContent: "",
 				toRelativeToExportDirRoot: path.parse(targetPath).dir,
 				lastExportDate: 0,
 			};

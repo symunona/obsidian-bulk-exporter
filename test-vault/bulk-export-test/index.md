@@ -1,8 +1,8 @@
 ---
 blog: test
 index: "true"
-internalLinks: "6"
-links: "6"
+internalLinks: "7"
+links: "7"
 ---
 # h1
 I want to link [[post1]] and [anywhere subfolder find by title](post1), then [posts1/header image test](posts1/header-imaget-test)

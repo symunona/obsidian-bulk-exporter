@@ -59,13 +59,13 @@ export function collectAndReplaceHeaderAttachments(
 		// Replace the links in the header.
 		if (attachment.newPath) {
 			// Poor man's yaml splitter.
-			const contentSplitByHrDashes = exportProperties.content.split('\n---\n')
+			const contentSplitByHrDashes = exportProperties.outputContent.split('\n---\n')
 
 			// This is not pretty, but it works.
 			let frontMatterPart = contentSplitByHrDashes.shift() || ''
 			frontMatterPart = replaceAll(attachment.originalPath, frontMatterPart, attachment.newPath)
 			contentSplitByHrDashes.unshift(frontMatterPart)
-			exportProperties.content = contentSplitByHrDashes.join('\n---\n')
+			exportProperties.outputContent = contentSplitByHrDashes.join('\n---\n')
 		}
 	})
 }
@@ -81,8 +81,8 @@ export function collectAndReplaceInlineAttachments(
 		saveAttachmentToLocation(plugin, settings, attachment, exportProperties)
 		// I have experimented with this a lot.
 		// @see comments in getLinksAndAttachments.
-		// I normalized before exportProperties.content to only have []() style links.
-		exportProperties.content = replaceAll(`](${attachment.originalPath})`, exportProperties.content, `](${attachment.newPath})`)
+		// I normalized before exportProperties.outputContent to only have []() style links.
+		exportProperties.outputContent = replaceAll(`](${attachment.originalPath})`, exportProperties.outputContent, `](${attachment.newPath})`)
 	})
 }
 

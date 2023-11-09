@@ -5,6 +5,7 @@ import { AttachmentLink, LinkParseResults } from "src/export/get-links-and-attac
 export type ExportProperties = {
 	toRelativeToExportDirRoot: string;
     content: string;
+    outputContent: string;
     md5: string;
     frontMatter: Record<string, Literal>;
     file?: SMarkdownPage,

@@ -28,9 +28,9 @@ export function replaceLocalLinks(
 
 		if (!linkedDocument) {
 			link.error = "Internal Link Not Found at all!"
-			exportProperties.content = replaceAll(
+			exportProperties.outputContent = replaceAll(
 				`[${title}](${original})`,
-				exportProperties.content,
+				exportProperties.outputContent,
 				`${title}`
 			);
 			warn('Internal link not found! Removing. ', title, original)
@@ -55,18 +55,18 @@ export function replaceLocalLinks(
 			}
 			link.newPath = newLink
 			const newLinkWithTitle = `[${title}](${newLink})`;
-			exportProperties.content = replaceAll(
+			exportProperties.outputContent = replaceAll(
 				`[${title}](${original})`,
-				exportProperties.content,
+				exportProperties.outputContent,
 				newLinkWithTitle);
 		} else {
 			// Removed as it's pointing to a file that's not being exported.
 			warn("Internal link not found in output, removing!", original, title, path);
 			link.error = "Internal Link FOUND but not public, removed!"
 
-			exportProperties.content = replaceAll(
+			exportProperties.outputContent = replaceAll(
 				`[${title}](${original})`,
-				exportProperties.content,
+				exportProperties.outputContent,
 				`${title}`
 			);
 		}

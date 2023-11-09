@@ -8,7 +8,7 @@ const LINK_LISTS = [
   'internalLinks',
   'externalLinks',
   'internalAttachments',
-  'internalAttachments',
+  'internalHeaderAttachments',
   'externalAttachments',
   'headerAttachments'
 ]
@@ -33,27 +33,30 @@ export class StatsModal extends Modal {
   }
 
 
-  globStats(content: HTMLElement){
-    if (this.item.copyGlob){
-      content.createEl('h2', 'bopy raw files')
-      Object.keys(this.item.copyGlob).forEach((selector)=>{
+  globStats(content: HTMLElement) {
+    if (this.item.copyGlob) {
+      content.createEl('h2', 'body raw files')
+      Object.keys(this.item.copyGlob).forEach((selector) => {
         const groupDiv = content.createDiv()
         groupDiv.createEl('h3', { text: selector })
 
         // @ts-ignore
-        if (this.item.copyGlob[selector] && this.item.copyGlob[selector].length){
+        if (this.item.copyGlob[selector] && this.item.copyGlob[selector].length) {
           // @ts-ignore
           this.item.copyGlob[selector].forEach((link: AttachmentLink) => {
             this.renderLink(link, groupDiv)
           })
         } else {
-          groupDiv.createSpan({text: 'no files found'})
+          groupDiv.createSpan({ text: 'no files found' })
         }
-    })
+      })
     }
   }
 
   linkStats(content: HTMLElement) {
+    if (this.noLinksOrAttachments()) {
+      content.createEl('p', { text: 'No attachments or links in file.' })
+    }
     LINK_LISTS.forEach((linkOrAttachmentGroupKey) => {
       // @ts-ignore
       if (this.item.linksAndAttachments && this.item.linksAndAttachments[linkOrAttachmentGroupKey]) {
@@ -71,9 +74,22 @@ export class StatsModal extends Modal {
     })
   }
 
-  renderLink(link: AttachmentLink, groupDiv: HTMLElement){
+  noLinksOrAttachments() {
+    return !LINK_LISTS.find((linkOrAttachmentGroupKey) => {
+      // @ts-ignore
+      if (this.item.linksAndAttachments &&
+          // @ts-ignore
+          this.item.linksAndAttachments[linkOrAttachmentGroupKey] &&
+          // @ts-ignore
+          this.item.linksAndAttachments[linkOrAttachmentGroupKey].length) {
+            return true;
+      }
+    })
+  }
+
+  renderLink(link: AttachmentLink, groupDiv: HTMLElement) {
     const linkDisplay = groupDiv.createDiv({
-      cls: link.error ? 'error link' : (link.newPath? 'success link' : 'link')
+      cls: link.error ? 'error link' : (link.newPath ? 'success link' : 'link')
     })
     linkDisplay.createEl('a', {
       text: link.text,
@@ -81,7 +97,7 @@ export class StatsModal extends Modal {
       cls: 'title',
       href: link.originalPath
     })
-    linkDisplay.createSpan({ text: link.normalizedOriginalPath, cls: 'url'})
+    linkDisplay.createSpan({ text: link.normalizedOriginalPath, cls: 'url' })
     if (link.newPath) {
       linkDisplay.createSpan({ text: `=> ${link.newPath}`, cls: 'replaced' })
     }

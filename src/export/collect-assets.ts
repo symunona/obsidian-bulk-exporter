@@ -26,7 +26,7 @@ export async function collectAssetsReplaceLinks(
 ) {
 	const linksAndAttachments = getLinksAndAttachments(fileExportProperties.content)
 	fileExportProperties.linksAndAttachments = linksAndAttachments
-	fileExportProperties.content = linksAndAttachments.markdownReplacedWikiStyleLinks
+	fileExportProperties.outputContent = linksAndAttachments.markdownReplacedWikiStyleLinks
 
 	// console.warn(fileExportProperties.newFileName, linksAndAttachments)
 
