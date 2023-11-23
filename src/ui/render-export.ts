@@ -225,10 +225,10 @@ export class ExportTableRender {
 		const metadataWrapper = createSpan({ cls: 'metadata' })
 
 		if (this.settings.isPublishedField) {
-			const draftsInFolder = this.countDraftsInFolder(list)
-			const publishedInFolder = allInFolder - draftsInFolder;
-			if (draftsInFolder > 0) {
-				metadataWrapper.title = 'Published / Draft = ' + allInFolder;
+			const publishedInFolder = this.publishedInFolder(list)
+			const draftsInFolder = allInFolder - publishedInFolder;
+			if (publishedInFolder > 0) {
+				metadataWrapper.title = 'Published / Draft SUM = ' + allInFolder;
 				metadataWrapper.createSpan({
 					text: String(publishedInFolder),
 					cls: 'metadata-published',
@@ -247,7 +247,7 @@ export class ExportTableRender {
 		return metadataWrapper
 	}
 
-	countDraftsInFolder(list: ExportProperties[]): number {
+	publishedInFolder(list: ExportProperties[]): number {
 		return list.filter((e) => {
 			return Boolean(e.frontMatter[this.settings.isPublishedField])
 		}).length
