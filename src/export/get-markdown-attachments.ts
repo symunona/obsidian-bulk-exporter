@@ -32,6 +32,7 @@ import { AttachmentLink } from "./get-links-and-attachments";
 import { BulkExportSettings } from "src/models/bulk-export-settings";
 import { getAssetPaths } from "src/utils/indexing/asset-and-link-paths";
 import replaceAll from "src/utils/replace-all";
+import normalizeFileName from "src/utils/normalize-file-name";
 
 export const ATTACHMENT_URL_REGEXP = /!\[\[((.*?)\.(\w+))\]\]/g;
 export const MARKDOWN_ATTACHMENT_URL_REGEXP = /!\[(.*?)\]\(((.*?)\.(\w+))\)/g;
@@ -114,7 +115,7 @@ async function saveAttachmentToLocation(
 	const { toDir, toDirRelative } = getAssetPaths(exportProperties, settings)
 
 	const imageLinkMd5 = Md5.hashStr(asset.path);
-	const imageTargetFileName = imageNameWithoutExtension + "-" + imageLinkMd5 + imageExtension;
+	const imageTargetFileName = normalizeFileName(imageNameWithoutExtension) + "-" + imageLinkMd5 + imageExtension;
 
 	// Calculate the link within the markdown file, using the target's relative path!
 	const documentLink = join(toDirRelative, imageTargetFileName);
