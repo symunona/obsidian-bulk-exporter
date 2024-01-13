@@ -33,6 +33,7 @@ import { BulkExportSettings } from "src/models/bulk-export-settings";
 import { getAssetPaths } from "src/utils/indexing/asset-and-link-paths";
 import replaceAll from "src/utils/replace-all";
 import normalizeFileName from "src/utils/normalize-file-name";
+import { normalizeLinkToForwardSlash } from "src/utils/forward-slash";
 
 export const ATTACHMENT_URL_REGEXP = /!\[\[((.*?)\.(\w+))\]\]/g;
 export const MARKDOWN_ATTACHMENT_URL_REGEXP = /!\[(.*?)\]\(((.*?)\.(\w+))\)/g;
@@ -64,7 +65,16 @@ export function collectAndReplaceHeaderAttachments(
 
 			// This is not pretty, but it works.
 			let frontMatterPart = contentSplitByHrDashes.shift() || ''
-			frontMatterPart = replaceAll(attachment.originalPath, frontMatterPart, attachment.newPath)
+			frontMatterPart = replaceAll(
+				attachment.originalPath, 
+				frontMatterPart, 
+				// Replace with normalized '/' slashes, always. Windows uses (\) backslashes.
+				// However the markdown standard is '/' - works on Mac and Linux.
+				// The links should always be / in markdown documents.
+				// For copying the assets, the plugin uses the system path's join, hence the replaced
+				// urls. If I normalize it back here, the link will be fixed and the copy will still work.
+				normalizeLinkToForwardSlash(attachment.newPath))
+
 			contentSplitByHrDashes.unshift(frontMatterPart)
 			exportProperties.outputContent = contentSplitByHrDashes.join('\n---\n')
 		}
@@ -83,7 +93,15 @@ export function collectAndReplaceInlineAttachments(
 		// I have experimented with this a lot.
 		// @see comments in getLinksAndAttachments.
 		// I normalized before exportProperties.outputContent to only have []() style links.
-		exportProperties.outputContent = replaceAll(`](${attachment.originalPath})`, exportProperties.outputContent, `](${attachment.newPath})`)
+		exportProperties.outputContent = replaceAll(
+			`](${attachment.originalPath})`, 
+			exportProperties.outputContent,
+			// Replace with normalized '/' slashes, always. Windows uses (\) backslashes.
+			// However the markdown standard is '/' - works on Mac and Linux.
+			// The links should always be / in markdown documents.
+			// For copying the assets, the plugin uses the system path's join, hence the replaced
+			// urls. If I normalize it back here, the link will be fixed and the copy will still work.
+			`](${normalizeLinkToForwardSlash(attachment.newPath || '')})`)
 	})
 }
 
@@ -118,7 +136,7 @@ async function saveAttachmentToLocation(
 	const imageTargetFileName = normalizeFileName(imageNameWithoutExtension) + "-" + imageLinkMd5 + imageExtension;
 
 	// Calculate the link within the markdown file, using the target's relative path!
-	const documentLink = join(toDirRelative, imageTargetFileName);
+	const documentLink = join(toDirRelative, imageTargetFileName).replace(/\\/g, '/');
 	attachment.newPath = documentLink;
 
 	const assetAbsoluteTarget = join(toDir, imageTargetFileName);
