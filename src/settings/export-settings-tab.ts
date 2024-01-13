@@ -217,6 +217,30 @@ export class OutputSettingTab extends PluginSettingTab {
 					})
 			);
 
+		new Setting(containerEl)
+			.setName("Preserve Wiki links")
+			.setDesc("if true, wiki-link styled links will be converted back to wiki links.")
+			.addToggle((text) =>
+				text
+					.setValue(settings.preserveWikiLinks)
+					.onChange(async (value) => {
+						settings.preserveWikiLinks = value;
+						await this.plugin.saveSettingsWithRefresh();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Normalize Spaces in Links")
+			.setDesc("if true, spaces in local links will be url escaped (e.g. %20 for spaces)")
+			.addToggle((text) =>
+				text
+					.setValue(settings.normalizeSpacesInLinks)
+					.onChange(async (value) => {
+						settings.normalizeSpacesInLinks = value;
+						await this.plugin.saveSettingsWithRefresh();
+					})
+			);
+
 
 		new Setting(containerEl)
 			.setName("Attachment / Asset folder name")

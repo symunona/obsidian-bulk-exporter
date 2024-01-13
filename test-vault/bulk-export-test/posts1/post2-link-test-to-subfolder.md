@@ -21,3 +21,9 @@ hmm
 
 
 [[sub-note1|wiki link]] <- this is.
+
+
+[[Wiki link with space in it]]
+[[Wiki link with space in it|Another wiki space link with pipe]]
+
+

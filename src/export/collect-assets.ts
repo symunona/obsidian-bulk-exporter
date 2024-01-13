@@ -37,6 +37,7 @@ export async function collectAssetsReplaceLinks(
 		fileExportProperties,
 		linksAndAttachments.internalLinks,
 		allFileListMap,
+		settings,
 		plugin
 	);
 

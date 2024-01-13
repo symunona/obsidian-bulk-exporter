@@ -6,6 +6,8 @@ const DOUBLE_BRACKET_LINK_MATCHER = /\[\[([^\]]+)\]\]/g;
 
 export const IMAGE_MATCHER = /(([^\s]*).(png|jpe?g|gif|webp|svg|pdf|doc|docx|xls|xlsx|txt))/
 
+const WIKI_LINK_PREFIX = 'wikilink://'
+
 const md = new MarkdownIt();
 
 export enum LinkType {
@@ -27,7 +29,8 @@ export interface AttachmentLink {
     error?: string,
     count?: number,
     linkType: LinkType,
-    token?: Token
+    token?: Token,
+    isWikiLink?: boolean
 }
 
 
@@ -91,7 +94,7 @@ export function replaceDoubleBracketLinks(markdown: string): string {
                 linkTarget = linkParts.shift() || ''
                 text = linkParts.join('|')
             }
-            const standardLinkStyle = `[${text}](${encodeURIComponent(linkTarget)})`
+            const standardLinkStyle = `[${text}](${WIKI_LINK_PREFIX}${encodeURIComponent(linkTarget)})`
             markdown = replaceAll(link, markdown, standardLinkStyle)
         })
     }
@@ -187,13 +190,18 @@ export function extractLinks(tokens: Token[], links: AttachmentLink[] = []) {
                     normalizedOriginalPath: normalizeUrl(url),
                     linkType: getTypeofUrl(normalizeUrl(url)),
                     source: 'body',
-                    token: token
+                    token: token,
+                    isWikiLink: isWikiLink(url)
                 });
             }
         }
     }
 
     return links
+}
+
+function isWikiLink(url: string){
+    return url.startsWith("wikilink://")
 }
 
 function normalizeUrl(url: string) {
@@ -203,6 +211,9 @@ function normalizeUrl(url: string) {
             url.substring(url.indexOf("&file=") + 6)
         );
         url = fileLink;
+    }
+    if (isWikiLink(url)) {
+        url = url.substring(WIKI_LINK_PREFIX.length)
     }
     return url
 }

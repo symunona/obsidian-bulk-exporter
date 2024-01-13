@@ -13,7 +13,9 @@ export const DEFAULT_SETTINGS: BulkExportSettings = {
 	shell: '',
 	headerFieldsToShow: [],
 	groupOpenMap: {},
-	absoluteAssets: false
+	absoluteAssets: false,
+	preserveWikiLinks: true,
+	normalizeSpacesInLinks: false
 };
 
 export interface BulkExportSettings {
@@ -23,6 +25,8 @@ export interface BulkExportSettings {
 	exportQuery: string;
 	isPublishedField: string;
 	emptyTargetFolder: boolean;
+	preserveWikiLinks: boolean;
+	normalizeSpacesInLinks: boolean;
 
 	assetPath: string;
 	absoluteAssets: boolean;
