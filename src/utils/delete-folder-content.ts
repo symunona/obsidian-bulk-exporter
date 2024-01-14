@@ -1,9 +1,25 @@
 import { existsSync, lstatSync, readdirSync, rmSync, unlinkSync } from "fs";
 import { join } from "path";
+import { globSync } from 'glob'
+import { log } from "./log";
 
-export function rmDirContent(directoryPath: string) {
+export function rmDirContent(directoryPath: string, ignorePattern: string) {
     if (existsSync(directoryPath)) {
+        const fileMap: {[key: string]: boolean} = {}
+        if (ignorePattern){
+            const matching =
+                globSync(ignorePattern, {cwd: directoryPath})
+                    .forEach((filePath)=>fileMap[filePath] = true)
+            console.warn(matching)
+        }
+
         readdirSync(directoryPath).forEach((file) => {
+            // Keep if!
+            if (fileMap[file]) {
+                log('Not deleting file/folder as it is matching ignore rule: ', file)
+                return
+            }
+
             const curPath = join(directoryPath, file);
 
             if (lstatSync(curPath).isDirectory()) {

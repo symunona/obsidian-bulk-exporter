@@ -165,9 +165,36 @@ export class OutputSettingTab extends PluginSettingTab {
 					.setValue(settings.emptyTargetFolder)
 					.onChange(async (value) => {
 						settings.emptyTargetFolder = value;
+						if (value){
+							ignorePatterns.settingEl.show()
+						} else {
+							ignorePatterns.settingEl.hide()
+						}
 						await this.plugin.saveSettingsWithRefresh();
 					})
 			);
+
+		const linkToGlobDocs = createEl('a', { href: 'https://globster.xyz/', text: 'Glob pattern matcher' })
+		const ignoreInfo = createSpan({ text: `Files in the root folder matching this pattern will NOT be deleted. E.g. ignore 'engine' and 'rest' folders, just type in {engine,rest} - ` })
+		ignoreInfo.append(linkToGlobDocs)
+		const ignoreMatcherElement = document.createDocumentFragment()
+		ignoreMatcherElement.append(ignoreInfo)
+
+		const ignorePatterns = new Setting(containerEl)
+			.setName("Ignore Delete Glob Pattern")
+			.setDesc(ignoreMatcherElement)
+			.addText((text) =>
+				text
+					.setPlaceholder("*")
+					.setValue(settings.emptyTargetFolderIgnore)
+					.onChange(async (value) => {
+						settings.emptyTargetFolderIgnore = value
+						await this.plugin.saveSettingsWithRefresh();
+					})
+			);
+		if (!settings.emptyTargetFolder){ ignorePatterns.settingEl.hide() }
+
+
 
 
 		containerEl.createEl('h2', { text: 'Preview' })
@@ -195,7 +222,7 @@ export class OutputSettingTab extends PluginSettingTab {
 					.setPlaceholder("*")
 					.setValue(settings.headerFieldsToShow.join(', '))
 					.onChange(async (value) => {
-						settings.headerFieldsToShow = value.split(',').map(v=>v.trim()).filter(v=>v);
+						settings.headerFieldsToShow = value.split(',').map(v => v.trim()).filter(v => v);
 						await this.plugin.saveSettingsWithRefresh();
 					})
 			);

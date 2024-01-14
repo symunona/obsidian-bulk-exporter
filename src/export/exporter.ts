@@ -219,7 +219,7 @@ export async function exportSelection(
 
 	// If emptying target folder is set, remove all files and folders within.
 	if (settings.emptyTargetFolder) {
-		rmDirContent(settings.outputFolder)
+		rmDirContent(settings.outputFolder, settings.emptyTargetFolderIgnore)
 	}
 
 	for (const fileIndex in fileList) {

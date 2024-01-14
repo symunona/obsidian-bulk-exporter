@@ -50,6 +50,7 @@ export class ButtonWithLoader {
                 loadingIcon.style.display = 'none'
                 errorIcon.style.display = 'block'
                 onError(e)
+                console.error(e)
             }
             button.disabled = false
         })

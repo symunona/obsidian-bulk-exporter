@@ -6,6 +6,8 @@ export const DEFAULT_SETTINGS: BulkExportSettings = {
 	outputFolder: "output",
 	exportQuery: "blog",
 	emptyTargetFolder: false,
+	emptyTargetFolderIgnore: '',
+
 	isPublishedField: '',
 	assetPath: "assets",
 	outputFormat: '${blog}/${slug}',
@@ -25,6 +27,8 @@ export interface BulkExportSettings {
 	exportQuery: string;
 	isPublishedField: string;
 	emptyTargetFolder: boolean;
+	emptyTargetFolderIgnore: string,
+
 	preserveWikiLinks: boolean;
 	normalizeSpacesInLinks: boolean;
 
