@@ -28,7 +28,7 @@ import { basename, dirname, join } from "path";
 import BulkExporterPlugin from "../main";
 import { ExportProperties } from "../models/export-properties";
 import { Md5 } from "ts-md5";
-import { AttachmentLink } from "./get-links-and-attachments";
+import { AttachmentLink, normalizeUrl } from "./get-links-and-attachments";
 import { BulkExportSettings } from "src/models/bulk-export-settings";
 import { getAssetPaths } from "src/utils/indexing/asset-and-link-paths";
 import replaceAll from "src/utils/replace-all";
@@ -66,8 +66,8 @@ export function collectAndReplaceHeaderAttachments(
 			// This is not pretty, but it works.
 			let frontMatterPart = contentSplitByHrDashes.shift() || ''
 			frontMatterPart = replaceAll(
-				attachment.originalPath, 
-				frontMatterPart, 
+				attachment.originalPath,
+				frontMatterPart,
 				// Replace with normalized '/' slashes, always. Windows uses (\) backslashes.
 				// However the markdown standard is '/' - works on Mac and Linux.
 				// The links should always be / in markdown documents.
@@ -94,7 +94,7 @@ export function collectAndReplaceInlineAttachments(
 		// @see comments in getLinksAndAttachments.
 		// I normalized before exportProperties.outputContent to only have []() style links.
 		exportProperties.outputContent = replaceAll(
-			`](${attachment.originalPath})`, 
+			`](${attachment.originalPath})`,
 			exportProperties.outputContent,
 			// Replace with normalized '/' slashes, always. Windows uses (\) backslashes.
 			// However the markdown standard is '/' - works on Mac and Linux.
@@ -111,7 +111,7 @@ async function saveAttachmentToLocation(
 	attachment: AttachmentLink,
 	exportProperties: ExportProperties
 ) {
-	const imageLink = decodeURIComponent(attachment.originalPath);
+	const imageLink = normalizeUrl(attachment.originalPath);
 
 	const imageName = basename(imageLink);
 

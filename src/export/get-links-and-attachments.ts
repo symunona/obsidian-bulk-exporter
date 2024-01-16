@@ -201,10 +201,10 @@ export function extractLinks(tokens: Token[], links: AttachmentLink[] = []) {
 }
 
 function isWikiLink(url: string){
-    return url.startsWith("wikilink://")
+    return url.startsWith(WIKI_LINK_PREFIX)
 }
 
-function normalizeUrl(url: string) {
+export function normalizeUrl(url: string) {
     if (url.startsWith("obsidian://")) {
         // Just grab the file value from the link.
         const fileLink = decodeURIComponent(
@@ -213,7 +213,7 @@ function normalizeUrl(url: string) {
         url = fileLink;
     }
     if (isWikiLink(url)) {
-        url = url.substring(WIKI_LINK_PREFIX.length)
+        url = decodeURIComponent(url.substring(WIKI_LINK_PREFIX.length))
     }
     return url
 }

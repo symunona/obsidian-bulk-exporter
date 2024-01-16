@@ -7,10 +7,8 @@ export function rmDirContent(directoryPath: string, ignorePattern: string) {
     if (existsSync(directoryPath)) {
         const fileMap: {[key: string]: boolean} = {}
         if (ignorePattern){
-            const matching =
-                globSync(ignorePattern, {cwd: directoryPath})
-                    .forEach((filePath)=>fileMap[filePath] = true)
-            console.warn(matching)
+            globSync(ignorePattern, {cwd: directoryPath})
+                .forEach((filePath)=>fileMap[filePath] = true)
         }
 
         readdirSync(directoryPath).forEach((file) => {
