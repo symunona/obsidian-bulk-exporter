@@ -29,13 +29,31 @@ export function replaceLocalLinks(
 		);
 
 		if (!linkedDocument) {
-			link.error = "Internal Link Not Found at all!"
-			exportProperties.outputContent = replaceAll(
-				`[${title}](${original})`,
-				exportProperties.outputContent,
-				`${title}`
-			);
-			warn('Internal link not found! Removing. ', title, original)
+			if (!settings.keepLinksNotFound){
+				exportProperties.outputContent = replaceAll(
+					`[${title}](${original})`,
+					exportProperties.outputContent,
+					`${title}`
+				);
+
+				warn('Internal link not found! Removed.', title, original)
+				link.error = "Internal Link Not Found at all! Removed."
+			} else {
+				// Still need to replace the link with the original normalized link, because
+				// it might be a wiki link.
+				let newLink = link.normalizedOriginalPath
+				if (newLink.indexOf(' ') > -1 && settings.normalizeSpacesInLinks) {
+					newLink = newLink.split('/').map((urlPart) => encodeURIComponent(urlPart)).join('/')
+				}
+
+				replaceAll(
+					`[${title}](${original})`,
+					exportProperties.outputContent,
+					`[${title}](${newLink})`)
+
+				warn('Internal link not found! Keeping due to settings keep not found. ', title, original)
+				link.error = "Internal Link Not Found, NOT replacing due to Keep Links Not Found setting keep not found!"
+			}
 			continue
 
 		}
@@ -81,14 +99,27 @@ export function replaceLocalLinks(
 				newLinkWithTitle);
 		} else {
 			// Removed as it's pointing to a file that's not being exported.
-			warn("Internal link not found in output, removing!", original, title, path);
-			link.error = "Internal Link FOUND but not public, removed!"
+			if (!settings.keepLinksPrivate){
+				warn("Internal link not found in output, removing!", original, title, path);
+				link.error = "Internal Link FOUND but not public, removed!"
 
-			exportProperties.outputContent = replaceAll(
-				`[${title}](${original})`,
-				exportProperties.outputContent,
-				`${title}`
-			);
+				exportProperties.outputContent = replaceAll(
+					`[${title}](${original})`,
+					exportProperties.outputContent,
+					`${title}`
+				);
+			} else {
+				let newLink = link.normalizedOriginalPath
+				if (newLink.indexOf(' ') > -1 && settings.normalizeSpacesInLinks) {
+					newLink = newLink.split('/').map((urlPart) => encodeURIComponent(urlPart)).join('/')
+				}
+				exportProperties.outputContent = replaceAll(
+					`[${title}](${original})`,
+					exportProperties.outputContent,
+					`[${title}](${newLink})`)
+				warn("Internal link not found in output, kept due to settings keep private!", original, title, path);
+				link.error = "Internal Link FOUND but not public, kept due to settings keep private!"
+			}
 		}
 	}
 }

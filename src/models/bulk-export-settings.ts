@@ -17,7 +17,9 @@ export const DEFAULT_SETTINGS: BulkExportSettings = {
 	groupOpenMap: {},
 	absoluteAssets: false,
 	preserveWikiLinks: true,
-	normalizeSpacesInLinks: false
+	normalizeSpacesInLinks: false,
+	keepLinksNotFound: false,
+	keepLinksPrivate: false
 };
 
 export interface BulkExportSettings {
@@ -38,6 +40,9 @@ export interface BulkExportSettings {
 	lastExport: ExportMap;
 	shell: string;
 	headerFieldsToShow: Array<string>;
+
+	keepLinksNotFound: boolean;
+	keepLinksPrivate: boolean;
 
 	groupOpenMap: {[id: string]: boolean}
 }

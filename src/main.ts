@@ -46,8 +46,8 @@ export default class BulkExporterPlugin extends Plugin {
 		this.registerEvent(
 			this.app.metadataCache.on("resolved", async () => {
 				// If the dataview plugin was not loaded when this inited,
-				// let's create the initial search!
-				if (!this.inited) {
+				// let's create the initial search! Wait until Obsidian is fully loaded.
+				if (!this.inited && document.querySelector('.mod-root')) {
 					this.exporter.searchAll();
 					this.inited = true;
 				} else {

@@ -268,6 +268,29 @@ export class OutputSettingTab extends PluginSettingTab {
 					})
 			);
 
+		new Setting(containerEl)
+			.setName("Keep Links Not Found")
+			.setDesc("Instead of replacing them with plain text, just leave them as is.")
+			.addToggle((text) =>
+				text
+					.setValue(settings.keepLinksNotFound)
+					.onChange(async (value) => {
+						settings.keepLinksNotFound = value;
+						await this.plugin.saveSettingsWithRefresh();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Keep Links Not Exported")
+			.setDesc("For e.g. you want to export them in another batch.")
+			.addToggle((text) =>
+				text
+					.setValue(settings.keepLinksPrivate)
+					.onChange(async (value) => {
+						settings.keepLinksPrivate = value;
+						await this.plugin.saveSettingsWithRefresh();
+					})
+			);
 
 		new Setting(containerEl)
 			.setName("Attachment / Asset folder name")
