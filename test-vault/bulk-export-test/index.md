@@ -17,8 +17,11 @@ Obsidian URL:
 [simple absolute subfolder](posts1/subfolder/sub-note1x) <<--- This should be NOT A LINK in the export, only if toggle is
 [find it by name](header-image-test) <- exported
 
-
-Wiki link: [[bla bla blah]]
-Normal link: [bla](posts1/bla%20bla%20blah)
+This link does not exist, should be removed, unless "preserve non-existent": [[asdf asdf asdf]]
+Wiki link to be preserved if "preserve not public" toggle is on: [[bla bla blah]]
+Wiki link same as the above with title: [[bla bla blah|i am a title]]
+Normal link with %20 spaces: [bla](posts1/bla%20bla%20blah)
+Normal link with NORMAL spaces: [bla](posts1/bla bla blah)
 Obsidian Link: [bla](obsidian://open?vault=bulk-export-test&file=posts1%2Fbla%20bla%20blah)
+
 
