@@ -34,6 +34,7 @@ import { getAssetPaths } from "src/utils/indexing/asset-and-link-paths";
 import replaceAll from "src/utils/replace-all";
 import normalizeFileName from "src/utils/normalize-file-name";
 import { normalizeLinkToForwardSlash } from "src/utils/forward-slash";
+import { replaceLinks } from "./replace-local-links";
 
 export const ATTACHMENT_URL_REGEXP = /!\[\[((.*?)\.(\w+))\]\]/g;
 export const MARKDOWN_ATTACHMENT_URL_REGEXP = /!\[(.*?)\]\(((.*?)\.(\w+))\)/g;
@@ -93,15 +94,8 @@ export function collectAndReplaceInlineAttachments(
 		// I have experimented with this a lot.
 		// @see comments in getLinksAndAttachments.
 		// I normalized before exportProperties.outputContent to only have []() style links.
-		exportProperties.outputContent = replaceAll(
-			`](${attachment.originalPath})`,
-			exportProperties.outputContent,
-			// Replace with normalized '/' slashes, always. Windows uses (\) backslashes.
-			// However the markdown standard is '/' - works on Mac and Linux.
-			// The links should always be / in markdown documents.
-			// For copying the assets, the plugin uses the system path's join, hence the replaced
-			// urls. If I normalize it back here, the link will be fixed and the copy will still work.
-			`](${normalizeLinkToForwardSlash(attachment.newPath || '')})`)
+
+		replaceLinks(normalizeLinkToForwardSlash(attachment.newPath || ''), attachment, settings, exportProperties)
 	})
 }
 
@@ -133,7 +127,12 @@ async function saveAttachmentToLocation(
 	const { toDir, toDirRelative } = getAssetPaths(exportProperties, settings)
 
 	const imageLinkMd5 = Md5.hashStr(asset.path);
-	const imageTargetFileName = normalizeFileName(imageNameWithoutExtension) + "-" + imageLinkMd5 + imageExtension;
+	let imageTargetFileName = normalizeFileName(imageNameWithoutExtension) + "-" + imageLinkMd5 + imageExtension;
+
+	// Can opt to keep original file names!
+	if (settings.keepOriginalAttachmentFileNames) {
+		imageTargetFileName = imageNameWithoutExtension + imageExtension;
+	}
 
 	// Calculate the link within the markdown file, using the target's relative path!
 	const documentLink = join(toDirRelative, imageTargetFileName).replace(/\\/g, '/');

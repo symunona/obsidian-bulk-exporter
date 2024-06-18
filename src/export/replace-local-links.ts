@@ -1,9 +1,10 @@
 import { ExportMap, ExportProperties } from "../models/export-properties";
-import { warn } from "console";
 import replaceAll from "../utils/replace-all";
 import { AttachmentLink } from "./get-links-and-attachments";
 import BulkExporterPlugin from "src/main";
 import { BulkExportSettings } from "src/models/bulk-export-settings";
+
+const warn = console.warn.bind(console);
 
 /**
  * Supports obsidian: formatted links, replaces exportProperties' content.
@@ -92,7 +93,7 @@ function removeLinks(link:AttachmentLink, exportProperties: ExportProperties){
  * @param settings
  * @param exportProperties
  */
-function replaceLinks(newLink: string, link: AttachmentLink, settings:BulkExportSettings, exportProperties: ExportProperties){
+export function replaceLinks(newLink: string, link: AttachmentLink, settings:BulkExportSettings, exportProperties: ExportProperties){
 	const title = link.text
 	const original = link.originalPath
 	// There are spaces in the URL, normalize it!

@@ -155,15 +155,17 @@ export function extractAttachments(tokens: Token[], attachments: AttachmentLink[
             extractAttachments(token.children, attachments);
         }
 
+        // PDFs are also images if they are embedded here...
         if (token.type === 'image') {
             const url = token.attrGet('src') || ''
             attachments.push({
-                text: token.attrGet('alt') || '',
+                text: token.attrGet('alt') || token.content,
                 originalPath: url,
                 normalizedOriginalPath: normalizeUrl(url),
                 linkType: getTypeofUrl(normalizeUrl(url)),
                 source: "body",
-                token: token
+                token: token,
+                isWikiLink: isWikiLink(url)
             });
         }
     }
@@ -225,6 +227,3 @@ function getTypeofUrl(url: string) {
         return LinkType.internal
     }
 }
-
-
-normalizeUrl

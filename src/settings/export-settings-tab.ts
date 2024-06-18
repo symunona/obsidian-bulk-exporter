@@ -257,6 +257,19 @@ export class OutputSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
+			.setName("Keep original attachment file names")
+			.setDesc("By default the plugin uses md5 hashes in the file names to make them unique. If you want to keep the original file names, set this to true. \nWARNING: if you have the same file name in different folders, they will overwrite each other, randomly, you have to make sure your file names are unique!")
+			.addToggle((text) =>
+				text
+					.setValue(settings.keepOriginalAttachmentFileNames)
+					.onChange(async (value) => {
+						settings.keepOriginalAttachmentFileNames = value;
+						await this.plugin.saveSettingsWithRefresh();
+					})
+			);
+
+
+		new Setting(containerEl)
 			.setName("Normalize Spaces in Links")
 			.setDesc("if true, spaces in local links will be url escaped (e.g. %20 for spaces)")
 			.addToggle((text) =>
