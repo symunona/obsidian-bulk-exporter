@@ -207,15 +207,18 @@ export function extractLinks(tokens: Token[], links: AttachmentLink[] = []) {
             const linkTextToken = tokens[tokens.indexOf(token) + 1];
             if (linkTextToken?.type === 'text' && linkTextToken?.content) {
                 const url = token.attrGet('href') || ''
-                links.push({
-                    text: linkTextToken.content,
-                    originalPath: url,
-                    normalizedOriginalPath: normalizeUrl(url),
-                    linkType: getTypeofUrl(normalizeUrl(url)),
-                    source: 'body',
-                    token: token,
-                    isWikiLink: isWikiLink(url)
-                });
+                const isAttachment = url.toLocaleLowerCase().match(IMAGE_MATCHER)
+                if (!isAttachment) {
+                    links.push({
+                        text: linkTextToken.content,
+                        originalPath: url,
+                        normalizedOriginalPath: normalizeUrl(url),
+                        linkType: getTypeofUrl(normalizeUrl(url)),
+                        source: 'body',
+                        token: token,
+                        isWikiLink: isWikiLink(url)
+                    });
+                }
             }
         }
     }
