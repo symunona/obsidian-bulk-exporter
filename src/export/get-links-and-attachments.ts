@@ -168,6 +168,27 @@ export function extractAttachments(tokens: Token[], attachments: AttachmentLink[
                 isWikiLink: isWikiLink(url)
             });
         }
+        // This is like "[url](title)" or [[url|title]] - where title ends with
+        // an attachment extension e.g. (pdf, jpg, etc.) (see IMAGE_MATCHER)
+        if (token.type === 'link_open') {
+            // When a link_open token is found, extract link text and URL.
+            const linkTextToken = tokens[tokens.indexOf(token) + 1];
+            if (linkTextToken?.type === 'text' && linkTextToken?.content) {
+                const url = token.attrGet('href') || ''
+                const isAttachment = url.toLocaleLowerCase().match(IMAGE_MATCHER)
+                if (isAttachment) {
+                    attachments.push({
+                        text: linkTextToken.content,
+                        originalPath: url,
+                        normalizedOriginalPath: normalizeUrl(url),
+                        linkType: getTypeofUrl(normalizeUrl(url)),
+                        source: 'body',
+                        token: token,
+                        isWikiLink: isWikiLink(url)
+                    });
+                }
+            }
+        }
     }
 
     return attachments
