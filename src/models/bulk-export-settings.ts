@@ -20,7 +20,8 @@ export const DEFAULT_SETTINGS: BulkExportSettings = {
 	normalizeSpacesInLinks: false,
 	keepLinksNotFound: false,
 	keepLinksPrivate: false,
-	keepOriginalAttachmentFileNames: false
+	keepOriginalAttachmentFileNames: false,
+	keepWikiLinksAsIs: false
 };
 
 export interface BulkExportSettings {
@@ -33,6 +34,7 @@ export interface BulkExportSettings {
 	emptyTargetFolderIgnore: string,
 
 	preserveWikiLinks: boolean;
+	keepWikiLinksAsIs: boolean;
 	normalizeSpacesInLinks: boolean;
 
 	assetPath: string;
@@ -46,7 +48,8 @@ export interface BulkExportSettings {
 	keepLinksPrivate: boolean;
 	keepOriginalAttachmentFileNames: boolean;
 
-	groupOpenMap: {[id: string]: boolean}
+	groupOpenMap: {[id: string]: boolean};
+
 }
 
 export interface BulkExportSettingsList {

@@ -1,6 +1,6 @@
 import { ExportMap, ExportProperties } from "../models/export-properties";
 import replaceAll from "../utils/replace-all";
-import { AttachmentLink } from "./get-links-and-attachments";
+import { AttachmentLink, normalizeUrl } from "./get-links-and-attachments";
 import BulkExporterPlugin from "src/main";
 import { BulkExportSettings } from "src/models/bulk-export-settings";
 
@@ -115,7 +115,18 @@ export function replaceLinks(newLink: string, link: AttachmentLink, settings:Bul
 		if (title === newLink) {
 			newLinkWithTitle = `[[${title}]]`
 		} else {
-			newLinkWithTitle = `[[${newLink}|${title}]]`
+			// An edge case: if:
+			// - this is a WIKI link
+			// - preserve wiki links
+			// - keepWikiLinksAsIs
+			// we can just leave the original, as e.g. quartz can link it up.
+			if (settings.keepWikiLinksAsIs){
+
+				newLinkWithTitle = `[[${normalizeUrl(link.originalPath)}]]`
+			} else {
+				// Do update to the new relative path.
+				newLinkWithTitle = `[[${newLink}|${title}]]`
+			}
 		}
 	}
 
