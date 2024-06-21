@@ -3,6 +3,7 @@ import { AttachmentLink } from "src/export/get-links-and-attachments";
 import BulkExporterPlugin from "src/main";
 import { ExportProperties } from "src/models/export-properties";
 import { getIcon } from "src/obsidian-api-helpers/get-icon";
+import { DiffView } from "src/utils/diff";
 
 const LINK_LISTS = [
   'internalLinks',
@@ -15,10 +16,12 @@ const LINK_LISTS = [
 
 export class StatsModal extends Modal {
   item: ExportProperties
+  plugin: BulkExporterPlugin
 
   constructor(plugin: BulkExporterPlugin, item: ExportProperties) {
     super(plugin.app);
     this.item = item
+    this.plugin = plugin
   }
 
   onOpen() {
@@ -30,6 +33,7 @@ export class StatsModal extends Modal {
     const content = contentEl.createDiv({ cls: 'content' })
     this.linkStats(content)
     this.globStats(content)
+    new DiffView(content, this.item, this.plugin)
   }
 
 
@@ -108,6 +112,7 @@ export class StatsModal extends Modal {
       linkDisplay.prepend(getIcon('check'));
     }
   }
+
 
   onClose() {
     this.contentEl.empty();

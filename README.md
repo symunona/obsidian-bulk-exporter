@@ -208,9 +208,11 @@ Open an [Issue on github](https://github.com/symunona/obsidian-bulk-exporter/iss
 
 ### Thanks
 
-[Obsidian people](https://obsidian.md/about) for this amazing tool!
+[Obsidian people](https://obsidian.md/about)
 
 [Marcus Olson](https://marcus.se.net/) for the Dataview plugin and the [developer docs](https://marcus.se.net/obsidian-plugin-docs/)!
 
-[jspaint.app](https://jspaint.app/) - the software missing from my childhood.
+[Till Friebe](https://github.com/friebetill/obsidian-file-diff) for the Diff Tool code
+
+[jspaint.app](https://jspaint.app/) - for the marketing image.
 
