@@ -46,7 +46,7 @@ export class FileListItemWrapper {
 			// @ts-ignore: the type of this is obstructed, as it's an internal plugin.
 			const fileExplorerFileItems = fileExplorer.view.fileItems;
 
-			Object.entries(fileExplorerFileItems).forEach(
+			Object.entries(fileExplorerFileItems || {}).forEach(
 				([path, fileItem]) => {
 					// @ts-ignore: so as fileItem: it's an internal type the file explorer uses.
 					const fileItemElement = fileItem.selfEl as HTMLElement;
