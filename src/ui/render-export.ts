@@ -18,7 +18,7 @@ import { HeaderFieldSelectorModal } from "./header-selector-modal";
 import { BulkExportSettings } from "src/models/bulk-export-settings";
 import openSettingsPage from "src/obsidian-api-helpers/open-settings-page";
 import { showFolderInSystemBrowserAbsolute } from "src/obsidian-api-helpers/show-in-folder";
-import { join } from "path";
+import { isAbsolute, join } from "path";
 import { statusIcon } from "./status-icon";
 
 const OVERWRITE_LOCALE = 'hu-HU'
@@ -110,8 +110,14 @@ export class ExportTableRender {
 		})
 		openOutputFolderLink.append(getIcon('folder-open'));
 		openOutputFolderLink.addEventListener('click', () => {
-			const outputFolder = join(process.cwd(), this.settings.outputFolder) + '/'
-			showFolderInSystemBrowserAbsolute(this.plugin, outputFolder)
+			// first, check if the output folder is absolute
+
+			if (isAbsolute(this.settings.outputFolder)){
+				showFolderInSystemBrowserAbsolute(this.plugin, this.settings.outputFolder)
+			} else {
+				const outputFolder = join(process.cwd(), this.settings.outputFolder) + '/'
+				showFolderInSystemBrowserAbsolute(this.plugin, outputFolder)
+			}
 		})
 
 		// Header
