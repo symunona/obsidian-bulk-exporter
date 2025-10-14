@@ -112,8 +112,11 @@ export function replaceLinks(newLink: string, link: AttachmentLink, settings:Bul
 	// @see discussion: https://forum.obsidian.md/t/how-to-link-a-file-with-filename-with-spaces/22592
 	// @see issue: https://github.com/symunona/obsidian-bulk-exporter/issues/3
 	if (link?.isWikiLink && settings.preserveWikiLinks) {
+		console.log('Preserving wiki link for: ', link)
+		// console.warn(newLink, title)
 		if (title === newLink) {
 			newLinkWithTitle = `[[${title}]]`
+			console.warn(1)
 		} else {
 			// An edge case: if:
 			// - this is a WIKI link
@@ -121,9 +124,16 @@ export function replaceLinks(newLink: string, link: AttachmentLink, settings:Bul
 			// - keepWikiLinksAsIs
 			// we can just leave the original, as e.g. quartz can link it up.
 			if (settings.keepWikiLinksAsIs){
-
-				newLinkWithTitle = `[[${normalizeUrl(link.originalPath)}]]`
+				console.warn(2)
+				const url = normalizeUrl(link.originalPath)
+				if (url === title) {
+					newLinkWithTitle = `[[${url}]]`
+				}
+				else {
+					newLinkWithTitle = `[[${url}|${title}]]`
+				}
 			} else {
+				console.warn(3)
 				// Do update to the new relative path.
 				newLinkWithTitle = `[[${newLink}|${title}]]`
 			}
