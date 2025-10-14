@@ -153,7 +153,7 @@ export class OutputSettingTab extends PluginSettingTab {
 			text: "DataView Language Specs",
 		});
 		const filterInfo = createSpan({
-			text: `Use a DataView style query for matching your metadata. Example: "blog='personal'". For more, see `,
+			text: `Use a DataView style query for matching your metadata. Example: 'blog="personal"'. For more, see `,
 		});
 		filterInfo.append(linkToDataViewDocs);
 		const filterInfoFragment = document.createDocumentFragment();
