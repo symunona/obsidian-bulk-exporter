@@ -162,7 +162,7 @@ export class OutputSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Filter Query")
 			.setDesc(filterInfoFragment)
-			.addText((text) =>
+			.addTextArea((text) =>
 				text
 					.setPlaceholder("default")
 					.setValue(settings.exportQuery)
