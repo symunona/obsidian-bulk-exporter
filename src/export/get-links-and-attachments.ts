@@ -233,13 +233,21 @@ function isWikiLink(url: string){
 export function normalizeUrl(url: string) {
     if (url.startsWith("obsidian://")) {
         // Just grab the file value from the link.
-        const fileLink = decodeURIComponent(
-            url.substring(url.indexOf("&file=") + 6)
-        );
-        url = fileLink;
+        try {
+            url = decodeURIComponent(url.substring(url.indexOf("file=") + 5))
+        } catch (e) {
+            console.error("Error decoding obsidian link: ", url, e)
+            throw e;
+        }
+        
     }
     if (isWikiLink(url)) {
-        url = decodeURIComponent(url.substring(WIKI_LINK_PREFIX.length))
+        try {
+            url = decodeURIComponent(url.substring(WIKI_LINK_PREFIX.length))
+        } catch (e) {
+            console.error("Error decoding wiki link: ", url, e)
+            throw e;
+        }
     }
     return url
 }
