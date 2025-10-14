@@ -152,10 +152,17 @@ export class OutputSettingTab extends PluginSettingTab {
 			href: "https://blacksmithgu.github.io/obsidian-dataview/queries/data-commands/",
 			text: "DataView Language Specs",
 		});
+		const linkToDocs1 = createEl("a", {
+			href: "https://github.com/symunona/obsidian-bulk-exporter",
+			text: "Docs",
+		});
+
 		const filterInfo = createSpan({
 			text: `Use a DataView style query for matching your metadata. Example: 'blog="personal"'. For more, see `,
 		});
 		filterInfo.append(linkToDataViewDocs);
+		filterInfo.append(" and ");
+		filterInfo.append(linkToDocs1);
 		const filterInfoFragment = document.createDocumentFragment();
 		filterInfoFragment.append(filterInfo);
 
@@ -172,14 +179,16 @@ export class OutputSettingTab extends PluginSettingTab {
 					})
 			);
 
-		const linkToDocs = createEl("a", {
+
+		const linkToDocs2 = createEl("a", {
 			href: "https://github.com/symunona/obsidian-bulk-exporter",
 			text: "Docs",
 		});
+
 		const filenameInfo = createSpan({
 			text: 'You can define the output path with the following JS expression. Example: "${blog}/${created.date}-${slug}" - see ',
 		});
-		filenameInfo.append(linkToDocs);
+		filenameInfo.append(linkToDocs2);
 		const exportFileNameInfoFragment = document.createDocumentFragment();
 		exportFileNameInfoFragment.append(filenameInfo);
 		new Setting(containerEl)
