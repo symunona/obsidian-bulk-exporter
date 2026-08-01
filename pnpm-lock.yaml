@@ -85,7 +85,7 @@ importers:
         specifier: ^13.0.2
         version: 13.0.2
       obsidian:
-        specifier: latest
+        specifier: 1.13.1
         version: 1.13.1(@codemirror/state@6.7.1)(@codemirror/view@6.43.7)
       obsidian-dataview:
         specifier: ^0.5.55

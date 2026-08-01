@@ -1,6 +1,7 @@
 import esbuild from "esbuild";
 import process from "process";
 import builtins from "builtin-modules";
+import fs from "fs";
 
 const banner =
 `/*
@@ -10,6 +11,100 @@ if you want to view the source, please visit the github repository of this plugi
 `;
 
 const prod = (process.argv[2] === "production");
+
+/*
+ * Warn (never fail) when the npm dist-tag "obsidian@latest" has moved past the
+ * version pinned in package.json.
+ *
+ * This plugin reaches into undocumented Obsidian internals (@ts-ignore'd
+ * accesses to app.plugins, the dataview API, internal metadata caches), so an
+ * Obsidian API bump is NOT safe by default -- it has to be tried. Hence a loud
+ * warning instead of a silent auto-update.
+ *
+ * Hard rules for this code:
+ *   - it must never fail the build,
+ *   - it must never hang the build (offline machines, CI without egress,
+ *     registry outages, proxies that black-hole connections).
+ * Everything below is therefore wrapped, timeboxed, and resolves to null on any
+ * problem whatsoever.
+ */
+const VERSION_CHECK_TIMEOUT_MS = 2500;
+const REGISTRY_URL = process.env.OBSIDIAN_REGISTRY_URL
+	|| "https://registry.npmjs.org/obsidian/latest";
+
+function readPinnedObsidianVersion() {
+	try {
+		const pkg = JSON.parse(fs.readFileSync(new URL("./package.json", import.meta.url), "utf8"));
+		const spec = (pkg.devDependencies && pkg.devDependencies.obsidian)
+			|| (pkg.dependencies && pkg.dependencies.obsidian);
+		if (typeof spec !== "string") return null;
+		// Accept "1.13.1", "^1.13.1", "~1.13.1"; ignore anything exotic
+		// (URLs, git specs, "latest") -- nothing sane to compare against.
+		const match = spec.match(/^[\^~]?(\d+\.\d+\.\d+(?:-[\w.]+)?)$/);
+		return match ? { version: match[1], spec } : null;
+	} catch {
+		return null;
+	}
+}
+
+async function fetchLatestObsidianVersion() {
+	try {
+		const response = await fetch(REGISTRY_URL, {
+			headers: { accept: "application/vnd.npm.install-v1+json, application/json" },
+			signal: AbortSignal.timeout(VERSION_CHECK_TIMEOUT_MS),
+		});
+		if (!response.ok) return null;
+		const body = await response.json();
+		return typeof body.version === "string" ? body.version : null;
+	} catch {
+		// Offline, DNS failure, proxy, timeout, malformed JSON, ancient Node
+		// without global fetch/AbortSignal.timeout -- all equally ignorable.
+		return null;
+	}
+}
+
+function printOutdatedWarning(pinned, latest) {
+	const colour = process.stderr.isTTY && !process.env.NO_COLOR;
+	const y = colour ? "\x1b[33m" : "";
+	const b = colour ? "\x1b[1m" : "";
+	const r = colour ? "\x1b[0m" : "";
+	const lines = [
+		"WARNING: the pinned Obsidian API is out of step with the registry",
+		"",
+		`obsidian@latest is ${latest}, this plugin is pinned to ${pinned}`,
+		"",
+		"Do NOT just bump the pin. This plugin uses undocumented Obsidian",
+		"internals (see the @ts-ignore comments in src/), so a minor API",
+		"release can break it silently. Update package.json only after",
+		"building and smoke-testing the plugin against the new version.",
+		"",
+		"Silence this check with SKIP_OBSIDIAN_VERSION_CHECK=1",
+	];
+	const width = Math.max(...lines.map((l) => l.length)) + 2;
+	const rule = `${y}${b}+${"-".repeat(width)}+${r}`;
+	const body = lines
+		.map((l) => `${y}${b}|${r} ${l}${" ".repeat(width - l.length - 1)}${y}${b}|${r}`)
+		.join("\n");
+	process.stderr.write(`\n${rule}\n${body}\n${rule}\n\n`);
+}
+
+async function checkObsidianVersion() {
+	try {
+		if (process.env.SKIP_OBSIDIAN_VERSION_CHECK) return;
+		const pinned = readPinnedObsidianVersion();
+		if (!pinned) return;
+		const latest = await fetchLatestObsidianVersion();
+		if (!latest || latest === pinned.version) return;
+		printOutdatedWarning(pinned.version, latest);
+	} catch {
+		// Belt and braces: a build must never die over a version notice.
+	}
+}
+
+// Kicked off before esbuild so the network round-trip overlaps with the bundle
+// rather than adding to it. Runs exactly once per process: in watch mode that
+// means once at `pnpm run dev` startup, never on a rebuild.
+const obsidianVersionCheck = checkObsidianVersion();
 
 const context = await esbuild.context({
 	banner: {
@@ -43,7 +138,12 @@ const context = await esbuild.context({
 
 if (prod) {
 	await context.rebuild();
+	// Awaited only here, so a one-shot build cannot exit before the notice is
+	// printed. Bounded by VERSION_CHECK_TIMEOUT_MS and cannot reject.
+	await obsidianVersionCheck;
 	process.exit(0);
 } else {
+	// Watch mode: not awaited. The process lives forever, so the warning simply
+	// appears when the lookup lands; startup is never delayed by it.
 	await context.watch();
 }

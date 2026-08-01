@@ -39,7 +39,7 @@
 		"js-yaml": "^4.1.0",
 		"jsdom": "^22.1.0",
 		"markdown-it": "^13.0.2",
-		"obsidian": "latest",
+		"obsidian": "1.13.1",
 		"obsidian-dataview": "^0.5.55",
 		"ts-jest": "^29.1.1",
 		"tslib": "2.4.0",
