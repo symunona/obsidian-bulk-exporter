@@ -1,8 +1,27 @@
 import { DEFAULT_SETTINGS } from "../models/bulk-export-settings";
+import { ExportMap } from "../models/export-properties";
 import {
 	getTransferableSettings,
 	parseImportedSettings,
 } from "../settings/settings-transfer";
+
+/** One entry of the export cache an export set carries around. */
+function lastExport(): ExportMap {
+	return {
+		"a.md": {
+			from: "a.md",
+			newFileName: "a.md",
+			toRelative: "blog/a.md",
+			toRelativeToExportDirRoot: "blog/a.md",
+			toAbsoluteFs: "/tmp/blog/a.md",
+			content: "",
+			outputContent: "",
+			frontMatter: {},
+			md5: "",
+			lastExportDate: 0,
+		},
+	};
+}
 
 function settingsList() {
 	return {
@@ -11,7 +30,7 @@ function settingsList() {
 		items: [
 			Object.assign({}, DEFAULT_SETTINGS, {
 				name: "blog",
-				lastExport: { "a.md": { toRelativeDir: "blog" } as any },
+				lastExport: lastExport(),
 				groupOpenMap: { blog: true },
 			}),
 			Object.assign({}, DEFAULT_SETTINGS, { name: "wiki" }),

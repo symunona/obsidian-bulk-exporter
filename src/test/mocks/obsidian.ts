@@ -2,14 +2,17 @@
  * The `obsidian` npm package only ships types, the implementation lives in the
  * app. This is just enough of it for the pure logic to be testable in jest.
  */
+import type { App } from "obsidian";
+
 export class Notice {
 	constructor(public message: string) {}
 	hide() {}
 }
 
 export class Modal {
-	contentEl: any = null;
-	constructor(public app: any) {}
+	// The real Modal only has a contentEl once it is opened by the app.
+	contentEl: HTMLElement | null = null;
+	constructor(public app: App) {}
 	open() {}
 	close() {}
 }
