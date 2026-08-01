@@ -1614,16 +1614,20 @@
             "starred": false,
             "frontmatter": {
                 "blog": "test",
-                "links": "3",
-                "externalLinks": "3",
+                "links": "2",
+                "externalLinks": "2",
+                "attachments": "1",
+                "externalAttachments": "1",
                 "lvl": "one"
             },
             "ext": "md"
         },
         "frontMatter": {
             "blog": "test",
-            "links": "3",
-            "externalLinks": "3",
+            "links": "2",
+            "externalLinks": "2",
+            "attachments": "1",
+            "externalAttachments": "1",
             "lvl": "one"
         },
         "from": "posts1/external link test.md",
@@ -1631,12 +1635,12 @@
         "toAbsoluteFs": "tmp/test-export/external-link-test.md",
         "toRelative": "external-link-test.md",
         "md5": "a3a25c2559652688a29dfb10563481ec",
-        "content": "---\nblog: test\nlinks: \"3\"\nexternalLinks: \"3\"\nlvl: one\n---\nI want to test external links:\n\nThis is a link to a comic, where [Cueball is debugging](https://xkcd.com/1479/) something what should be obvious\n\n[same link](https://xkcd.com/1479/)\n\nA link to an [SVG](https://shapes.tmpx.space/vol_01/out/9.svg)\n\n\n",
+        "content": "---\nblog: test\nlinks: \"2\"\nexternalLinks: \"2\"\nattachments: \"1\"\nexternalAttachments: \"1\"\nlvl: one\n---\nI want to test external links:\n\nThis is a link to a comic, where [Cueball is debugging](https://xkcd.com/1479/) something what should be obvious\n\n[same link](https://xkcd.com/1479/)\n\nA link to an [SVG](https://shapes.tmpx.space/vol_01/out/9.svg)\n\n\n",
         "toRelativeToExportDirRoot": "",
         "lastExportDate": 1699552719400,
-        "outputContent": "---\nblog: test\nlinks: \"3\"\nexternalLinks: \"3\"\nlvl: one\n---\nI want to test external links:\n\nThis is a link to a comic, where [Cueball is debugging](https://xkcd.com/1479/) something what should be obvious\n\n[same link](https://xkcd.com/1479/)\n\nA link to an [SVG](https://shapes.tmpx.space/vol_01/out/9.svg)\n\n\n",
+        "outputContent": "---\nblog: test\nlinks: \"2\"\nexternalLinks: \"2\"\nattachments: \"1\"\nexternalAttachments: \"1\"\nlvl: one\n---\nI want to test external links:\n\nThis is a link to a comic, where [Cueball is debugging](https://xkcd.com/1479/) something what should be obvious\n\n[same link](https://xkcd.com/1479/)\n\nA link to an [SVG](https://shapes.tmpx.space/vol_01/out/9.svg)\n\n\n",
         "linksAndAttachments": {
-            "markdownReplacedWikiStyleLinks": "---\nblog: test\nlinks: \"3\"\nexternalLinks: \"3\"\nlvl: one\n---\nI want to test external links:\n\nThis is a link to a comic, where [Cueball is debugging](https://xkcd.com/1479/) something what should be obvious\n\n[same link](https://xkcd.com/1479/)\n\nA link to an [SVG](https://shapes.tmpx.space/vol_01/out/9.svg)\n\n\n",
+            "markdownReplacedWikiStyleLinks": "---\nblog: test\nlinks: \"2\"\nexternalLinks: \"2\"\nattachments: \"1\"\nexternalAttachments: \"1\"\nlvl: one\n---\nI want to test external links:\n\nThis is a link to a comic, where [Cueball is debugging](https://xkcd.com/1479/) something what should be obvious\n\n[same link](https://xkcd.com/1479/)\n\nA link to an [SVG](https://shapes.tmpx.space/vol_01/out/9.svg)\n\n\n",
             "parsedMarkdown": [
                 {
                     "type": "hr",

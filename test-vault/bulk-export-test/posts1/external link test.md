@@ -1,7 +1,9 @@
 ---
 blog: test
-links: "3"
-externalLinks: "3"
+links: "2"
+externalLinks: "2"
+attachments: "1"
+externalAttachments: "1"
 lvl: one
 ---
 I want to test external links:
