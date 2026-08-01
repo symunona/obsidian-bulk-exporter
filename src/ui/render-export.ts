@@ -46,7 +46,7 @@ export class ExportTableRender {
 		settings: BulkExportSettings,
 		plugin: BulkExporterPlugin
 	) {
-		const resultListEl = leaf.createEl("div", {
+		const resultListEl = leaf.createDiv({
 			cls: "nav-files-container meta-data-view-table-container",
 		});
 
@@ -89,13 +89,13 @@ export class ExportTableRender {
 		})
 
 		const preHeaderButtons = preHeader.createSpan({ cls: 'table-header-buttons' })
-		const editHeaderFieldsLink = preHeaderButtons.createEl('span', {
+		const editHeaderFieldsLink = preHeaderButtons.createSpan({
 			cls: 'clickable table-header-link',
 			title: 'Edit Visible Header Fields'
 		})
 		editHeaderFieldsLink.append(getIcon('eye'));
 
-		const editSettingsLink = preHeaderButtons.createEl('span', {
+		const editSettingsLink = preHeaderButtons.createSpan({
 			cls: 'clickable table-header-link',
 			title: 'Edit Export Settings'
 		})
@@ -105,7 +105,7 @@ export class ExportTableRender {
 			openSettingsPage("bulk-exporter", this.plugin);
 		})
 
-		const openOutputFolderLink = preHeaderButtons.createEl('span', {
+		const openOutputFolderLink = preHeaderButtons.createSpan({
 			cls: 'clickable table-header-link',
 			title: 'Open Output Folder'
 		})
@@ -219,7 +219,7 @@ export class ExportTableRender {
 
 		this.settings.groupOpenMap = this.settings.groupOpenMap || {}
 		this.settings.groupOpenMap[group] = isOpen
-		this.plugin.saveSettings()
+		void this.plugin.saveSettings()
 
 		const elements = tableBodyRoot.querySelectorAll(`.meta-data-table-file-row[data-path="${group}"]`)
 		if (elements) {
@@ -263,7 +263,7 @@ export class ExportTableRender {
 	renderMetaCell(
 		fileItemRow: HTMLElement,
 		metaKey: string,
-		value: Literal | undefined
+		value: Literal
 	) {
 		const td = fileItemRow.createEl('td', { cls: 'data-view-meta-key' })
 		if (metaKey === 'tags' && value instanceof Array) {
@@ -293,10 +293,10 @@ export class ExportTableRender {
 		} else if (value instanceof Array) {
 			td.createSpan({ cls: 'meta-value', text: value.join(', ') })
 		} else if (value instanceof Object) {
-			td.createEl('button', { cls: 'meta-value', text: 'JS Object', attr: { title: JSON.stringify(value, null, 2) } })
+			td.createEl('button', { cls: 'meta-value', text: 'Js object', attr: { title: JSON.stringify(value, null, 2) } })
 			td.addEventListener('click', () => {
 				new Notice("Copied to clipboard! \n" + JSON.stringify(value, null, 2));
-				navigator.clipboard.writeText(JSON.stringify(value, null, 2));
+				void navigator.clipboard.writeText(JSON.stringify(value, null, 2));
 			})
 		} else if (value === undefined) {
 			td.classList.add('undefined')
@@ -304,7 +304,7 @@ export class ExportTableRender {
 			td.classList.add('boolean')
 			td.createEl('input', { attr: { type: 'checkbox', disabled: true, checked: value } })
 		} else {
-			td.createSpan({ cls: 'meta-value', text: value })
+			td.createSpan({ cls: 'meta-value', text: String(value) })
 		}
 	}
 

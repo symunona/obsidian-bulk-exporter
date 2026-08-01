@@ -4,7 +4,11 @@ import { AttachmentLink, normalizeUrl } from "./get-links-and-attachments";
 import BulkExporterPlugin from "src/main";
 import { BulkExportSettings } from "src/models/bulk-export-settings";
 
-const warn = console.warn.bind(console);
+// `console.warn.bind(console)` types as `any` (a known TS quirk for `.bind()` on
+// rest-arg functions like `console.warn`); wrap it instead so the call stays typed.
+function warn(...args: unknown[]): void {
+	console.warn(...args);
+}
 
 /**
  * Supports obsidian: formatted links, replaces exportProperties' content.
@@ -18,9 +22,7 @@ export function replaceLocalLinks(
 	settings: BulkExportSettings,
 	plugin: BulkExporterPlugin
 ) {
-	for (const index in links) {
-		const link = links[index]
-
+	for (const link of links) {
 		// See if this link exists in the vault!
 		const linkedDocument = plugin.app.metadataCache.getFirstLinkpathDest(
 			decodeURIComponent(link.normalizedOriginalPath),
@@ -112,7 +114,6 @@ export function replaceLinks(newLink: string, link: AttachmentLink, settings:Bul
 	// @see discussion: https://forum.obsidian.md/t/how-to-link-a-file-with-filename-with-spaces/22592
 	// @see issue: https://github.com/symunona/obsidian-bulk-exporter/issues/3
 	if (link?.isWikiLink && settings.preserveWikiLinks) {
-		console.log('Preserving wiki link for: ', link)
 		// console.warn(newLink, title)
 		if (title === newLink) {
 			newLinkWithTitle = `[[${title}]]`

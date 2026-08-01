@@ -26,18 +26,18 @@ export default class BulkExporterPlugin extends Plugin {
 
 		this.addRibbonIcon(
 			"folder-input",
-			"Bulk Exporter Preview",
+			"Bulk exporter preview",
 			(evt: MouseEvent) => {
-				this.activateView();
+				void this.activateView();
 			}
 		);
 
 		this.addCommand({
 			id: "bulk-export",
-			name: "Bulk Export",
+			name: "Bulk export",
 			callback: () => {
-				this.exporter.searchAndExportAll();
-				this.activateView();
+				void this.exporter.searchAndExportAll();
+				void this.activateView();
 			},
 		});
 
@@ -48,7 +48,7 @@ export default class BulkExporterPlugin extends Plugin {
 				// If the dataview plugin was not loaded when this inited,
 				// let's create the initial search! Wait until Obsidian is fully loaded.
 				if (!this.inited && document.querySelector('.mod-root')) {
-					this.exporter.searchAll();
+					void this.exporter.searchAll();
 					this.inited = true;
 				} else {
 					// Check files
@@ -64,7 +64,8 @@ export default class BulkExporterPlugin extends Plugin {
 	}
 
 	async loadSettings() {
-		this.settings = parseSavedSettingsData(await this.loadData())
+		const data = (await this.loadData()) as Record<string, unknown> | null | undefined;
+		this.settings = parseSavedSettingsData(data)
 	}
 
 	async saveSettings() {
@@ -79,7 +80,7 @@ export default class BulkExporterPlugin extends Plugin {
 	debouncedRefresh = debounce(()=>{
 		if (this.app.workspace.getLeavesOfType(META_DATA_VIEW_TYPE)?.length){
 			const view = this.app.workspace.getLeavesOfType(META_DATA_VIEW_TYPE)[0].view as BulkExporterView;
-			view.refresh()
+			void view.refresh()
 		}
 	}, 1000)
 
@@ -91,7 +92,7 @@ export default class BulkExporterPlugin extends Plugin {
 			active: true,
 		});
 
-		this.app.workspace.revealLeaf(
+		await this.app.workspace.revealLeaf(
 			this.app.workspace.getLeavesOfType(META_DATA_VIEW_TYPE)[0]
 		);
 	}

@@ -10,6 +10,6 @@ export function openFileByPath(plugin: Plugin, filePath: string) {
 		new Notice("Could not open " + filePath);
 		return;
 	}
-	const leaf = plugin.app.workspace.getUnpinnedLeaf();
-	leaf.openFile(file, { active: true });
+	const leaf = plugin.app.workspace.getLeaf(false);
+	void leaf.openFile(file, { active: true });
 }

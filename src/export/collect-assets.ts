@@ -49,13 +49,20 @@ export async function collectAssetsReplaceLinks(
 		// log(`[glob] [${fileExportProperties.newFileName}.md] has a copy property.
 		// Looking for file matches here: ${relativeRoot}`);
 		// Iterate every file that matches the regex.
+		// `frontMatter` is typed as `Record<string, Literal>`, and dataview's `Literal`
+		// resolves to an unresolved type (see the note in exporter.ts on dataview's broken
+		// package-root re-exports), so `copy` needs an honest cast here: per the plugin's
+		// own docs/usage, a `copy` front-matter key is always a glob string or an array of
+		// them.
 		if (isArray(frontMatterData.copy)) {
-			for (let i = 0; i < frontMatterData.copy.length; i++) {
-				const globPattern = frontMatterData.copy[i]
+			const globPatterns = frontMatterData.copy as string[];
+			for (let i = 0; i < globPatterns.length; i++) {
+				const globPattern = globPatterns[i]
 				filesCopied[globPattern] = await copyGlob(fileExportProperties, globPattern, plugin)
 			}
 		} else if (isString(frontMatterData.copy)) {
-			filesCopied[frontMatterData.copy] = await copyGlob(fileExportProperties, frontMatterData.copy, plugin)
+			const globPattern = frontMatterData.copy;
+			filesCopied[globPattern] = await copyGlob(fileExportProperties, globPattern, plugin)
 		}
 	}
 

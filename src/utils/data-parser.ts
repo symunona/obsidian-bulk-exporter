@@ -22,7 +22,7 @@ export function parseSavedSettingsData(storedData?: Record<string, unknown> | nu
         }
         else {
             const defaults: BulkExportSettingsList = {items: [], selected: 0, preview: 'all'};
-            const settings: BulkExportSettingsList = Object.assign(defaults, storedData);
+            const settings: BulkExportSettingsList = { ...defaults, ...storedData };
             if (!settings.items.length) {
                 settings.items.push(Object.assign({}, DEFAULT_SETTINGS))
             }

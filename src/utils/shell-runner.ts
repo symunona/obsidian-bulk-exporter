@@ -58,9 +58,9 @@ function runShellCommandWithArgs(command: string, args: string[] = []): Promise<
         env: process.env
     });
 
-    scriptProcess.stdout.on('data', (data) => {
+    scriptProcess.stdout.on('data', (data: Buffer) => {
       const lines = data.toString().trim().split('\n');
-      lines.forEach((line:string) => {
+      lines.forEach((line: string) => {
         // Process each line here
         logEntry(allOutputContainer, COLORS.LOG, line)
         logLines++
@@ -68,7 +68,7 @@ function runShellCommandWithArgs(command: string, args: string[] = []): Promise<
       });
     });
 
-    scriptProcess.stderr.on('data', (data) => {
+    scriptProcess.stderr.on('data', (data: Buffer) => {
       // Handle any error output from the command
       logEntry(errorsContainer, COLORS.ERROR, data.toString())
       logEntry(allOutputContainer, COLORS.ERROR, data.toString())
@@ -84,7 +84,7 @@ function runShellCommandWithArgs(command: string, args: string[] = []): Promise<
       } else {
         // Command encountered an error
         error(`Command exited with code ${code}`)
-        reject();
+        reject(new Error(`Command exited with code ${code}`));
       }
     });
   });

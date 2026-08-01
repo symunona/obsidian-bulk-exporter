@@ -52,7 +52,7 @@ export class BulkExporterView extends ItemView {
 	}
 
 	getDisplayText() {
-		return "Bulk Export Preview";
+		return "Bulk export preview";
 	}
 
 	async onOpen() {
@@ -62,8 +62,7 @@ export class BulkExporterView extends ItemView {
 
 		this.header = container.createDiv();
 
-		this.settingsHeader = container.createDiv();
-		this.settingsHeader.style.display = "none";
+		this.settingsHeader = container.createDiv({ cls: "settings-header is-hidden" });
 
 		this.error = container.createDiv();
 		this.resultsContainer = container.createDiv();
@@ -86,17 +85,16 @@ export class BulkExporterView extends ItemView {
 		this.refreshButton = this.topRightMenuContainer.createEl("button", { title: 'Refresh' });
 		this.refreshButton.append(getIcon("refresh-cw"));
 		this.refreshButton.addEventListener("click", () => {
-			this.refresh();
+			void this.refresh();
 		});
 
-		this.logButton = this.topRightMenuContainer.createEl("button", { title: 'Show Log' });
+		this.logButton = this.topRightMenuContainer.createEl("button", { title: 'Show log' });
 		this.logButton.append(getIcon("bug"));
 		this.logButton.addEventListener("click", () => {
-			this.settingsHeader.style.display =
-				this.settingsHeader.style.display === "none" ? "block" : "none";
+			this.settingsHeader.classList.toggle("is-hidden");
 		});
 
-		this.settingsButton = this.topRightMenuContainer.createEl("button", { title: 'Open Plugin Settings' });
+		this.settingsButton = this.topRightMenuContainer.createEl("button", { title: 'Open plugin settings' });
 		this.settingsButton.append(getIcon("settings"));
 		this.settingsButton.addEventListener("click", () => {
 			openSettingsPage("bulk-exporter", this.plugin);
@@ -118,7 +116,7 @@ export class BulkExporterView extends ItemView {
 						})
 
 					} catch (e) {
-						this.settingsHeader.style.display = "block";
+						this.settingsHeader.classList.remove("is-hidden");
 						console.error(e)
 					}
 				} else {
@@ -130,8 +128,8 @@ export class BulkExporterView extends ItemView {
 				await this.refresh()
 			}, (e) => {
 				error(e?.message || 'Something went wrong with the export, see log!')
-				this.settingsHeader.style.display = 'block';
-				this.log.style.display = 'block'
+				// The log lives inside settingsHeader, so revealing it is enough.
+				this.settingsHeader.classList.remove("is-hidden");
 			})
 
 		const h = this.header.createEl("h4");
@@ -141,7 +139,7 @@ export class BulkExporterView extends ItemView {
 			h.setText('Bulk Exporter Preview ' + this.plugin.settings.items[0].name)
 		}
 
-		this.refresh();
+		await this.refresh();
 	}
 
 	async refresh() {
@@ -154,7 +152,7 @@ export class BulkExporterView extends ItemView {
 					this.renderPreviewTable(results, setting);
 				})
 			} catch (e) {
-				this.settingsHeader.style.display = "block";
+				this.settingsHeader.classList.remove("is-hidden");
 				console.error(e)
 			}
 		} else {
@@ -192,8 +190,8 @@ export class BulkExporterView extends ItemView {
 			} else {
 				this.plugin.settings.selected = parseInt(selectedId);
 			}
-			this.refresh()
-			this.plugin.saveSettings()
+			void this.refresh()
+			void this.plugin.saveSettings()
 		}, { value: this.plugin.settings.preview })
 	}
 

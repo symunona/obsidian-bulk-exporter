@@ -47,6 +47,16 @@ export const EMBED_URL_REGEXP = /!\[\[(.*?)\]\]/g;
 
 const META_KEY_IGNORE_LIST = ['copy']
 
+/**
+ * Obsidian's real desktop `FileSystemAdapter` exposes `basePath` at runtime, but it isn't
+ * part of the public `DataAdapter`/`FileSystemAdapter` type declarations (only the
+ * `getBasePath()` method is). This captures just that undocumented-but-real property,
+ * without weakening the check with `any`.
+ */
+interface AdapterWithBasePath {
+	basePath?: string;
+}
+
 export function collectAndReplaceHeaderAttachments(
 	plugin: BulkExporterPlugin,
 	settings: BulkExportSettings,
@@ -57,7 +67,10 @@ export function collectAndReplaceHeaderAttachments(
 		// Is coming from the meta, and is it an ignore key like copy?
 		if (attachment.source === 'frontMatter' && META_KEY_IGNORE_LIST.indexOf(attachment.text) > -1) { return; }
 
-		saveAttachmentToLocation(plugin, settings, attachment, exportProperties)
+		// Not awaited: attachments across the file are saved concurrently, fire-and-forget,
+		// same as before this rule was enforced. Errors are still not swallowed - a
+		// rejection surfaces as an unhandled rejection, same as it always did.
+		void saveAttachmentToLocation(plugin, settings, attachment, exportProperties)
 
 		// Replace the links in the header.
 		if (attachment.newPath) {
@@ -90,7 +103,9 @@ export function collectAndReplaceInlineAttachments(
 ) {
 	// "text" is the YAML key here.
 	attachments.forEach((attachment) => {
-		saveAttachmentToLocation(plugin, settings, attachment, exportProperties)
+		// Not awaited: same fire-and-forget behavior as before this rule was enforced (see
+		// the matching comment in collectAndReplaceHeaderAttachments above).
+		void saveAttachmentToLocation(plugin, settings, attachment, exportProperties)
 		// I have experimented with this a lot.
 		// @see comments in getLinksAndAttachments.
 		// I normalized before exportProperties.outputContent to only have []() style links.
@@ -153,8 +168,8 @@ async function saveAttachmentToLocation(
 		return
 	}
 
-	// @ts-ignore : simple way to figure out if we are on the cloud I guess.
-	const basePath = plugin.app.vault.adapter.basePath;
+	// Simple way to figure out if we are on the cloud I guess.
+	const basePath = (plugin.app.vault.adapter as AdapterWithBasePath).basePath;
 
 	if (basePath) {
 		const fullAssetPath = join(

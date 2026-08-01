@@ -16,11 +16,23 @@ import { AttachmentLink, LinkType } from "./get-links-and-attachments"
 
 export interface GlobMap { [glob: string]: Array<AttachmentLink> }
 
+/**
+ * Obsidian's real desktop `FileSystemAdapter` exposes `basePath` at runtime, but it isn't
+ * part of the public `DataAdapter`/`FileSystemAdapter` type declarations (only the
+ * `getBasePath()` method is). This captures just that undocumented-but-real property,
+ * without weakening the check with `any`.
+ */
+interface AdapterWithBasePath {
+    basePath?: string;
+}
+
 export async function copyGlob(fileExportProperties: ExportProperties, globString: string, plugin: Plugin){
     const relativeRoot = parse(fileExportProperties.from).dir
 
-    // @ts-ignore : simple way to figure out if we are on the cloud I guess.
-    const basePath =  plugin.app.vault.adapter.basePath;
+    // Simple way to figure out if we are on the cloud I guess. Desktop-only (see
+    // AdapterWithBasePath); this plugin doesn't support cloud/mobile globbing (see the
+    // file header), so the same assumption applies here as before this was typed.
+    const basePath = (plugin.app.vault.adapter as AdapterWithBasePath).basePath as string;
     const fromAbsoluteRoot = join(basePath, relativeRoot)
     const toRootDir = parse(fileExportProperties.toAbsoluteFs).dir
 	const files = globSync(globString, {cwd: fromAbsoluteRoot})
@@ -70,7 +82,8 @@ export async function copyGlob(fileExportProperties: ExportProperties, globStrin
                     originalPath: relativeFileName,
                     normalizedOriginalPath: relativeFileName,
                     status: 'error',
-                    error: e.message,
+                    // `cpSync` throws a real `Error` (`NodeJS.ErrnoException`) here.
+                    error: (e as Error).message,
                     text: relativeFileName,
                     source: "globCopy",
                     linkType: LinkType.internal

@@ -7,6 +7,37 @@ import ScopedEval from "scoped-eval";
 import { Link, SMarkdownPage } from "obsidian-dataview";
 
 /**
+ * `obsidian-dataview`'s shipped `.d.ts` files re-export their public types
+ * (`SMarkdownPage`, `Link`, ...) from bare specifiers like `"api/plugin-api"`
+ * instead of relative paths. Those only resolve inside the package's own
+ * build, so from this project every type that flows through them is an
+ * unchecked/error type - `fileDescriptor.path`, `.frontmatter` etc. all come
+ * back as `any` no matter how the value is declared. This interface
+ * documents, honestly, the subset of the real Dataview page shape this
+ * module reads (see `obsidian-dataview`'s
+ * `data-model/serialized/markdown.d.ts`), so the rest of the file can be
+ * typed normally.
+ */
+interface DataviewFileDescriptor {
+	path: string;
+	frontmatter: Record<string, unknown>;
+	// Dataview exposes these as luxon DateTime instances; `.ts` is the epoch
+	// millisecond value, which is what `getDateKeys` consumes.
+	ctime: { ts: number };
+	mtime: { ts: number };
+}
+
+/**
+ * Casts a Dataview page down to the fields this module actually reads.
+ * `SMarkdownPage` itself can't be checked here (see above), so this is a
+ * plain assertion rather than a runtime-validated narrowing - the shape is
+ * guaranteed by the Dataview API, not user-controlled.
+ */
+function asFileDescriptor(page: SMarkdownPage): DataviewFileDescriptor {
+	return page as DataviewFileDescriptor;
+}
+
+/**
  * From a DataView query results, it creates an output map, running
  * the output transformation.
  */
@@ -17,10 +48,11 @@ export function createPathMap(
 	const foundFileMap: { [key: string]: ExportProperties } = {};
 	const targetRoot = settings.outputFolder || '';
 
-	queryResults.map(([link, fileDescriptor]) => {
+	queryResults.map(([, page]) => {
+		const fileDescriptor = asFileDescriptor(page);
 
 		try {
-			const {targetPath} = getTargetPaths(fileDescriptor, settings);
+			const {targetPath} = getTargetPaths(page, settings);
 			const newFileName = basename(targetPath);
 			const extension = fileDescriptor.path.substring(fileDescriptor.path.lastIndexOf('.'))
 
@@ -61,29 +93,31 @@ export function createPathMap(
 function getTargetPaths(
 	fileDescriptor: SMarkdownPage,
 	settings: BulkExportSettings
-) {
+): { targetPath: string } {
 	// Populate an object with all the properties
 	const fileMetaData: { [key: string]: string } = {};
+	// Cast once here rather than at each call site (see the module-level note
+	// on why `SMarkdownPage` can't be resolved).
+	const descriptor = asFileDescriptor(fileDescriptor);
+	const filePath = descriptor.path;
 
-	// @ts-ignore - any front-matter data
-	Object.assign(fileMetaData, fileDescriptor.frontmatter);
+	// Arbitrary user front-matter, hence the `unknown` values.
+	Object.assign(fileMetaData, descriptor.frontmatter);
 
 	Object.assign(fileMetaData, {
-		// @ts-ignore
-		created: getDateKeys(fileDescriptor.ctime.ts),
-		// @ts-ignore
-		modified: getDateKeys(fileDescriptor.mtime.ts),
+		created: getDateKeys(descriptor.ctime.ts),
+		modified: getDateKeys(descriptor.mtime.ts),
 
-		fileName: path.parse(fileDescriptor.path).name,
+		fileName: path.parse(filePath).name,
 
 		// Use it like this: ${norm(someMetaData)} - will replace every separator
 		// character with a dash (-).
 		norm: normalizeFileName,
-		baseName: basename(fileDescriptor.path),
+		baseName: basename(filePath),
 		slug:
 			fileMetaData.slug ||
 			normalizeFileName(fileMetaData.title) ||
-			normalizeFileName(path.parse(fileDescriptor.path).name),
+			normalizeFileName(path.parse(filePath).name),
 	});
 
 	// Magic date conversion function, so it's easy to convert metadata dates
@@ -93,8 +127,19 @@ function getTargetPaths(
 	// Serious black magic here: use the outputFormat string to evaluate.
 	try {
 		const scopedEval = new ScopedEval();
+		const targetPath: unknown = scopedEval.eval(
+			"`" + settings.outputFormat + "`",
+			fileMetaData
+		);
+		if (typeof targetPath !== "string") {
+			// A backtick-wrapped template literal always evaluates to a
+			// string; this only trips if `scoped-eval` itself misbehaves.
+			throw new Error(
+				`Output format did not evaluate to a string: ${settings.outputFormat}`
+			);
+		}
 		return {
-			targetPath: scopedEval.eval("`" + settings.outputFormat + "`", fileMetaData),
+			targetPath,
 			// relativeRoot: scopedEval.eval("`" + settings.relativeFileRoot + "`", fileMetaData)
 		}
 	} catch (e) {

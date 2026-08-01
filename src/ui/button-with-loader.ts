@@ -31,28 +31,31 @@ export class ButtonWithLoader {
         const icon = getIcon(buttonWithLoaderSettings.iconId)
         const loadingIcon = getIcon(buttonWithLoaderSettings.loadingIconId)
         const errorIcon = getIcon(buttonWithLoaderSettings.errorIconId)
-        loadingIcon.style.display = 'none'
-        loadingIcon.classList.add('spin')
-        errorIcon.style.display = 'none'
+        icon.classList.add('button-with-loader-icon')
+        loadingIcon.classList.add('button-with-loader-icon', 'spin', 'is-hidden')
+        errorIcon.classList.add('button-with-loader-icon', 'is-hidden')
         button.append(icon, loadingIcon, errorIcon)
         button.classList.add('with-icon')
 
-        button.addEventListener('click', async (evt)=> {
-            icon.style.display = 'none'
-            loadingIcon.style.display = 'block'
-            errorIcon.style.display = 'none'
-            button.disabled = true
-            try{
-                await onClick(evt)
-                loadingIcon.style.display = 'none'
-                icon.style.display = 'block'
-            } catch (e){
-                loadingIcon.style.display = 'none'
-                errorIcon.style.display = 'block'
-                onError(e)
-                console.error(e)
-            }
-            button.disabled = false
+        button.addEventListener('click', (evt) => {
+            void (async () => {
+                icon.classList.add('is-hidden')
+                loadingIcon.classList.remove('is-hidden')
+                errorIcon.classList.add('is-hidden')
+                button.disabled = true
+                try {
+                    await onClick(evt)
+                    loadingIcon.classList.add('is-hidden')
+                    icon.classList.remove('is-hidden')
+                } catch (e: unknown) {
+                    loadingIcon.classList.add('is-hidden')
+                    errorIcon.classList.remove('is-hidden')
+                    const error = e instanceof Error ? e : new Error(String(e))
+                    onError(error)
+                    console.error(error)
+                }
+                button.disabled = false
+            })()
         })
 
     }

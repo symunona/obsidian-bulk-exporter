@@ -1,4 +1,4 @@
-import { getLinksAndAttachments } from "../export/get-links-and-attachments";
+import { getLinksAndAttachments, AttachmentLink, LinkParseResults } from "../export/get-links-and-attachments";
 
 import { ExportMap } from "../models/export-properties"
 import getTestData from "./test-vault"
@@ -23,7 +23,10 @@ test('JEST test', () => {
 describe('getLinksAndAttachments', () => {
     test('gets  all the links from index file', () => {
         const { internalLinks } = getLinksAndAttachments(indexMd.content)
-        expect(internalLinks.length).toBe(parseInt(indexMd.frontMatter['internalLinks']))
+        // The fixture is a JSON dump: frontMatter values that came from
+        // Dataview counts are serialized as strings.
+        const expectedInternalLinks = indexMd.frontMatter['internalLinks'] as string
+        expect(internalLinks.length).toBe(parseInt(expectedInternalLinks))
 
     })
 
@@ -33,12 +36,12 @@ describe('getLinksAndAttachments', () => {
 
         describe(path, () => {
             Object.keys(result).forEach((el)=>{
-                const shouldBe = exportProperties.frontMatter[el] || 0
+                const key = el as keyof LinkParseResults
+                const shouldBe = (exportProperties.frontMatter[el] as string | number | undefined) || 0
                 test(el + ' ' + shouldBe, ()=>{
                     if (OUTPUT_FIELDS_TO_TEST.indexOf(el) > -1){
-                        // @ts-ignore
-                        const list: Array<MarkdownLink> = result[el]
-                        const count = parseInt(shouldBe)
+                        const list = result[key] as Array<AttachmentLink>
+                        const count = parseInt(String(shouldBe))
                         expect(list.length).toBe(count)
                     }
                 })

@@ -35,21 +35,21 @@ export class OutputSettingTab extends PluginSettingTab {
 
 		const linkToIssues = createEl("a", {
 			href: "https://github.com/symunona/obsidian-bulk-exporter/issues",
-			text: "Github Issue Tracker",
+			text: "GitHub issue tracker",
 		});
 		const genericInfo = createSpan({
 			text: "Export a certain subset of your notes, based on whether they match a DataView query. Bug reports and Feature Requests are welcome at ",
 		});
 		genericInfo.append(linkToIssues);
-		const genericFragment = document.createDocumentFragment();
+		const genericFragment = createFragment();
 		genericFragment.append(genericInfo);
 
 		new Setting(containerEl)
-			.setName("Bulk Exporter")
+			.setName("Bulk exporter")
 			.setDesc(genericFragment);
 
 		new Setting(containerEl)
-			.setName("Export / Import Settings")
+			.setName("Export / import settings")
 			.setDesc("Want to transfer to another vault?")
 			.addButton((button) =>
 				button.setButtonText("Export").onClick(() => {
@@ -65,11 +65,11 @@ export class OutputSettingTab extends PluginSettingTab {
 							existingCount: this.plugin.settings.items.length,
 							overwriteCallback: () => {
 								overwriteSettings(this.plugin, imported);
-								this.applyImport(imported.items.length);
+								void this.applyImport(imported.items.length);
 							},
 							extendCallback: () => {
 								extendSettings(this.plugin, imported);
-								this.applyImport(imported.items.length);
+								void this.applyImport(imported.items.length);
 							},
 						}).open();
 					});
@@ -150,11 +150,11 @@ export class OutputSettingTab extends PluginSettingTab {
 			cls: "tab-header",
 			text: setting.name || "no-name",
 		});
-		button.addEventListener("click", async () => {
+		button.addEventListener("click", () => {
 			this.plugin.settings.selected =
 				this.plugin.settings.items.indexOf(setting);
 			this.selectSetting(setting);
-			await this.plugin.saveSettingsWithRefresh();
+			void this.plugin.saveSettingsWithRefresh();
 		});
 		return button;
 	}
@@ -171,7 +171,7 @@ export class OutputSettingTab extends PluginSettingTab {
 			.setName("Name of the export set")
 			.addText((text) =>
 				text
-					.setPlaceholder("default")
+					.setPlaceholder("Default")
 					.setValue(settings.name)
 					.onChange(async (value) => {
 						settings.name = value;
@@ -183,9 +183,9 @@ export class OutputSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Export Target Folder")
+			.setName("Export target folder")
 			.setDesc(
-				"Which folder do you want to export converted markdown files with their assets?"
+				"Which folder do you want to export converted Markdown files with their assets?"
 			)
 			.addText((text) =>
 				text
@@ -199,7 +199,7 @@ export class OutputSettingTab extends PluginSettingTab {
 
 		const linkToDataViewDocs = createEl("a", {
 			href: "https://blacksmithgu.github.io/obsidian-dataview/queries/data-commands/",
-			text: "DataView Language Specs",
+			text: "Dataview language specs",
 		});
 		const linkToDocs1 = createEl("a", {
 			href: "https://github.com/symunona/obsidian-bulk-exporter",
@@ -212,15 +212,15 @@ export class OutputSettingTab extends PluginSettingTab {
 		filterInfo.append(linkToDataViewDocs);
 		filterInfo.append(" and ");
 		filterInfo.append(linkToDocs1);
-		const filterInfoFragment = document.createDocumentFragment();
+		const filterInfoFragment = createFragment();
 		filterInfoFragment.append(filterInfo);
 
 		new Setting(containerEl)
-			.setName("Filter Query")
+			.setName("Filter query")
 			.setDesc(filterInfoFragment)
 			.addTextArea((text) =>
 				text
-					.setPlaceholder("default")
+					.setPlaceholder("Default")
 					.setValue(settings.exportQuery)
 					.onChange(async (value) => {
 						settings.exportQuery = value;
@@ -238,10 +238,10 @@ export class OutputSettingTab extends PluginSettingTab {
 			text: 'You can define the output path with the following JS expression. Example: "${blog}/${created.date}-${slug}" - see ',
 		});
 		filenameInfo.append(linkToDocs2);
-		const exportFileNameInfoFragment = document.createDocumentFragment();
+		const exportFileNameInfoFragment = createFragment();
 		exportFileNameInfoFragment.append(filenameInfo);
 		new Setting(containerEl)
-			.setName("Output Filename and Path")
+			.setName("Output filename and path")
 			.setDesc(exportFileNameInfoFragment)
 			.addText((text) =>
 				text
@@ -257,7 +257,7 @@ export class OutputSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Empty target folder on each export")
 			.setDesc(
-				"if true, the target folder contents will be erased every time. This can be good for getting rid of deleted blog posts, as by default the plugin does not track the ones that were deleted. Note that the ROOT of the folder is NOT deleted if everything is ordered in folders, so if you want to have your blogs in a monorepo, you can do so."
+				"If true, the target folder contents will be erased every time. This can be good for getting rid of deleted blog posts, as by default the plugin does not track the ones that were deleted. Note that the root of the folder is not deleted if everything is ordered in folders, so if you want to have your blogs in a monorepo, you can do so."
 			)
 			.addToggle((text) =>
 				text
@@ -281,11 +281,11 @@ export class OutputSettingTab extends PluginSettingTab {
 			text: `Files in the root folder matching this pattern will NOT be deleted. E.g. ignore 'engine' and 'rest' folders, just type in {engine,rest} - `,
 		});
 		ignoreInfo.append(linkToGlobDocs);
-		const ignoreMatcherElement = document.createDocumentFragment();
+		const ignoreMatcherElement = createFragment();
 		ignoreMatcherElement.append(ignoreInfo);
 
 		const ignorePatterns = new Setting(containerEl)
-			.setName("Ignore Delete Glob Pattern")
+			.setName("Ignore delete glob pattern")
 			.setDesc(ignoreMatcherElement)
 			.addText((text) =>
 				text
@@ -300,16 +300,16 @@ export class OutputSettingTab extends PluginSettingTab {
 			ignorePatterns.settingEl.hide();
 		}
 
-		containerEl.createEl("h2", { text: "Preview" });
+		new Setting(containerEl).setName("Preview").setHeading();
 
 		new Setting(containerEl)
-			.setName("Published Field / Drafts")
+			.setName("Published field / drafts")
 			.setDesc(
-				"If provided, files that DO NOT have this field in their front matter will be shown on the file tree and the export preview, but will not get actually exported."
+				"If provided, files that do not have this field in their front matter will be shown on the file tree and the export preview, but will not get actually exported."
 			)
 			.addText((text) =>
 				text
-					.setPlaceholder("key of the meta value, like draft")
+					.setPlaceholder("Key of the meta value, like draft")
 					.setValue(settings.isPublishedField)
 					.onChange(async (value) => {
 						settings.isPublishedField = value.trim();
@@ -319,7 +319,7 @@ export class OutputSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Visible Columns")
+			.setName("Visible columns")
 			.setDesc("Same as clicking on the eye icon")
 			.addText((text) =>
 				text
@@ -334,12 +334,12 @@ export class OutputSettingTab extends PluginSettingTab {
 					})
 			);
 
-		containerEl.createEl("h2", { text: "Links" });
+		new Setting(containerEl).setName("Links").setHeading();
 
 		new Setting(containerEl)
-			.setName("Normalize Spaces in Links")
+			.setName("Normalize spaces in links")
 			.setDesc(
-				"if true, spaces in local links will be url escaped (e.g. %20 for spaces)"
+				"If true, spaces in local links will be URL escaped (e.g. %20 for spaces)"
 			)
 			.addToggle((text) =>
 				text
@@ -351,7 +351,7 @@ export class OutputSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Keep Links Not Found")
+			.setName("Keep links not found")
 			.setDesc(
 				"Instead of replacing them with plain text, just leave them as is."
 			)
@@ -365,8 +365,8 @@ export class OutputSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Keep Links Not Exported")
-			.setDesc("For e.g. you want to export them in another batch.")
+			.setName("Keep links not exported")
+			.setDesc("For e.g. You want to export them in another batch.")
 			.addToggle((text) =>
 				text
 					.setValue(settings.keepLinksPrivate)
@@ -377,9 +377,9 @@ export class OutputSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Convert Wiki links to '[]()' styled standard links")
+			.setName("Convert wiki links to '[]()' styled standard links")
 			.setDesc(
-				"if true, all links will be the standard unified format."
+				"If true, all links will be the standard unified format."
 			)
 			.addToggle((text) =>{
 				text
@@ -397,10 +397,10 @@ export class OutputSettingTab extends PluginSettingTab {
 
 		let keepAsIsToggle: ToggleComponent
 		const keepAsIsDOM = new Setting(containerEl)
-			.setName("Preserve Wiki links as is")
+			.setName("Preserve wiki links as is")
 			.setDesc(
 				`Do not replace with new exported folder paths, keep them untouched.
-				Needs "Convert Wiki links" toggle to be OFF.
+				Needs "convert wiki links" toggle to be off.
 				(Use this for e.g. Quartz exports)`
 			)
 		keepAsIsDOM.addToggle((text) =>
@@ -413,12 +413,12 @@ export class OutputSettingTab extends PluginSettingTab {
 			)
 			.setDisabled(!settings.preserveWikiLinks)
 
-		containerEl.createEl("h2", { text: "Attachments" });
+		new Setting(containerEl).setName("Attachments").setHeading();
 
 		new Setting(containerEl)
-			.setName("Flatten attachments to File Root")
+			.setName("Flatten attachments to file root")
 			.setDesc(
-				"if true, all attachments will go to the file root's asset folder."
+				"If true, all attachments will go to the file root's asset folder."
 			)
 			.addToggle((text) =>
 				text
@@ -432,7 +432,7 @@ export class OutputSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Keep original attachment file names")
 			.setDesc(
-				"By default the plugin uses md5 hashes in the file names to make them unique. If you want to keep the original file names, set this to true. \nWARNING: if you have the same file name in different folders, they will overwrite each other, randomly, you have to make sure your file names are unique!"
+				"By default the plugin uses MD5 hashes in the file names to make them unique. If you want to keep the original file names, set this to true. \nWarning: if you have the same file name in different folders, they will overwrite each other, randomly, you have to make sure your file names are unique!"
 			)
 			.addToggle((text) =>
 				text
@@ -444,13 +444,13 @@ export class OutputSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Attachment / Asset folder name")
+			.setName("Attachment / asset folder name")
 			.setDesc(
-				"Relative to the file's export path, or absolute, to the file's Attachment and link root above."
+				"Relative to the file's export path, or absolute, to the file's attachment and link root above."
 			)
 			.addText((text) =>
 				text
-					.setPlaceholder("assets")
+					.setPlaceholder("Assets")
 					.setValue(settings.assetPath)
 					.onChange(async (value) => {
 						settings.assetPath = value;
@@ -459,16 +459,16 @@ export class OutputSettingTab extends PluginSettingTab {
 					})
 			);
 
-		containerEl.createEl("h2", { text: "Other" });
+		new Setting(containerEl).setName("Other").setHeading();
 
 		new Setting(containerEl)
-			.setName("Run Script After Export")
+			.setName("Run script after export")
 			.setDesc(
 				"Place here anything you want to run after the export is done. Uses child_process.spawn."
 			)
 			.addText((text) =>
 				text
-					.setPlaceholder("shell script path")
+					.setPlaceholder("Shell script path")
 					.setValue(settings.shell)
 					.onChange(async (value) => {
 						settings.shell = value;
@@ -480,7 +480,7 @@ export class OutputSettingTab extends PluginSettingTab {
 		if (this.plugin.settings.items.length > 1) {
 			containerEl.createEl("hr");
 			const deleteButton = containerEl.createEl("button", {
-				text: "Delete this Export Settings",
+				text: "Delete this export settings",
 				cls: "danger",
 			});
 			deleteButton.addEventListener("click", () => {
@@ -492,7 +492,7 @@ export class OutputSettingTab extends PluginSettingTab {
 							this.plugin.settings.selected,
 							1
 						);
-						this.plugin.saveSettingsWithRefresh();
+						void this.plugin.saveSettingsWithRefresh();
 						this.buttons[this.plugin.settings.selected].remove();
 						this.selectSetting();
 					},

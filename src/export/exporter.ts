@@ -2,7 +2,7 @@
  * Find files with DataView's API, organize exports.
  */
 import { existsSync, mkdirSync, writeFileSync } from "fs";
-import { Notice } from "obsidian";
+import { Notice, TFile } from "obsidian";
 
 import { error, log } from "src/utils/log";
 
@@ -20,11 +20,56 @@ import { exportedLogEntry } from "./export-log";
 import { join, normalize } from "path";
 import { runShellCommand } from "src/utils/shell-runner";
 import { getDataViewApi } from "src/utils/data-view-api";
-import { SMarkdownPage } from "obsidian-dataview";
+// `obsidian-dataview`'s package root (`obsidian-dataview/lib/index.d.ts`) re-exports its
+// types via non-relative specifiers (e.g. `from "data-model/value"`) that only resolve
+// inside dataview's own build, not against this project's `baseUrl`. Importing from the
+// package root therefore yields unresolved ("error") types everywhere. Deep-importing the
+// concrete declaration files below sidesteps that and gives real, checked types for the
+// shapes this file touches.
+import type { SMarkdownPage } from "obsidian-dataview/lib/data-model/serialized/markdown";
+import type { Link } from "obsidian-dataview/lib/data-model/value";
+import type { Result } from "obsidian-dataview/lib/api/result";
 import { collectAssetsReplaceLinks } from "./collect-assets";
 import { sortBy } from "underscore";
 import { BulkExportSettings } from "src/models/bulk-export-settings";
 import { rmDirContent } from "src/utils/delete-folder-content";
+
+/**
+ * Luxon (a dataview dependency) ships no type declarations and `@types/luxon` isn't
+ * installed, so `SMarkdownPage.file.mtime` resolves to an unresolved type. This captures
+ * only the bit of the real `DateTime` API this file relies on.
+ */
+interface LuxonDateTimeLike {
+	toMillis(): number;
+}
+
+/**
+ * Dataview also mirrors `file.*` metadata directly onto the page object itself, as a
+ * convenience shorthand (e.g. `page.path` for `page.file.path`); see the dataview docs on
+ * "implicit fields". This plugin relies on that flattened shape throughout (see also
+ * create-path-map.ts and the test-vault.ts fixture), which the vendor's own
+ * `SMarkdownPage` interface only models nested under `.file`.
+ */
+interface DataviewPage extends SMarkdownPage {
+	path: string;
+	mtime: LuxonDateTimeLike;
+}
+
+/**
+ * The row shape produced by the queries this plugin runs against dataview: a `TABLE`
+ * query selecting a link and its matching page (consumed by `createPathMap`).
+ */
+type DataviewTableRow = [Link, DataviewPage];
+
+interface DataviewTableQueryResult {
+	type: "table";
+	values: DataviewTableRow[];
+}
+
+/** Minimal surface of `DataviewApi` this file calls. */
+interface DataviewQueryApi {
+	query(source: string): Promise<Result<DataviewTableQueryResult, string>>;
+}
 
 export class Exporter {
 	plugin: BulkExporterPlugin;
@@ -66,7 +111,11 @@ export class Exporter {
 			this.plugin.app.metadataCache.on(
 				// @ts-ignore
 				"dataview:metadata-change",
-				(type: string, file: SMarkdownPage) => {
+				(type: string, file: TFile) => {
+					// `type`/`file` come through the generic `Events.on` fallback overload
+					// (see the `@ts-ignore` above). The dataview plugin fires this event
+					// with the underlying Obsidian `TFile`, not one of its own `SMarkdownPage`
+					// wrappers, so that's the honest type here.
 					this.plugin.settings.items.forEach((setting) => {
 						// If this was already a file, see if it got updated!
 						const previouslyExported =
@@ -98,7 +147,10 @@ export class Exporter {
 	 * @returns
 	 */
 	async searchFilesToExport(settings: BulkExportSettings): Promise<ExportMap> {
-		const dataViewApi = getDataViewApi()
+		// `getDataViewApi()` is typed via dataview's broken package-root re-exports (see the
+		// note above); cast to the honest, deep-imported `DataviewQueryApi` shape this file
+		// actually relies on.
+		const dataViewApi = getDataViewApi() as DataviewQueryApi
 		if (dataViewApi) {
 			const initialQuery = normalizeQuery(
 				settings.exportQuery
@@ -107,7 +159,6 @@ export class Exporter {
 
 			if (data.successful) {
 				const exportFileMap = createPathMap(
-					// @ts-ignore
 					data.value.values,
 					settings
 				);
@@ -118,7 +169,7 @@ export class Exporter {
 				);
 
 				if (data.value && data.value.type === "table") {
-					this.display.applyStatusIcons(exportFileMap, settings);
+					await this.display.applyStatusIcons(exportFileMap, settings);
 
 					return exportFileMap;
 				} else {
@@ -130,7 +181,7 @@ export class Exporter {
 			console.error(data)
 			throw new Error("[Bulk Exporter] Query Error");
 		} else {
-			new Notice("Meta-Dataview needs Dataview plugin to be installed.");
+			new Notice("Meta-dataview needs dataview plugin to be installed.");
 			error("[Bulk Exporter] Dataview plugin to be installed.");
 			throw new Error("Dataview plugin to be installed.");
 		}
@@ -169,8 +220,8 @@ export class Exporter {
 		settings.lastExport = lastExport
 		// console.warn(settings.name, lastExport)
 
-		this.plugin.saveSettings();
-		this.display.applyStatusIcons(settings.lastExport, settings);
+		await this.plugin.saveSettings();
+		await this.display.applyStatusIcons(settings.lastExport, settings);
 		return results
 	}
 }
@@ -186,7 +237,7 @@ export function getGroups(
 	const ret: { [key: string]: Array<ExportProperties> } = {}
 
 	Object.keys(fileMap).forEach((filePath) => {
-		const dir = fileMap[filePath].toRelativeToExportDirRoot as string;
+		const dir = fileMap[filePath].toRelativeToExportDirRoot;
 		if (!ret[dir]) { ret[dir] = [] }
 		ret[dir].push(fileMap[filePath])
 	})
@@ -223,7 +274,7 @@ export async function exportSelection(
 	}
 
 	for (const fileIndex in fileList) {
-		const exportProperties = fileList[fileIndex] as ExportProperties;
+		const exportProperties = fileList[fileIndex];
 		await convertAndCopy(
 			outputFolder,
 			exportProperties,
@@ -232,8 +283,11 @@ export async function exportSelection(
 			plugin
 		);
 
+		// `ExportProperties.file` is declared as dataview's (broken-typed) `SMarkdownPage`
+		// in export-properties.ts; cast to our honestly-resolved type here.
+		const exportedFile = exportProperties.file as DataviewPage | undefined;
 		exportProperties.lastExportDate = new Date(
-			exportProperties.file?.mtime
+			exportedFile?.mtime.toMillis() ?? NaN
 		).getTime();
 
 		outputPathMap[exportProperties.toRelativeToExportDirRoot] = outputPathMap[exportProperties.toRelativeToExportDirRoot] || []
@@ -266,7 +320,9 @@ export async function convertAndCopy(
 	plugin: BulkExporterPlugin
 ) {
 	const targetDir = join(normalize(rootPath), fileExportProperties.toRelativeToExportDirRoot);
-	const fileDescriptor = fileExportProperties.file;
+	// `ExportProperties.file` is declared as dataview's (broken-typed) `SMarkdownPage`
+	// in export-properties.ts; cast to our honestly-resolved type here.
+	const fileDescriptor = fileExportProperties.file as DataviewPage | undefined;
 
 	if (!existsSync(targetDir)) {
 		mkdirSync(targetDir, { recursive: true });

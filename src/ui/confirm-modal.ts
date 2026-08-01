@@ -44,7 +44,7 @@ export class ConfirmModal extends Modal {
         text: this.settings.cancelText,
         cls: 'cancel'
     })
-    cancelBtn.addEventListener('click', this.close)
+    cancelBtn.addEventListener('click', () => this.close())
   }
 
   onClose() {

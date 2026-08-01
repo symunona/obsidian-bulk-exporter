@@ -37,17 +37,26 @@ export function getTransferableSettings(
  * Throws with a human readable message if the file is not ours.
  */
 export function parseImportedSettings(raw: string): BulkExportSettingsList {
-	let parsed;
+	let parsed: unknown;
 	try {
 		parsed = JSON.parse(raw);
-	} catch (e) {
+	} catch {
 		throw new Error("This is not a valid JSON file.");
 	}
+
+	// A JSON export always round-trips to a plain object; anything else
+	// (an array, a primitive) can't hold export settings.
+	const parsedObject: Record<string, unknown> | undefined =
+		parsed && typeof parsed === "object" && !(parsed instanceof Array)
+			? (parsed as Record<string, unknown>)
+			: undefined;
 
 	// Accept a single export set as well: that's how the settings looked
 	// before multiple export sets were a thing.
 	const items: unknown[] =
-		parsed && parsed.items instanceof Array ? parsed.items : [parsed];
+		parsedObject && parsedObject.items instanceof Array
+			? parsedObject.items
+			: [parsed];
 
 	const valid = items.filter(
 		(item): item is Partial<BulkExportSettings> =>
@@ -59,7 +68,8 @@ export function parseImportedSettings(raw: string): BulkExportSettingsList {
 
 	return {
 		selected: 0,
-		preview: parsed.preview || "all",
+		preview:
+			typeof parsedObject?.preview === "string" ? parsedObject.preview : "all",
 		items: valid.map(stripCache),
 	};
 }
@@ -78,7 +88,7 @@ export function downloadSettings(plugin: BulkExporterPlugin) {
 	link.click();
 	link.remove();
 	// Revoking right away can cancel the download that just started.
-	setTimeout(() => URL.revokeObjectURL(url), 10000);
+	window.setTimeout(() => URL.revokeObjectURL(url), 10000);
 
 	new Notice(
 		`Exported ${data.items.length} export setting${
@@ -93,21 +103,26 @@ export function downloadSettings(plugin: BulkExporterPlugin) {
 export function pickSettingsFile(
 	callback: (imported: BulkExportSettingsList, fileName: string) => void
 ) {
-	const input = document.createElement("input");
+	const input = createEl("input");
 	input.type = "file";
 	input.accept = "application/json,.json";
-	input.addEventListener("change", async () => {
+
+	const onFileChosen = async () => {
 		const file = input.files && input.files[0];
 		if (!file) {
 			return;
 		}
 		try {
 			callback(parseImportedSettings(await file.text()), file.name);
-		} catch (e) {
+		} catch (e: unknown) {
 			// The log view is not necessarily open, so this goes to the console.
 			console.error("Could not import settings", e);
-			new Notice(`Could not import settings: ${e.message}`);
+			const message = e instanceof Error ? e.message : String(e);
+			new Notice(`Could not import settings: ${message}`);
 		}
+	};
+	input.addEventListener("change", () => {
+		void onFileChosen();
 	});
 	input.click();
 }

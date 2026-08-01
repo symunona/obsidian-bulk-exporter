@@ -33,7 +33,7 @@ export function statusIcon(root: HTMLElement, item: ExportProperties, settings: 
     const iconSpanAddedAlready = root.createSpan({ cls: 'status-icon' })
     // Not draft
     // is Already Exported?
-    const alreadyExported: ExportProperties = settings.lastExport[item.file?.path]
+    const alreadyExported: ExportProperties = settings.lastExport[item.from]
     iconSpanAddedAlready.addEventListener('click', ()=>{
         new StatsModal(plugin, alreadyExported || item).open()
     })
@@ -42,7 +42,7 @@ export function statusIcon(root: HTMLElement, item: ExportProperties, settings: 
         if (modifiedSinceLastExport(item, alreadyExported)) {
             iconSpanAddedAlready.classList.add("orange");
             iconSpanAddedAlready.append(getIcon("file-plus"));
-            iconSpanAddedAlready.title = "Modified Since Last Export";
+            iconSpanAddedAlready.title = "Modified since last export";
         } else {
             const hadErrorsLastExport = hadErrors(alreadyExported)
             if (!hadErrorsLastExport) {
@@ -71,8 +71,20 @@ function hadErrors(alreadyExported: ExportProperties) {
     return errors ? debugInfo : false
 }
 
+/**
+ * `ExportProperties.file` is typed as the Dataview `SMarkdownPage`, whose only
+ * declared property is a nested `file` object - but the actual runtime page
+ * object this plugin works with exposes `mtime` directly at the top level
+ * (see `exportProperties.file?.mtime` in src/export/exporter.ts). This
+ * describes the slice of that runtime shape read here.
+ */
+interface DataviewPageMeta {
+    mtime: string | number | Date
+}
+
 function modifiedSinceLastExport(item: ExportProperties, alreadyExported: ExportProperties) {
-    const lastModifyDateOfFile = new Date(item.file?.mtime).getTime();
+    const fileMeta = item.file as unknown as DataviewPageMeta | undefined
+    const lastModifyDateOfFile = new Date(fileMeta ? fileMeta.mtime : NaN).getTime();
     const lastExportedDate = new Date(
         alreadyExported.lastExportDate
     ).getTime();

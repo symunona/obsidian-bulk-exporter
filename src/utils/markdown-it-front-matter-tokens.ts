@@ -1,6 +1,4 @@
 import MarkdownIt from "markdown-it";
-// const jsYAML = require('js-yaml');
-import * as jsYAML from 'js-yaml'
 
 /**
  * Parse FrontMatter templates.
@@ -17,21 +15,6 @@ export function frontMatterPlugin(md:MarkdownIt) {
             const endMarker = content.startsWith('---') ? '---' : '+++';
             const frontMatterEnd = content.indexOf(endMarker, 3);
             if (frontMatterEnd !== -1) {
-                const frontMatterContent = content.slice(3, frontMatterEnd);
-                const metadata = jsYAML.load(frontMatterContent);
-
-                // Store the front-matter tokens for later use
-                const frontMatterToken = {
-                    type: 'frontMatter',
-                    content: JSON.stringify(metadata),
-                    level: 0,
-                    data: {
-                        frontMatter: metadata,
-                    },
-                };
-
-                console.log(frontMatterToken)
-
                 // Update the content to exclude the front-matter
                 state.src = content.slice(frontMatterEnd + endMarker.length);
             }

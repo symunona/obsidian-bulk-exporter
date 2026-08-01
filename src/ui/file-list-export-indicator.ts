@@ -1,9 +1,23 @@
 import type { Literal } from "obsidian-dataview";
+import type { View } from "obsidian";
 
 import { getIcon } from "src/obsidian-api-helpers/get-icon";
 import BulkExporterPlugin from "src/main";
 import { ExportMap, ExportProperties } from "src/models/export-properties";
 import { BulkExportSettings } from "src/models/bulk-export-settings";
+
+/**
+ * The core "file-explorer" plugin's view isn't part of Obsidian's public
+ * API/types, but it exposes a `fileItems` map keyed by vault path. This
+ * describes the slice of that internal shape this file actually reads.
+ */
+interface FileExplorerItem {
+	selfEl: HTMLElement
+}
+
+interface FileExplorerView extends View {
+	fileItems: Record<string, FileExplorerItem>
+}
 
 export class FileListItemWrapper {
 	plugin: BulkExporterPlugin;
@@ -21,14 +35,11 @@ export class FileListItemWrapper {
 		const fileExplorers =
 			this.plugin.app.workspace.getLeavesOfType("file-explorer");
 		fileExplorers.forEach((fileExplorer) => {
-			// @ts-ignore: the type of this is obstructed, as it's an internal plugin.
-			const fileExplorerFileItems = fileExplorer.view.fileItems;
+			const fileExplorerFileItems = (fileExplorer.view as FileExplorerView).fileItems;
 
 			Object.entries(fileExplorerFileItems).forEach(
-				([path, fileItem]) => {
-					// @ts-ignore: so as fileItem: it's an internal type the file explorer uses.
-					const fileItemElement = fileItem.selfEl as HTMLElement;
-					fileItemElement
+				([, fileItem]) => {
+					fileItem.selfEl
 						.querySelector(".export-plugin-icon")
 						?.remove();
 				}
@@ -45,13 +56,11 @@ export class FileListItemWrapper {
 			this.plugin.app.workspace.getLeavesOfType("file-explorer");
 		// Each open file explorer.
 		fileExplorers.forEach((fileExplorer) => {
-			// @ts-ignore: the type of this is obstructed, as it's an internal plugin.
-			const fileExplorerFileItems = fileExplorer.view.fileItems;
+			const fileExplorerFileItems = (fileExplorer.view as FileExplorerView).fileItems;
 
 			Object.entries(fileExplorerFileItems || {}).forEach(
 				([path, fileItem]) => {
-					// @ts-ignore: so as fileItem: it's an internal type the file explorer uses.
-					const fileItemElement = fileItem.selfEl as HTMLElement;
+					const fileItemElement = fileItem.selfEl;
 
 					if (fileMap[path] && fileMap[path].file) {
 						// Get the tree-node element, and see if there is already an indicator icon.
@@ -75,8 +84,7 @@ export class FileListItemWrapper {
 
 		// Iterate over all the file explorers present
 		fileExplorers.forEach((fileExplorer) => {
-			// @ts-ignore: the type of this is obstructed, as it's an internal plugin.
-			const fileExplorerFileItems = fileExplorer.view.fileItems;
+			const fileExplorerFileItems = (fileExplorer.view as FileExplorerView).fileItems;
 
 			const fileExplorerFileItem =
 				fileExplorerFileItems[exportProperties.from];
@@ -88,8 +96,7 @@ export class FileListItemWrapper {
 				);
 				return;
 			}
-			// @ts-ignore: so as fileItem: it's an internal type the file explorer uses.
-			const fileItemElement = fileExplorerFileItem.selfEl as HTMLElement;
+			const fileItemElement = fileExplorerFileItem.selfEl;
 			if (!exportProperties.file) {
 				return;
 			}

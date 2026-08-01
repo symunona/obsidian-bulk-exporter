@@ -52,7 +52,7 @@ export class HeaderFieldSelectorModal extends Modal {
 
         this.enabled = this.preview.value.split(',').map((s)=>s.trim());
         this.settings.headerFieldsToShow = this.preview.value.split(',').map((s)=>s.trim()).filter(s=>s);
-        this.plugin.saveSettings()
+        void this.plugin.saveSettings()
         this.onSubmit(this.enabled);
       }));
 

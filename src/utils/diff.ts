@@ -132,12 +132,12 @@ export class DiffView {
 
         diffDom.createEl('h3', {text: 'Diff'})
         const fromToDom = diffDom.createDiv()
-        fromToDom.createEl('span', {text: item.from})
+        fromToDom.createSpan({text: item.from})
         fromToDom.createSpan({text: ' => '})
-        fromToDom.createEl('span', {text: item.toRelative})
+        fromToDom.createSpan({text: item.toRelative})
 
         this.contentEl = diffDom
-        this.load(item, plugin)
+        void this.load(item, plugin)
     }
 
     async load(item: ExportProperties, plugin: BulkExporterPlugin){
@@ -166,7 +166,6 @@ export class DiffView {
 		const maxLineCount = Math.max(this.file1Lines.length, this.file2Lines.length)
 		while (lineCount1 <= maxLineCount || lineCount2 <= maxLineCount) {
 			const difference = this.fileDifferences.differences.find(
-				// eslint-disable-next-line no-loop-func
 				(d) =>
 					d.file1Start === lineCount1 && d.file2Start === lineCount2
 			);
@@ -238,7 +237,7 @@ export class DiffView {
 	}
 
 	private buildDiffLine(line1: string, line2: string, charClass: string) {
-		const fragment = document.createElement('div');
+		const fragment = createDiv();
 
 		if (line1 != undefined && line1.length === 0) {
 			fragment.textContent = preventEmptyString(line1);
@@ -250,7 +249,7 @@ export class DiffView {
 					continue;
 				}
 
-				const span = document.createElement('span');
+				const span = createSpan();
 				// Necessary to give the line a height when it's empty.
 				span.textContent = preventEmptyString(difference.value);
 				if (difference.added) {
@@ -259,7 +258,7 @@ export class DiffView {
 				fragment.appendChild(span);
 			}
 		} else if(line1 != undefined && line2 == undefined) {
-			const span = document.createElement('span');
+			const span = createSpan();
 			// Necessary to give the line a height when it's empty.
 			span.textContent = preventEmptyString(line1);
 			span.classList.add(charClass);

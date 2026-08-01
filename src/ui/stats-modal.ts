@@ -1,5 +1,5 @@
 import { Modal } from "obsidian";
-import { AttachmentLink } from "src/export/get-links-and-attachments";
+import { AttachmentLink, LinkParseResults } from "src/export/get-links-and-attachments";
 import BulkExporterPlugin from "src/main";
 import { ExportProperties } from "src/models/export-properties";
 import { getIcon } from "src/obsidian-api-helpers/get-icon";
@@ -13,6 +13,25 @@ const LINK_LISTS = [
   'externalAttachments',
   'headerAttachments'
 ]
+
+/**
+ * `LINK_LISTS` is looked up dynamically by name, but `LinkParseResults` has
+ * no index signature (and one of the names above, 'headerAttachments', isn't
+ * even a real key on it). Every key that does exist on it holds an
+ * `AttachmentLink[]`, so this describes that slice honestly instead of
+ * indexing the typed object with an arbitrary string.
+ */
+type LinkGroupMap = Partial<Record<string, Array<AttachmentLink>>>
+
+function getLinkGroup(
+  linksAndAttachments: LinkParseResults | undefined,
+  groupKey: string
+): Array<AttachmentLink> | undefined {
+  if (!linksAndAttachments) {
+    return undefined
+  }
+  return (linksAndAttachments as unknown as LinkGroupMap)[groupKey]
+}
 
 export class StatsModal extends Modal {
   item: ExportProperties
@@ -28,7 +47,7 @@ export class StatsModal extends Modal {
     const { contentEl } = this;
     contentEl.classList.add('bulk-export-stat-modal')
 
-    contentEl.createEl("h1", { text: this.item.file?.path })
+    contentEl.createEl("h1", { text: this.item.from })
 
     const content = contentEl.createDiv({ cls: 'content' })
     this.linkStats(content)
@@ -62,32 +81,22 @@ export class StatsModal extends Modal {
       content.createEl('p', { text: 'No attachments or links in file.' })
     }
     LINK_LISTS.forEach((linkOrAttachmentGroupKey) => {
-      // @ts-ignore
-      if (this.item.linksAndAttachments && this.item.linksAndAttachments[linkOrAttachmentGroupKey]) {
-        // @ts-ignore
-        const linkGroup = this.item.linksAndAttachments[linkOrAttachmentGroupKey]
-        if (linkGroup instanceof Array && linkGroup.length) {
-          const groupDiv = content.createDiv()
-          groupDiv.createEl('h3', { text: linkOrAttachmentGroupKey })
+      const linkGroup = getLinkGroup(this.item.linksAndAttachments, linkOrAttachmentGroupKey)
+      if (linkGroup && linkGroup.length) {
+        const groupDiv = content.createDiv()
+        groupDiv.createEl('h3', { text: linkOrAttachmentGroupKey })
 
-          linkGroup.forEach((link: AttachmentLink) => {
-            this.renderLink(link, groupDiv)
-          })
-        }
+        linkGroup.forEach((link: AttachmentLink) => {
+          this.renderLink(link, groupDiv)
+        })
       }
     })
   }
 
   noLinksOrAttachments() {
     return !LINK_LISTS.find((linkOrAttachmentGroupKey) => {
-      // @ts-ignore
-      if (this.item.linksAndAttachments &&
-          // @ts-ignore
-          this.item.linksAndAttachments[linkOrAttachmentGroupKey] &&
-          // @ts-ignore
-          this.item.linksAndAttachments[linkOrAttachmentGroupKey].length) {
-            return true;
-      }
+      const linkGroup = getLinkGroup(this.item.linksAndAttachments, linkOrAttachmentGroupKey)
+      return Boolean(linkGroup && linkGroup.length)
     })
   }
 

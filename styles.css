@@ -125,6 +125,10 @@ tr:hover .data-view-meta-key.undefined {background: var(--text-selection); opaci
 
 .rotate-180 { transform: rotateX(180deg); }
 .spin { animation: rotation 2s infinite linear; }
+
+/* Icon state classes used by ButtonWithLoader (src/ui/button-with-loader.ts) */
+.button-with-loader-icon { display: block; }
+.is-hidden { display: none; }
 @keyframes rotation {
     from { transform: rotate(0deg);}
     to { transform: rotate(359deg);}
