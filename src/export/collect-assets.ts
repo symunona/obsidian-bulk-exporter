@@ -26,6 +26,10 @@ export async function collectAssetsReplaceLinks(
 ) {
 	const linksAndAttachments = getLinksAndAttachments(fileExportProperties.content)
 	fileExportProperties.linksAndAttachments = linksAndAttachments
+	// The export log and the stats modal read `linkStats` to list the local links of
+	// a file, and to show the per-link `error` set by `replaceLocalLinks` below.
+	// Assign it up front, so it is populated even if something throws further down.
+	fileExportProperties.linkStats = linksAndAttachments.internalLinks
 	fileExportProperties.outputContent = linksAndAttachments.markdownReplacedWikiStyleLinks
 
 	// console.warn(fileExportProperties.newFileName, linksAndAttachments)

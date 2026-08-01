@@ -4,7 +4,7 @@
 import { existsSync, mkdirSync, writeFileSync } from "fs";
 import { Notice, TFile } from "obsidian";
 
-import { error, log } from "src/utils/log";
+import { error, log, warn } from "src/utils/log";
 
 import { normalizeQuery } from "src/utils/normalize-query";
 import { createPathMap } from "src/utils/indexing/create-path-map";
@@ -16,7 +16,8 @@ import {
 	ExportMap,
 	ExportProperties,
 } from "src/models/export-properties";
-import { exportedLogEntry } from "./export-log";
+import { ExportFailure, exportedLogEntry } from "./export-log";
+import { unsafeCharacterWarning } from "./unsafe-characters";
 import { join, normalize } from "path";
 import { runShellCommand } from "src/utils/shell-runner";
 import { getDataViewApi } from "src/utils/data-view-api";
@@ -273,28 +274,56 @@ export async function exportSelection(
 		rmDirContent(settings.outputFolder, settings.emptyTargetFolderIgnore)
 	}
 
+	const failures: Array<ExportFailure> = [];
+
 	for (const fileIndex in fileList) {
 		const exportProperties = fileList[fileIndex];
-		await convertAndCopy(
-			outputFolder,
-			exportProperties,
-			fileList,
-			settings,
-			plugin
-		);
+		// One unexportable file must never take the rest of the batch down with it.
+		// Before this, a single throw in here (a `URIError` from a '%' in a note
+		// title, say) aborted the loop, and with it every remaining file, the log
+		// entry, the shell hook and the status icon refresh - with no clue as to
+		// what had happened or which files never made it out.
+		// @see https://github.com/symunona/obsidian-bulk-exporter/issues/17
+		try {
+			await convertAndCopy(
+				outputFolder,
+				exportProperties,
+				fileList,
+				settings,
+				plugin
+			);
 
-		// `ExportProperties.file` is declared as dataview's (broken-typed) `SMarkdownPage`
-		// in export-properties.ts; cast to our honestly-resolved type here.
-		const exportedFile = exportProperties.file as DataviewPage | undefined;
-		exportProperties.lastExportDate = new Date(
-			exportedFile?.mtime.toMillis() ?? NaN
-		).getTime();
+			// `ExportProperties.file` is declared as dataview's (broken-typed) `SMarkdownPage`
+			// in export-properties.ts; cast to our honestly-resolved type here.
+			const exportedFile = exportProperties.file as DataviewPage | undefined;
+			exportProperties.lastExportDate = new Date(
+				exportedFile?.mtime.toMillis() ?? NaN
+			).getTime();
 
-		outputPathMap[exportProperties.toRelativeToExportDirRoot] = outputPathMap[exportProperties.toRelativeToExportDirRoot] || []
-		outputPathMap[exportProperties.toRelativeToExportDirRoot].push(exportProperties)
+			outputPathMap[exportProperties.toRelativeToExportDirRoot] = outputPathMap[exportProperties.toRelativeToExportDirRoot] || []
+			outputPathMap[exportProperties.toRelativeToExportDirRoot].push(exportProperties)
+		} catch (e) {
+			failures.push(collectExportFailure(exportProperties, e));
+			continue;
+		}
+
+		// Advice about the file we just wrote - so it must not be able to fail
+		// the export it is advising on, nor the batch around it.
+		try {
+			warnAboutUnsafeCharacters(exportProperties);
+		} catch (e) {
+			console.warn("[Bulk Exporter] Could not check", exportProperties.from, e);
+		}
 	}
 
-	exportedLogEntry(outputPathMap, plugin)
+	exportedLogEntry(outputPathMap, plugin, failures)
+
+	if (failures.length) {
+		new Notice(
+			`Bulk Export: ${failures.length} of ${Object.keys(fileList).length} ` +
+			`file(s) could not be exported. See the export log for details.`
+		);
+	}
 
 	if (settings.shell && settings.shell.trim()) {
 		log('Starting shell script ', settings.shell)
@@ -310,6 +339,58 @@ export async function exportSelection(
 	);
 
 	return fileList;
+}
+
+/**
+ * Turns whatever `convertAndCopy` threw into a reportable record, blaming the
+ * link that caused it when `replaceLocalLinks` managed to pin one down.
+ */
+function collectExportFailure(
+	exportProperties: ExportProperties,
+	thrown: unknown
+): ExportFailure {
+	const message = thrown instanceof Error
+		? `${thrown.name}: ${thrown.message}`
+		: String(thrown);
+
+	// `linkStats` is populated before the links are processed, so it is there
+	// even when processing them is what blew up.
+	const links = (exportProperties.linkStats || [])
+		.filter((link) => link.status === "error");
+
+	console.error("[Bulk Exporter] Could not export", exportProperties.from, thrown);
+	error(`Could not export ${exportProperties.from}: ${message}`);
+
+	return { exportProperties, message, links };
+}
+
+/**
+ * Advisory only: point out file names and links that hold characters which are
+ * not portable across file systems and static site generators. Never skips the
+ * file, never fails the export - it is a hint, not a rule.
+ */
+function warnAboutUnsafeCharacters(exportProperties: ExportProperties) {
+	const fileNameWarning = unsafeCharacterWarning(exportProperties.from);
+	if (fileNameWarning) {
+		warn("File name: " + fileNameWarning);
+	}
+
+	const linksAndAttachments = exportProperties.linksAndAttachments;
+	if (!linksAndAttachments) { return }
+
+	const alreadyWarned: { [name: string]: boolean } = {};
+	const internalTargets = linksAndAttachments.internalLinks
+		.concat(linksAndAttachments.internalAttachments);
+
+	internalTargets.forEach((link) => {
+		const name = link.normalizedOriginalPath;
+		if (alreadyWarned[name]) { return }
+		alreadyWarned[name] = true;
+		const linkWarning = unsafeCharacterWarning(name);
+		if (linkWarning) {
+			warn(`Link in "${exportProperties.from}": ` + linkWarning);
+		}
+	});
 }
 
 export async function convertAndCopy(

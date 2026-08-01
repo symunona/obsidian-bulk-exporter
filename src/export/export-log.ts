@@ -3,18 +3,35 @@ import { getIcon } from "src/obsidian-api-helpers/get-icon";
 import { ExportProperties } from "src/models/export-properties";
 import BulkExporterPlugin from "src/main";
 
-import { log } from "src/utils/log";
+import { error, log } from "src/utils/log";
 import { AttachmentLink, LinkType } from "./get-links-and-attachments";
+
+/**
+ * One file that could not be exported at all, plus whatever we know about why.
+ * `exportSelection` collects these instead of letting the first throw abort the
+ * whole batch.
+ * @see https://github.com/symunona/obsidian-bulk-exporter/issues/17
+ */
+export interface ExportFailure {
+    /** The file that never made it out. */
+    exportProperties: ExportProperties;
+    /** What was thrown, as text. */
+    message: string;
+    /** The link(s) blamed for it, if the failure could be pinned on one. */
+    links: Array<AttachmentLink>;
+}
 
 /**
  * I want great logging per file, with all the info.
  * For easy debugging and preserving sanity.
  * @param allAssetsExported
  * @param plugin
+ * @param failures files that threw and were skipped - reported in red, at the end.
  */
 export function exportedLogEntry(
     outputPathMap: { [path: string]: Array<ExportProperties> },
-    plugin: BulkExporterPlugin
+    plugin: BulkExporterPlugin,
+    failures: Array<ExportFailure> = []
 ) {
     let errorCount = 0;
 
@@ -114,6 +131,35 @@ export function exportedLogEntry(
         }
     })
     log(root);
+
+    if (failures.length) {
+        logExportFailures(failures);
+    }
+}
+
+/**
+ * The export finished, but not everything made it out. Say so, loudly, naming
+ * every file we dropped and - where we could pin it down - the link that did it.
+ */
+function logExportFailures(failures: Array<ExportFailure>) {
+    const root = createDiv({
+        cls: 'pull-in',
+        text: `${failures.length} file(s) could not be exported:`
+    })
+    failures.forEach((failure) => {
+        const fileElement = root.createDiv({
+            cls: 'pull-in error',
+            text: `${failure.exportProperties.from} - ${failure.message}`
+        })
+        failure.links.forEach((link) => {
+            fileElement.createDiv({
+                cls: 'pull-in',
+                text: `link: [${link.text}] -> ` +
+                    `${link.normalizedOriginalPath || link.originalPath} - ${link.error}`
+            })
+        })
+    })
+    error(root);
 }
 
 function fileAssetElementCreator(asset: AttachmentLink, errorCount: number, plugin: BulkExporterPlugin) {

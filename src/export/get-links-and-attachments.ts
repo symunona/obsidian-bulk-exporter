@@ -230,24 +230,46 @@ function isWikiLink(url: string){
     return url.startsWith(WIKI_LINK_PREFIX)
 }
 
-export function normalizeUrl(url: string) {
-    if (url.startsWith("obsidian://")) {
-        // Just grab the file value from the link.
-        try {
-            url = decodeURIComponent(url.substring(url.indexOf("file=") + 5))
-        } catch (e) {
-            console.error("Error decoding obsidian link: ", url, e)
-            throw e;
+const OBSIDIAN_LINK_PREFIX = 'obsidian://'
+const OBSIDIAN_FILE_PARAM = 'file='
+
+/**
+ * `decodeURIComponent` throws `URIError: URI malformed` on any `%` that does not
+ * start a valid escape sequence. A literal `%` in a note title (`[[100% sure]]`)
+ * is far more likely than a genuinely mis-encoded escape, so treat the value as
+ * already-plain text and hand it back untouched instead of throwing.
+ *
+ * Before this existed, that one `URIError` aborted the whole export.
+ * @see https://github.com/symunona/obsidian-bulk-exporter/issues/17
+ */
+export function safeDecodeURIComponent(value: string): string {
+    try {
+        return decodeURIComponent(value)
+    } catch (e) {
+        if (e instanceof URIError) {
+            console.warn(
+                `[Bulk Exporter] "${value}" is not a valid URI encoded string, ` +
+                `using it as-is. (A literal '%' in a file name does this.)`
+            )
+            return value
         }
-        
+        throw e
+    }
+}
+
+export function normalizeUrl(url: string) {
+    if (url.startsWith(OBSIDIAN_LINK_PREFIX)) {
+        // Just grab the file value from the link - if there is one at all.
+        // Without this guard `indexOf` returns -1 and the substring silently
+        // chops the first four characters off the url instead.
+        const fileParamIndex = url.indexOf(OBSIDIAN_FILE_PARAM)
+        if (fileParamIndex > -1) {
+            url = safeDecodeURIComponent(
+                url.substring(fileParamIndex + OBSIDIAN_FILE_PARAM.length))
+        }
     }
     if (isWikiLink(url)) {
-        try {
-            url = decodeURIComponent(url.substring(WIKI_LINK_PREFIX.length))
-        } catch (e) {
-            console.error("Error decoding wiki link: ", url, e)
-            throw e;
-        }
+        url = safeDecodeURIComponent(url.substring(WIKI_LINK_PREFIX.length))
     }
     return url
 }

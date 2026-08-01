@@ -23,54 +23,80 @@ export function replaceLocalLinks(
 	plugin: BulkExporterPlugin
 ) {
 	for (const link of links) {
-		// See if this link exists in the vault!
-		const linkedDocument = plugin.app.metadataCache.getFirstLinkpathDest(
-			decodeURIComponent(link.normalizedOriginalPath),
-			exportProperties.from
-		);
-
-		if (!linkedDocument) {
-			if (!settings.keepLinksNotFound){
-				removeLinks(link, exportProperties)
-
-				warn('Internal link not found! Removed.', link.text, link.originalPath)
-				link.error = "Internal Link Not Found at all! Removed."
-			} else {
-				replaceLinks(link.normalizedOriginalPath, link, settings, exportProperties)
-
-				warn('Internal link not found! Keeping due to settings keep not found. ', link.text, link.originalPath)
-				link.error = "Internal Link Not Found, NOT replacing due to Keep Links Not Found setting keep not found!"
-			}
-			continue
-
+		try {
+			replaceLocalLink(link, exportProperties, allFileListMap, settings, plugin)
+		} catch (e) {
+			// Pin the failure on the link that actually caused it, so the export
+			// log can name it, then let it bubble: `exportSelection` records it
+			// against this one file and carries on with the rest of the batch.
+			// @see https://github.com/symunona/obsidian-bulk-exporter/issues/17
+			link.status = "error"
+			link.error = `Could not process link: ${e instanceof Error ? e.message : String(e)}`
+			throw e
 		}
-		const path = linkedDocument.path
+	}
+}
 
-		// Replace all links that point to other markdown files.
-		// If not found, send a warning.
-		if (allFileListMap[path]) {
-			const newFilePath = allFileListMap[path].toRelative;
+function replaceLocalLink(
+	link: AttachmentLink,
+	exportProperties: ExportProperties,
+	allFileListMap: ExportMap,
+	settings: BulkExportSettings,
+	plugin: BulkExporterPlugin
+) {
+	// See if this link exists in the vault!
+	// `normalizedOriginalPath` has ALREADY been decoded by `normalizeUrl`, so
+	// decoding it a second time here was wrong twice over: it threw
+	// `URIError: URI malformed` on any title holding a literal '%'
+	// (`[[100% sure]]`), taking the whole export down with it, and it silently
+	// mangled titles that happened to look encoded (`[[a %20 b]]` -> `a   b`).
+	// @see https://github.com/symunona/obsidian-bulk-exporter/issues/17
+	const linkedDocument = plugin.app.metadataCache.getFirstLinkpathDest(
+		link.normalizedOriginalPath,
+		exportProperties.from
+	);
 
-			// Remove the extension from actual links.
-			const newLink = newFilePath.substring(
-				0,
-				newFilePath.lastIndexOf(".")
-			);
-			replaceLinks(newLink, link, settings, exportProperties)
+	if (!linkedDocument) {
+		if (!settings.keepLinksNotFound){
+			removeLinks(link, exportProperties)
 
+			warn('Internal link not found! Removed.', link.text, link.originalPath)
+			link.error = "Internal Link Not Found at all! Removed."
 		} else {
-			// Removed as it's pointing to a file that's not being exported.
-			if (!settings.keepLinksPrivate){
-				warn("Internal link not found in output, removing!", link.originalPath, link.text, path);
-				link.error = "Internal Link FOUND but not public, removed!"
+			replaceLinks(link.normalizedOriginalPath, link, settings, exportProperties)
 
-				removeLinks(link, exportProperties)
-			} else {
-				replaceLinks(link.normalizedOriginalPath, link, settings, exportProperties)
+			warn('Internal link not found! Keeping due to settings keep not found. ', link.text, link.originalPath)
+			link.error = "Internal Link Not Found, NOT replacing due to Keep Links Not Found setting keep not found!"
+		}
+		return
 
-				warn("Internal link not found in output, kept due to settings keep private!", link.originalPath, link.text, path);
-				link.error = "Internal Link FOUND but not public, kept due to settings keep private!"
-			}
+	}
+	const path = linkedDocument.path
+
+	// Replace all links that point to other markdown files.
+	// If not found, send a warning.
+	if (allFileListMap[path]) {
+		const newFilePath = allFileListMap[path].toRelative;
+
+		// Remove the extension from actual links.
+		const newLink = newFilePath.substring(
+			0,
+			newFilePath.lastIndexOf(".")
+		);
+		replaceLinks(newLink, link, settings, exportProperties)
+
+	} else {
+		// Removed as it's pointing to a file that's not being exported.
+		if (!settings.keepLinksPrivate){
+			warn("Internal link not found in output, removing!", link.originalPath, link.text, path);
+			link.error = "Internal Link FOUND but not public, removed!"
+
+			removeLinks(link, exportProperties)
+		} else {
+			replaceLinks(link.normalizedOriginalPath, link, settings, exportProperties)
+
+			warn("Internal link not found in output, kept due to settings keep private!", link.originalPath, link.text, path);
+			link.error = "Internal Link FOUND but not public, kept due to settings keep private!"
 		}
 	}
 }
