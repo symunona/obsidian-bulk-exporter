@@ -18,7 +18,7 @@ import {
 } from "src/models/export-properties";
 import { ExportFailure, exportedLogEntry } from "./export-log";
 import { unsafeCharacterWarning } from "./unsafe-characters";
-import { join, normalize } from "path";
+import { dirname, normalize } from "path";
 import { runShellCommand } from "src/utils/shell-runner";
 import { getDataViewApi } from "src/utils/data-view-api";
 // `obsidian-dataview`'s package root (`obsidian-dataview/lib/index.d.ts`) re-exports its
@@ -286,7 +286,6 @@ export async function exportSelection(
 		// @see https://github.com/symunona/obsidian-bulk-exporter/issues/17
 		try {
 			await convertAndCopy(
-				outputFolder,
 				exportProperties,
 				fileList,
 				settings,
@@ -394,13 +393,19 @@ function warnAboutUnsafeCharacters(exportProperties: ExportProperties) {
 }
 
 export async function convertAndCopy(
-	rootPath: string,
 	fileExportProperties: ExportProperties,
 	allFileListMap: ExportMap,
 	settings: BulkExportSettings,
 	plugin: BulkExporterPlugin
 ) {
-	const targetDir = join(normalize(rootPath), fileExportProperties.toRelativeToExportDirRoot);
+	// Create the directory of the file we are about to write, derived from the
+	// resolved target itself - not from a second, independent guess at what the
+	// output format meant. `toRelativeToExportDirRoot` is a *grouping* key for
+	// the log and the preview table; deriving the mkdir from it made "no group"
+	// and "the export root" the same thing, so an output format like `food/`
+	// silently skipped creating `<root>/food` and every write died with ENOENT.
+	// @see https://github.com/symunona/obsidian-bulk-exporter/issues/18
+	const targetDir = dirname(normalize(fileExportProperties.toAbsoluteFs));
 	// `ExportProperties.file` is declared as dataview's (broken-typed) `SMarkdownPage`
 	// in export-properties.ts; cast to our honestly-resolved type here.
 	const fileDescriptor = fileExportProperties.file as DataviewPage | undefined;

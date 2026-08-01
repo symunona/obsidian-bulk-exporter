@@ -2,7 +2,7 @@ import { BulkExportSettings } from "../../models/bulk-export-settings";
 import path, { basename, join } from "path";
 import normalizeFileName from "../normalize-file-name";
 import { ExportMap, ExportProperties } from "src/models/export-properties";
-import { error } from "../log";
+import { error, warn } from "../log";
 import ScopedEval from "scoped-eval";
 import { Link, SMarkdownPage } from "obsidian-dataview";
 
@@ -38,6 +38,65 @@ function asFileDescriptor(page: SMarkdownPage): DataviewFileDescriptor {
 }
 
 /**
+ * Does this evaluated output path name a folder instead of a file? That is
+ * either nothing at all, or something ending in a path separator.
+ *
+ * `path.parse("food/")` reports `{ dir: "", base: "food" }` - node drops the
+ * trailing slash and calls "food" the *file name*. So a `food/` output format
+ * used to produce `<export root>/food/.md` while claiming its directory was the
+ * export root itself: nothing ever created `<export root>/food`, and the very
+ * first `writeFileSync` died with ENOENT. Every file failed, nothing was
+ * written, and the log just stopped.
+ *
+ * @see https://github.com/symunona/obsidian-bulk-exporter/issues/18
+ */
+function namesDirectoryOnly(targetPath: string): boolean {
+	const trimmed = targetPath.trim();
+	return !trimmed || /[/\\]$/.test(trimmed);
+}
+
+/**
+ * Human readable explanation of what is wrong (or merely surprising) about an
+ * output format template, or null when there is nothing to say. Shown both in
+ * the settings tab, while the user types it, and in the export log, so whoever
+ * hits it sees it wherever they are looking.
+ */
+export function outputFormatWarning(outputFormat: string): string | null {
+	if (!outputFormat.trim()) {
+		return (
+			"Output filename and path is empty: every note is exported into the " +
+			"export root under its own file name. Set something like ${slug} to " +
+			"control where they land."
+		);
+	}
+	if (namesDirectoryOnly(outputFormat)) {
+		return (
+			`Output filename and path "${outputFormat}" ends with a path separator, ` +
+			"so it only names a folder: each note is exported as " +
+			`"${outputFormat}\${fileName}". Add a file name part to control it.`
+		);
+	}
+	if (outputFormat.indexOf("${") === -1) {
+		return (
+			`Output filename and path "${outputFormat}" contains no \${...} ` +
+			"expression, so every note is written to that very same file and they " +
+			"overwrite each other. Add something per-note, e.g. ${fileName} or ${slug}."
+		);
+	}
+	return null;
+}
+
+/**
+ * A template naming only a folder is not a mistake worth refusing - the intent
+ * is obvious - so fill in the note's own file name, exactly like an explicit
+ * `.../${fileName}` would. `join` also collapses the doubled separator.
+ */
+function resolveTargetPath(targetPath: string, sourcePath: string): string {
+	if (!namesDirectoryOnly(targetPath)) { return targetPath }
+	return join(targetPath.trim(), path.parse(sourcePath).name);
+}
+
+/**
  * From a DataView query results, it creates an output map, running
  * the output transformation.
  */
@@ -48,11 +107,17 @@ export function createPathMap(
 	const foundFileMap: { [key: string]: ExportProperties } = {};
 	const targetRoot = settings.outputFolder || '';
 
+	const formatWarning = outputFormatWarning(settings.outputFormat || "");
+	if (formatWarning) { warn(formatWarning) }
+
 	queryResults.map(([, page]) => {
 		const fileDescriptor = asFileDescriptor(page);
 
 		try {
-			const {targetPath} = getTargetPaths(page, settings);
+			const targetPath = resolveTargetPath(
+				getTargetPaths(page, settings).targetPath,
+				fileDescriptor.path
+			);
 			const newFileName = basename(targetPath);
 			const extension = fileDescriptor.path.substring(fileDescriptor.path.lastIndexOf('.'))
 

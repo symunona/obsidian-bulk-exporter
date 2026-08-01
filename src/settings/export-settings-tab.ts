@@ -7,6 +7,7 @@ import {
 } from "src/models/bulk-export-settings";
 import { ConfirmModal } from "src/ui/confirm-modal";
 import { ImportSettingsModal } from "src/ui/import-settings-modal";
+import { outputFormatWarning } from "src/utils/indexing/create-path-map";
 import {
 	downloadSettings,
 	extendSettings,
@@ -240,7 +241,7 @@ export class OutputSettingTab extends PluginSettingTab {
 		filenameInfo.append(linkToDocs2);
 		const exportFileNameInfoFragment = createFragment();
 		exportFileNameInfoFragment.append(filenameInfo);
-		new Setting(containerEl)
+		const outputFormatSetting = new Setting(containerEl)
 			.setName("Output filename and path")
 			.setDesc(exportFileNameInfoFragment)
 			.addText((text) =>
@@ -249,10 +250,27 @@ export class OutputSettingTab extends PluginSettingTab {
 					.setValue(settings.outputFormat)
 					.onChange(async (value) => {
 						settings.outputFormat = value;
-						// TODO: validate! Can I validate?
+						showOutputFormatWarning(value);
 						await this.plugin.saveSettingsWithRefresh();
 					})
 			);
+
+		// A bad output format used to be completely silent: `food/` exported
+		// exactly nothing, and a format with no ${...} in it wrote every note
+		// over the same single file. Say so, right where it is typed, and keep
+		// saying it - the warning is rendered on open too, not just on change.
+		// @see https://github.com/symunona/obsidian-bulk-exporter/issues/18
+		const outputFormatWarningEl = outputFormatSetting.descEl.createDiv({
+			// `mod-warning` is obsidian's own "this is a warning" text colour,
+			// so this needs no stylesheet of its own.
+			cls: "bulk-export-settings-warning mod-warning",
+		});
+		const showOutputFormatWarning = (value: string) => {
+			const warning = outputFormatWarning(value);
+			outputFormatWarningEl.setText(warning || "");
+			outputFormatWarningEl.toggle(Boolean(warning));
+		};
+		showOutputFormatWarning(settings.outputFormat || "");
 
 		new Setting(containerEl)
 			.setName("Empty target folder on each export")
