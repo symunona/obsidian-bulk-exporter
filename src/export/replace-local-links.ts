@@ -44,6 +44,20 @@ function replaceLocalLink(
 	settings: BulkExportSettings,
 	plugin: BulkExporterPlugin
 ) {
+	// `[[note#header]]` names a file AND a place inside it. Only the part in
+	// front of the '#' is a file name, so the anchor comes off before the lookup
+	// and goes back on afterwards.
+	const { path: linkPath, anchor } = splitAnchor(link.normalizedOriginalPath)
+
+	// `[[#Some heading]]` points inside THIS note: there is no file to resolve,
+	// and asking the vault for one called "#Some heading" only ever answered
+	// "not found" - which stripped the link.
+	// @see https://github.com/symunona/obsidian-bulk-exporter/issues/14
+	if (!linkPath) {
+		replaceLinks(link.normalizedOriginalPath, link, settings, exportProperties)
+		return
+	}
+
 	// See if this link exists in the vault!
 	// `normalizedOriginalPath` has ALREADY been decoded by `normalizeUrl`, so
 	// decoding it a second time here was wrong twice over: it threw
@@ -52,7 +66,7 @@ function replaceLocalLink(
 	// mangled titles that happened to look encoded (`[[a %20 b]]` -> `a   b`).
 	// @see https://github.com/symunona/obsidian-bulk-exporter/issues/17
 	const linkedDocument = plugin.app.metadataCache.getFirstLinkpathDest(
-		link.normalizedOriginalPath,
+		linkPath,
 		exportProperties.from
 	);
 
@@ -78,12 +92,14 @@ function replaceLocalLink(
 	if (allFileListMap[path]) {
 		const newFilePath = allFileListMap[path].toRelative;
 
-		// Remove the extension from actual links.
+		// Remove the extension from actual links. The anchor the lookup was not
+		// allowed to see goes back on: the heading it names lives in the
+		// exported file just as it did in the vault one.
 		const newLink = newFilePath.substring(
 			0,
 			newFilePath.lastIndexOf(".")
 		);
-		replaceLinks(newLink, link, settings, exportProperties)
+		replaceLinks(newLink + anchor, link, settings, exportProperties)
 
 	} else {
 		// Removed as it's pointing to a file that's not being exported.
@@ -115,7 +131,48 @@ function removeLinks(link:AttachmentLink, exportProperties: ExportProperties){
 }
 
 /**
+ * Splits a link target into the file it names and the place inside that file.
+ *
+ * Obsidian does not allow '#' in a file name, so the first one always starts an
+ * anchor: a heading (`note#Intro`, `note#Intro#Detail`) or a block reference
+ * (`note#^abc123`). Handing the whole string to `getFirstLinkpathDest` looked
+ * for a file literally called "note#Intro", never found one, and removed the
+ * link with a warning.
+ *
+ * A target that STARTS with '#' has an empty path: it is a heading in the note
+ * being exported and names no file at all.
+ *
+ * @see https://github.com/symunona/obsidian-bulk-exporter/issues/14
+ */
+export function splitAnchor(target: string): { path: string, anchor: string } {
+	const hash = target.indexOf('#')
+	if (hash === -1) { return { path: target, anchor: '' } }
+	return { path: target.substring(0, hash), anchor: target.substring(hash) }
+}
+
+/**
+ * Percent-encodes a link so a non-Obsidian markdown parser can read a path with
+ * a space in it. Per path segment, and never over the anchor - encoding the '#'
+ * would fold a heading reference back into the file name.
+ */
+function encodeSpaces(newLink: string, settings: BulkExportSettings): string {
+	if (newLink.indexOf(' ') === -1 || !settings.normalizeSpacesInLinks) { return newLink }
+	const { path, anchor } = splitAnchor(newLink)
+	return path.split('/').map((urlPart) => encodeURIComponent(urlPart)).join('/') + anchor
+}
+
+/**
  * It handles wiki links, and spaces depending on settings
+ *
+ * The output syntax is chosen FIRST, and only the `[](...)` form is encoded.
+ * Encoding up front - before the branch - meant `normalizeSpacesInLinks` also
+ * reached the two places it has no business in: the `title === newLink` test
+ * below, which then compared a title against an encoded copy of itself, and the
+ * inside of `[[...]]`, where percent escapes are not resolved by anyone.
+ * `[[My Note]]` came out as `[[out/My%20Note|My Note]]`, which neither Obsidian
+ * nor Quartz can resolve. Percent-encoding is a property of a url, and only the
+ * `[](...)` form holds one.
+ *
  * @param newLink
  * @param link
  * @param settings
@@ -124,12 +181,8 @@ function removeLinks(link:AttachmentLink, exportProperties: ExportProperties){
 export function replaceLinks(newLink: string, link: AttachmentLink, settings:BulkExportSettings, exportProperties: ExportProperties){
 	const title = link.text
 	const original = link.originalPath
-	// There are spaces in the URL, normalize it!
-	if (newLink.indexOf(' ') > -1 && settings.normalizeSpacesInLinks) {
-		newLink = newLink.split('/').map((urlPart) => encodeURIComponent(urlPart)).join('/')
-	}
 
-	let newLinkWithTitle = `[${title}](${newLink})`;
+	let newLinkWithTitle: string
 
 	// If a user wants spaces in their filenames in their output, normal [link](url)
 	// styled links do not cut it, as the matcher will have problems in other MD parsers
@@ -142,25 +195,20 @@ export function replaceLinks(newLink: string, link: AttachmentLink, settings:Bul
 	if (link?.isWikiLink && settings.preserveWikiLinks) {
 		if (title === newLink) {
 			newLinkWithTitle = `[[${title}]]`
-		} else {
+		} else if (settings.keepWikiLinksAsIs) {
 			// An edge case: if:
 			// - this is a WIKI link
 			// - preserve wiki links
 			// - keepWikiLinksAsIs
 			// we can just leave the original, as e.g. quartz can link it up.
-			if (settings.keepWikiLinksAsIs){
-				const url = normalizeUrl(link.originalPath)
-				if (url === title) {
-					newLinkWithTitle = `[[${url}]]`
-				}
-				else {
-					newLinkWithTitle = `[[${url}|${title}]]`
-				}
-			} else {
-				// Do update to the new relative path.
-				newLinkWithTitle = `[[${newLink}|${title}]]`
-			}
+			const url = normalizeUrl(link.originalPath)
+			newLinkWithTitle = url === title ? `[[${url}]]` : `[[${url}|${title}]]`
+		} else {
+			// Do update to the new relative path.
+			newLinkWithTitle = `[[${newLink}|${title}]]`
 		}
+	} else {
+		newLinkWithTitle = `[${title}](${encodeSpaces(newLink, settings)})`
 	}
 
 	exportProperties.outputContent = replaceAll(
