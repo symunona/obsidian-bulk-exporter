@@ -1,4 +1,4 @@
-import { FullIndex } from "obsidian-dataview";
+import { FullIndex, PageMetadata } from "obsidian-dataview";
 import { dirname } from "path";
 import { ExportMap } from "src/models/export-properties";
 import _ from "underscore";
@@ -16,7 +16,7 @@ export class FolderMeta {
         // const startTime = new Date();
         this.resultsMap = {};
         // console.log('index pages', index.pages)
-        index.pages.forEach((file: any) => {
+        index.pages.forEach((file: PageMetadata) => {
             const folderName = dirname(file.path)
             this.resultsMap[folderName] = this.resultsMap[folderName] || {};
             const pathEntry = this.resultsMap[folderName];
@@ -27,7 +27,7 @@ export class FolderMeta {
                 appendIfQualify(existingValues, value);
 
                 if (_.isArray(value)) {
-                    value.forEach((subValue: any) => {
+                    value.forEach((subValue: unknown) => {
                         appendIfQualify(existingValues, subValue);
                     });
                 }
@@ -42,7 +42,7 @@ export class FolderMeta {
  * @param index
  * @returns
  */
-export function getMetaFieldsAndValues(listOfFiles: Array<any>, index: FullIndex) {
+export function getMetaFieldsAndValues(listOfFiles: Array<PageMetadata>, index: FullIndex) {
     // const startTime = new Date();
     const resultsMap: { [key: string]: Array<string>} = {};
     listOfFiles.forEach(file => {
@@ -53,7 +53,7 @@ export function getMetaFieldsAndValues(listOfFiles: Array<any>, index: FullIndex
             appendIfQualify(existingValues, value);
 
             if (_.isArray(value)) {
-                value.forEach((subValue: any) => {
+                value.forEach((subValue: unknown) => {
                     appendIfQualify(existingValues, subValue);
                 });
             }
@@ -82,7 +82,7 @@ export function getMetaFields(mapOfFiles: ExportMap) {
             appendIfQualify(existingValues, value);
 
             if (_.isArray(value)) {
-                value.forEach((subValue: any) => {
+                value.forEach((subValue: unknown) => {
                     appendIfQualify(existingValues, subValue);
                 });
             }
@@ -92,7 +92,7 @@ export function getMetaFields(mapOfFiles: ExportMap) {
     return resultsMap
 }
 
-function appendIfQualify(array: Array<any>, value: any) {
+function appendIfQualify(array: Array<string>, value: unknown) {
     if (_.isNumber(value)) {
         array.push(value.toString());
     }

@@ -5,34 +5,36 @@ export const COLORS = {
 	WARN: "#838009",
 	ERROR: "red"
 }
-export function log(...args: any) {
+export function log(...args: unknown[]) {
 	return toView(COLORS.LOG, ...args);
 }
 
-export function warn(...args: any) {
+export function warn(...args: unknown[]) {
 	return toView(COLORS.WARN, ...args);
 }
 
-export function error(...args: any) {
+export function error(...args: unknown[]) {
 	return toView(COLORS.ERROR, ...args);
 }
 
-function toView(color: string, ...args: any) {
+function toView(color: string, ...args: unknown[]) {
 	if (!target) {
 		console.error("too early", args);
 		throw new Error('hmm.')
 	}
 	return logEntry(target, color, ...args);
 }
-export function logEntry(target: HTMLElement, color: string, ...args: any): HTMLElement{
+export function logEntry(target: HTMLElement, color: string, ...args: unknown[]): HTMLElement{
 	const h = String(new Date().getHours()).padStart(2, "0");
 	const m = String(new Date().getMinutes()).padStart(2, "0");
 	const s = String(new Date().getSeconds()).padStart(2, "0");
 	const timeStamp = `[${h}:${m}:${s}] `;
 	const spn = createSpan({ attr: { style: `color: ${color}`, class: 'log-entry' } });
 	spn.append(timeStamp);
-	args.forEach((element: string | Node) => {
-		spn.append(element);
+	args.forEach((element) => {
+		// Non-Node values are stringified by `append` anyway; do it explicitly
+		// so the value stays typed as `Node | string`.
+		spn.append(element instanceof Node ? element : String(element));
 	});
     spn.append(createEl('br'))
 	target.append(spn);

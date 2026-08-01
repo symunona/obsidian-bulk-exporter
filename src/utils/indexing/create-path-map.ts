@@ -4,14 +4,14 @@ import normalizeFileName from "../normalize-file-name";
 import { ExportMap, ExportProperties } from "src/models/export-properties";
 import { error } from "../log";
 import ScopedEval from "scoped-eval";
-import { SMarkdownPage } from "obsidian-dataview";
+import { Link, SMarkdownPage } from "obsidian-dataview";
 
 /**
  * From a DataView query results, it creates an output map, running
  * the output transformation.
  */
 export function createPathMap(
-	queryResults: Array<[any, SMarkdownPage]>,
+	queryResults: Array<[Link, SMarkdownPage]>,
 	settings: BulkExportSettings
 ): ExportMap {
 	const foundFileMap: { [key: string]: ExportProperties } = {};
