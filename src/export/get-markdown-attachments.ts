@@ -35,6 +35,7 @@ import normalizeFileName from "src/utils/normalize-file-name";
 import { normalizeLinkToForwardSlash } from "src/utils/forward-slash";
 import { replaceLinks } from "./replace-local-links";
 import { replaceFrontMatterValue } from "./front-matter";
+import replaceAll from "src/utils/replace-all";
 
 export const ATTACHMENT_URL_REGEXP = /!\[\[((.*?)\.(\w+))\]\]/g;
 export const MARKDOWN_ATTACHMENT_URL_REGEXP = /!\[(.*?)\]\(((.*?)\.(\w+))\)/g;
@@ -111,15 +112,67 @@ export async function collectAndReplaceInlineAttachments(
 	exportProperties: ExportProperties,
 	attachments: AttachmentLink[]
 ) {
-	// "text" is the YAML key here.
 	for (const attachment of attachments) {
 		await saveAttachmentToLocation(plugin, settings, attachment, exportProperties)
+
 		// I have experimented with this a lot.
 		// @see comments in getLinksAndAttachments.
 		// I normalized before exportProperties.outputContent to only have []() style links.
+		if (attachment.newPath) {
+			replaceLinks(
+				normalizeLinkToForwardSlash(attachment.newPath),
+				attachment, settings, exportProperties)
+			continue
+		}
 
-		replaceLinks(normalizeLinkToForwardSlash(attachment.newPath || ''), attachment, settings, exportProperties)
+		// No newPath means `saveAttachmentToLocation` never resolved the asset. This
+		// used to fall through to the same `replaceLinks` call with '' for the new
+		// path - guarded on the header side (see above), not here - so a broken embed
+		// was rewritten into a differently broken one: `![missing.png]()`, or
+		// `![[|missing.png]]` with preserveWikiLinks on. An empty link target is not a
+		// decision, it is state read out of the branch that was supposed to set it.
+		//
+		// A missing attachment is the same situation as a note link that resolves to
+		// nothing, so it gets the same answer, from the same setting - see
+		// `replaceLocalLink` in replace-local-links.ts:
+		//   keepLinksNotFound false -> drop the link, keep its text
+		//   keepLinksNotFound true  -> leave it pointing at the name as written
+		// Either way `status` stays "assetNotFound" (the export log paints that red)
+		// and `error` says what was done with it.
+		if (settings.keepLinksNotFound) {
+			replaceLinks(
+				attachment.normalizedOriginalPath, attachment, settings, exportProperties)
+			attachment.error = "Asset not found! Kept pointing at the original name, " +
+				"due to the Keep Links Not Found setting."
+		} else {
+			removeAttachmentLink(attachment, exportProperties)
+			attachment.error = "Asset not found! Removed the link, kept its text."
+		}
+		console.warn(
+			'[Bulk Exporter] Attachment not found!',
+			attachment.text, attachment.originalPath, attachment.error)
 	}
+}
+
+/**
+ * Drops a link that points at nothing and leaves its text behind - what
+ * `removeLinks` does to an unresolvable note link.
+ *
+ * The one difference is the '!': an embed is `![alt](src)`, and removing only the
+ * `[alt](src)` part of it would leave a stray bang in front of the text. The token
+ * says which one this is - `image` for an embed, `link_open` for a plain link to
+ * an attachment such as `[the plan](files/plan.docx)`.
+ */
+function removeAttachmentLink(
+	attachment: AttachmentLink,
+	exportProperties: ExportProperties
+) {
+	const isEmbed = attachment.token?.type === 'image'
+	exportProperties.outputContent = replaceAll(
+		`${isEmbed ? '!' : ''}[${attachment.text}](${attachment.originalPath})`,
+		exportProperties.outputContent,
+		attachment.text
+	)
 }
 
 async function saveAttachmentToLocation(
