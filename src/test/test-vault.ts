@@ -14,7 +14,7 @@ type SerializedPage = {
     aliases: Array<string>,
     outlinks: Array<Record<string, unknown>>,
     fields?: Record<string, unknown>,
-    fronmatter?: Record<string, unknown>
+    frontmatter: Record<string, unknown>
 }
 
 /**
@@ -44,7 +44,7 @@ export default function getTestData() : ExportMap{
             file: {
                 path: file.path,
                 fields: file.fields,
-                frontmatter: file.fronmatter,
+                frontmatter: file.frontmatter,
                 tags: file.tags,
                 aliases: file.aliases,
                 links: file.outlinks
