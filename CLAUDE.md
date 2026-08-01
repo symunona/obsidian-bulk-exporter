@@ -3,6 +3,8 @@
 **Read `README.md` first.** It explain what plugin do and how user use it. This file
 only cover how to work on code.
 
+Use caveman brief. Caveman commit messages, super dense.
+
 ## Stack
 
 Obsidian community plugin. TypeScript -> esbuild -> single `main.js`. Desktop only.
