@@ -244,13 +244,17 @@ export class OutputSettingTab extends PluginSettingTab {
 		const outputFormatSetting = new Setting(containerEl)
 			.setName("Output filename and path")
 			.setDesc(exportFileNameInfoFragment)
-			.addText((text) =>
+			// Textarea, not a text field: these are JS expressions that easily
+			// run longer than a one-line input can show.
+			.addTextArea((text) =>
 				text
 					.setPlaceholder("${blog}/${slug}")
 					.setValue(settings.outputFormat)
 					.onChange(async (value) => {
-						settings.outputFormat = value;
-						showOutputFormatWarning(value);
+						// A newline in a path template is never intended, and
+						// would end up in a file name. Paste tolerant.
+						settings.outputFormat = value.replace(/[\r\n]+/g, "");
+						showOutputFormatWarning(settings.outputFormat);
 						await this.plugin.saveSettingsWithRefresh();
 					})
 			);

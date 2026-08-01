@@ -136,6 +136,19 @@ tr:hover .data-view-meta-key.undefined {background: var(--text-selection); opaci
 
 .bulk-export-settings .bulk-export-settings-header{ margin-top: 20px; margin-bottom: 15px; border-bottom: 1px solid var(--color-base-50)}
 
+/* Obsidian's default setting control is ~180px wide, which is unusable for
+ * the things typed in here: export paths, dataview queries, output format
+ * expressions, glob patterns. Give the control half the row. */
+.bulk-export-settings .setting-item-info { flex-basis: 50%; min-width: 0; }
+.bulk-export-settings .setting-item-control { flex-grow: 1; flex-basis: 50%; }
+.bulk-export-settings .setting-item-control input[type="text"],
+.bulk-export-settings .setting-item-control textarea { width: 100%; }
+.bulk-export-settings .setting-item-control textarea {
+    min-height: 4.5em;
+    resize: vertical;
+    font-family: var(--font-monospace);
+}
+
 
 .bulk-export-settings button.tab-header {
     background: transparent; margin-right: 10px;
