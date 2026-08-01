@@ -31,10 +31,10 @@ import { Md5 } from "ts-md5";
 import { AttachmentLink, normalizeUrl } from "./get-links-and-attachments";
 import { BulkExportSettings } from "src/models/bulk-export-settings";
 import { getAssetPaths } from "src/utils/indexing/asset-and-link-paths";
-import replaceAll from "src/utils/replace-all";
 import normalizeFileName from "src/utils/normalize-file-name";
 import { normalizeLinkToForwardSlash } from "src/utils/forward-slash";
 import { replaceLinks } from "./replace-local-links";
+import { replaceFrontMatterValue } from "./front-matter";
 
 export const ATTACHMENT_URL_REGEXP = /!\[\[((.*?)\.(\w+))\]\]/g;
 export const MARKDOWN_ATTACHMENT_URL_REGEXP = /!\[(.*?)\]\(((.*?)\.(\w+))\)/g;
@@ -72,25 +72,19 @@ export function collectAndReplaceHeaderAttachments(
 		// rejection surfaces as an unhandled rejection, same as it always did.
 		void saveAttachmentToLocation(plugin, settings, attachment, exportProperties)
 
-		// Replace the links in the header.
+		// Replace the links in the header. `attachment.text` is the YAML key the
+		// path sits under, so only that one entry is rewritten - see front-matter.ts.
 		if (attachment.newPath) {
-			// Poor man's yaml splitter.
-			const contentSplitByHrDashes = exportProperties.outputContent.split('\n---\n')
-
-			// This is not pretty, but it works.
-			let frontMatterPart = contentSplitByHrDashes.shift() || ''
-			frontMatterPart = replaceAll(
+			exportProperties.outputContent = replaceFrontMatterValue(
+				exportProperties.outputContent,
+				attachment.text,
 				attachment.originalPath,
-				frontMatterPart,
 				// Replace with normalized '/' slashes, always. Windows uses (\) backslashes.
 				// However the markdown standard is '/' - works on Mac and Linux.
 				// The links should always be / in markdown documents.
 				// For copying the assets, the plugin uses the system path's join, hence the replaced
 				// urls. If I normalize it back here, the link will be fixed and the copy will still work.
 				normalizeLinkToForwardSlash(attachment.newPath))
-
-			contentSplitByHrDashes.unshift(frontMatterPart)
-			exportProperties.outputContent = contentSplitByHrDashes.join('\n---\n')
 		}
 	})
 }
@@ -122,11 +116,6 @@ async function saveAttachmentToLocation(
 ) {
 	const imageLink = normalizeUrl(attachment.originalPath);
 
-	const imageName = basename(imageLink);
-
-	const imageNameWithoutExtension = imageName.substring(0, imageName.lastIndexOf("."));
-	const imageExtension = imageName.substring(imageName.lastIndexOf("."));
-
 	// Find the file in the vault
 	// QUESTION: Is this the best way to do this?
 	// Is this the same endpoint that the link resolver uses?
@@ -138,6 +127,16 @@ async function saveAttachmentToLocation(
 		attachment.status = "assetNotFound"
 		return
 	}
+
+	// The name comes from the file that was actually resolved, not from the text of
+	// the link. Obsidian resolves links case insensitively, so `photo.jpg` in the
+	// front matter and `Photo.jpg` in the body are one and the same image - deriving
+	// the name from the link would copy it out twice, under two names, and the
+	// front matter one would 404 on a case sensitive host.
+	const imageName = basename(asset.path);
+
+	const imageNameWithoutExtension = imageName.substring(0, imageName.lastIndexOf("."));
+	const imageExtension = imageName.substring(imageName.lastIndexOf("."));
 
 	const { toDir, toDirRelative } = getAssetPaths(exportProperties, settings)
 

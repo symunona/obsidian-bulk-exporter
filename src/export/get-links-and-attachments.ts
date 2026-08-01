@@ -1,10 +1,27 @@
 import MarkdownIt, { Token } from "markdown-it";
 import replaceAll from "../utils/replace-all";
+import { findFrontMatterBlock, getFrontMatterKeyBlocks } from "./front-matter";
 
 // This also replaces the ![[]] attachments!
 const DOUBLE_BRACKET_LINK_MATCHER = /\[\[([^\]]+)\]\]/g;
 
-export const IMAGE_MATCHER = /(([^\s]*).(png|jpe?g|gif|webp|svg|pdf|doc|docx|xls|xlsx|txt))/
+const ATTACHMENT_EXTENSIONS = 'png|jpe?g|gif|webp|svg|pdf|doc|docx|xls|xlsx|txt'
+
+/**
+ * Tells an attachment link from an ordinary one, anywhere in the body.
+ *
+ * The dot is escaped: unescaped it matched ANY character, so `[[Some Document]]`
+ * ("... Document" - space, then "doc") counted as an attachment and never got
+ * link-resolved. Case insensitive, so `A.JPG` is an image too.
+ */
+export const IMAGE_MATCHER = new RegExp(`(([^\\s]*)\\.(${ATTACHMENT_EXTENSIONS}))`, 'i')
+
+/**
+ * Tells whether a front matter value IS an attachment path. Anchored, unlike
+ * IMAGE_MATCHER: a front matter value is the whole path, not a sentence to go
+ * fishing in, so `thumb: notanimagexxxjpg` is not an image.
+ */
+const FRONT_MATTER_ATTACHMENT_MATCHER = new RegExp(`\\.(${ATTACHMENT_EXTENSIONS})$`, 'i')
 
 const WIKI_LINK_PREFIX = 'wikilink://'
 
@@ -102,47 +119,37 @@ export function replaceDoubleBracketLinks(markdown: string): string {
 }
 
 /**
- * Given the parsed markdown files, it digs out FrontMatter, then looks
- * for links ending with asset extensions.
- * @param markdown
+ * Digs out the front matter, then reports every value that is an attachment path.
+ *
+ * The path is taken from the document EXACTLY as written - the previous version
+ * matched a `toLocaleLowerCase()` copy of the value and then kept a slice of that
+ * copy as the "original path". Nothing in the real document ever matched that
+ * lowercased text again, so an image whose name had a capital letter in it was
+ * copied but never re-linked. `js-yaml` also hands over the value without its
+ * quotes, whole across spaces, and can see list values.
+ *
+ * @see https://github.com/symunona/obsidian-bulk-exporter/issues/19
+ * @param content
  * @returns
  */
 function extractHeaderAttachments(content: string): Array<AttachmentLink> {
-    const contentSplitByHrDashes = content.split('\n---\n')
-    // This is not pretty, but it works.
-    const frontMatterPart = contentSplitByHrDashes.shift() || ''
-
-    const keyValuePairs: { [key: string]: { value: string, key: string } } = {}
-
-    frontMatterPart.split('\n').forEach((line)=>{
-        if (line.indexOf(':') > 0){
-            if (!line) { throw new Error('Empty line?') }
-            const keyValueSplitArray = line.split(':')
-            const key = keyValueSplitArray.shift()
-            if (!key) { throw new Error('Invalid YAML: no key value in line') }
-            const value = keyValueSplitArray.join(':')
-            keyValuePairs[key] = {
-                key, value
-            }
-        }
-    })
+    const frontMatter = findFrontMatterBlock(content)
+    if (!frontMatter) { return [] }
 
     const ret: Array<AttachmentLink> = []
-    Object.keys(keyValuePairs).forEach((key) => {
-        const valueAndToken = keyValuePairs[key]
-
-        const imageValue = valueAndToken.value.trim()
-            .toLocaleLowerCase().match(IMAGE_MATCHER)
-
-        if (imageValue) {
+    getFrontMatterKeyBlocks(frontMatter.yaml).forEach((block) => {
+        block.values.forEach((value) => {
+            if (!FRONT_MATTER_ATTACHMENT_MATCHER.test(value)) { return }
             ret.push({
-                originalPath: imageValue[0],
-                normalizedOriginalPath: normalizeUrl(imageValue[0]),
-                linkType: getTypeofUrl(normalizeUrl(imageValue[0])),
+                originalPath: value,
+                normalizedOriginalPath: normalizeUrl(value),
+                linkType: getTypeofUrl(normalizeUrl(value)),
                 source: "frontMatter",
-                text: key
+                // The exporter identifies a header attachment by the key it sits
+                // under: that is what the write-back targets.
+                text: block.key
             })
-        }
+        })
     })
     return ret;
 }
