@@ -238,7 +238,7 @@ function isWikiLink(url: string){
 }
 
 const OBSIDIAN_LINK_PREFIX = 'obsidian://'
-const OBSIDIAN_FILE_PARAM = 'file='
+const OBSIDIAN_FILE_PARAM = 'file'
 
 /**
  * `decodeURIComponent` throws `URIError: URI malformed` on any `%` that does not
@@ -264,15 +264,50 @@ export function safeDecodeURIComponent(value: string): string {
     }
 }
 
+/**
+ * Reads the `file` query parameter out of an `obsidian://open?...` uri, or
+ * null if the uri carries none - or is not parseable at all.
+ *
+ * An Obsidian uri is a real url with real query parameters, so it gets read as
+ * one. Hunting for the literal text "file=" used to end the file name at the
+ * end of the string (`...&file=Some%20Note&heading=Intro` gave back
+ * "Some Note&heading=Intro"), and used to match the "file=" sitting inside
+ * *another* parameter's name (`?notfile=x&file=y` gave back "x&file=y").
+ *
+ * `new URL()` throws a TypeError on input it cannot parse, so it is guarded:
+ * a link nobody can read is handed back untouched rather than taking the
+ * export down with it, same as `safeDecodeURIComponent` does.
+ */
+function getObsidianFileParam(url: string): string | null {
+    let search: string
+    try {
+        search = new URL(url).search
+    } catch (e) {
+        console.warn(
+            `[Bulk Exporter] "${url}" is not a valid obsidian:// url, using it ` +
+            `as-is. (${e})`
+        )
+        return null
+    }
+    // URLSearchParams reads a query as form data, where '+' means a space.
+    // An Obsidian uri is not form data: it is built with encodeURIComponent,
+    // which writes a space as %20 and a literal plus as %2B, so a bare '+' in
+    // here can only be part of a file name ("C++ notes"). Escaping it before
+    // the parse keeps it a plus - the same reading the previous
+    // `safeDecodeURIComponent` call gave it.
+    //
+    // No decode guard is needed beyond that: unlike `decodeURIComponent`,
+    // URLSearchParams never throws on a stray '%', it leaves the escape as
+    // written. The issue #17 promise holds.
+    return new URLSearchParams(search.replace(/\+/g, '%2B')).get(OBSIDIAN_FILE_PARAM)
+}
+
 export function normalizeUrl(url: string) {
     if (url.startsWith(OBSIDIAN_LINK_PREFIX)) {
         // Just grab the file value from the link - if there is one at all.
-        // Without this guard `indexOf` returns -1 and the substring silently
-        // chops the first four characters off the url instead.
-        const fileParamIndex = url.indexOf(OBSIDIAN_FILE_PARAM)
-        if (fileParamIndex > -1) {
-            url = safeDecodeURIComponent(
-                url.substring(fileParamIndex + OBSIDIAN_FILE_PARAM.length))
+        const file = getObsidianFileParam(url)
+        if (file !== null) {
+            url = file
         }
     }
     if (isWikiLink(url)) {

@@ -144,6 +144,72 @@ describe("normalizeUrl", () => {
 	});
 });
 
+/**
+ * An obsidian:// uri is a url with query parameters, and used to be read with
+ * `indexOf("file=")` + `substring` instead of being parsed as one.
+ */
+describe("normalizeUrl on an obsidian:// uri", () => {
+	test("stops the file name where the next parameter starts", () => {
+		// Was "Some Note&heading=Intro": everything to the end of the string.
+		expect(
+			normalizeUrl("obsidian://open?vault=MyVault&file=Some%20Note&heading=Intro")
+		).toBe("Some Note");
+	});
+
+	test("a trailing block reference is not part of the file name", () => {
+		expect(normalizeUrl("obsidian://open?file=Some%20Note&block=abc123"))
+			.toBe("Some Note");
+	});
+
+	test("does not mistake another parameter's name for 'file='", () => {
+		// `indexOf` found the "file=" inside "notfile=" and returned "x&file=y".
+		expect(normalizeUrl("obsidian://open?notfile=x&file=y")).toBe("y");
+	});
+
+	test("percent-decodes the file name", () => {
+		expect(normalizeUrl("obsidian://open?vault=v&file=folder%2Fnote%20one.md"))
+			.toBe("folder/note one.md");
+		expect(normalizeUrl("obsidian://open?file=%C3%A1rv%C3%ADzt%C5%B1r%C5%91"))
+			.toBe("árvíztűrő");
+	});
+
+	test("keeps a literal % instead of throwing (issue #17)", () => {
+		expect(() => normalizeUrl("obsidian://open?vault=v&file=100% sure")).not.toThrow();
+		expect(normalizeUrl("obsidian://open?vault=v&file=100% sure")).toBe("100% sure");
+		expect(normalizeUrl("obsidian://open?vault=v&file=100%25%20sure")).toBe("100% sure");
+	});
+
+	test("keeps a literal + in the file name - a uri is not form data", () => {
+		// URLSearchParams would read '+' as a space. Obsidian encodes with
+		// encodeURIComponent, which writes a space as %20, so a bare '+' here
+		// is a plus in the file name.
+		expect(normalizeUrl("obsidian://open?file=C++%20notes")).toBe("C++ notes");
+		expect(normalizeUrl("obsidian://open?file=C%2B%2B%20notes")).toBe("C++ notes");
+	});
+
+	test("an obsidian:// url with no file parameter at all is left alone", () => {
+		expect(normalizeUrl("obsidian://open?vault=v")).toBe("obsidian://open?vault=v");
+		expect(normalizeUrl("obsidian://")).toBe("obsidian://");
+		expect(normalizeUrl("obsidian://search?query=cats")).toBe("obsidian://search?query=cats");
+	});
+
+	test("malformed input comes back untouched instead of throwing", () => {
+		const broken = "obsidian:// not a url ?file=x";
+		expect(() => new URL(broken)).toThrow(/Invalid URL/);
+		expect(() => normalizeUrl(broken)).not.toThrow();
+		expect(normalizeUrl(broken)).toBe(broken);
+	});
+
+	test("the whole pipeline looks the note up under its bare title", () => {
+		const plugin = stubPlugin();
+		processNote(
+			"See [that](obsidian://open?vault=MyVault&file=Some%20Note&heading=Intro).",
+			plugin
+		);
+		expect(lookedUpPaths).toEqual(["Some Note"]);
+	});
+});
+
 describe("a wiki link with a literal % (issue #17)", () => {
 	test("parses to the plain note title", () => {
 		const { internalLinks } = getLinksAndAttachments("Progress is [[100% sure]] today.");
