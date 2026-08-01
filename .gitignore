@@ -8,6 +8,10 @@
 # npm
 node_modules
 
+# Scratch space at the project root: drafts, repro scripts, notes.
+# Project root only - does not match test-vault/tmp or similar.
+/tmp/
+
 # Don't include the compiled main.js file in the repo.
 # They should be uploaded to GitHub releases instead.
 main.js
