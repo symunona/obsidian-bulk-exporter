@@ -57,20 +57,35 @@ interface AdapterWithBasePath {
 	basePath?: string;
 }
 
-export function collectAndReplaceHeaderAttachments(
+/**
+ * Why `for ... of` + `await` and not `forEach` + fire-and-forget:
+ *
+ * The save is what assigns `attachment.newPath`, and the link rewrite right after it
+ * reads that. Firing the save without awaiting only ever worked because the save
+ * happened to reach the assignment before its first `await` - one `await` added above
+ * that line and every rewrite below would silently stop happening. Awaiting makes the
+ * dependency real instead of accidental.
+ *
+ * It also puts the save back inside the per-file `try/catch` in `exportSelection`, so a
+ * failed attachment copy is reported as a failed file rather than escaping as an
+ * unhandled rejection nobody ever sees.
+ * @see https://github.com/symunona/obsidian-bulk-exporter/issues/17
+ *
+ * Sequential, not `Promise.all`: on desktop - the only platform this plugin supports -
+ * `saveAttachmentToLocation` copies with `copyFileSync` and never awaits anything, so
+ * there is no concurrency to win back, only ordering to lose.
+ */
+export async function collectAndReplaceHeaderAttachments(
 	plugin: BulkExporterPlugin,
 	settings: BulkExportSettings,
 	exportProperties: ExportProperties,
 	attachments: AttachmentLink[]
 ) {
-	attachments.forEach((attachment) => {
+	for (const attachment of attachments) {
 		// Is coming from the meta, and is it an ignore key like copy?
-		if (attachment.source === 'frontMatter' && META_KEY_IGNORE_LIST.indexOf(attachment.text) > -1) { return; }
+		if (attachment.source === 'frontMatter' && META_KEY_IGNORE_LIST.indexOf(attachment.text) > -1) { continue; }
 
-		// Not awaited: attachments across the file are saved concurrently, fire-and-forget,
-		// same as before this rule was enforced. Errors are still not swallowed - a
-		// rejection surfaces as an unhandled rejection, same as it always did.
-		void saveAttachmentToLocation(plugin, settings, attachment, exportProperties)
+		await saveAttachmentToLocation(plugin, settings, attachment, exportProperties)
 
 		// Replace the links in the header. `attachment.text` is the YAML key the
 		// path sits under, so only that one entry is rewritten - see front-matter.ts.
@@ -86,26 +101,25 @@ export function collectAndReplaceHeaderAttachments(
 				// urls. If I normalize it back here, the link will be fixed and the copy will still work.
 				normalizeLinkToForwardSlash(attachment.newPath))
 		}
-	})
+	}
 }
 
-export function collectAndReplaceInlineAttachments(
+/** @see the note on `collectAndReplaceHeaderAttachments` for why this awaits. */
+export async function collectAndReplaceInlineAttachments(
 	plugin: BulkExporterPlugin,
 	settings: BulkExportSettings,
 	exportProperties: ExportProperties,
 	attachments: AttachmentLink[]
 ) {
 	// "text" is the YAML key here.
-	attachments.forEach((attachment) => {
-		// Not awaited: same fire-and-forget behavior as before this rule was enforced (see
-		// the matching comment in collectAndReplaceHeaderAttachments above).
-		void saveAttachmentToLocation(plugin, settings, attachment, exportProperties)
+	for (const attachment of attachments) {
+		await saveAttachmentToLocation(plugin, settings, attachment, exportProperties)
 		// I have experimented with this a lot.
 		// @see comments in getLinksAndAttachments.
 		// I normalized before exportProperties.outputContent to only have []() style links.
 
 		replaceLinks(normalizeLinkToForwardSlash(attachment.newPath || ''), attachment, settings, exportProperties)
-	})
+	}
 }
 
 async function saveAttachmentToLocation(

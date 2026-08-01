@@ -34,8 +34,11 @@ export async function collectAssetsReplaceLinks(
 
 	// console.warn(fileExportProperties.newFileName, linksAndAttachments)
 
-	collectAndReplaceHeaderAttachments(plugin, settings, fileExportProperties, linksAndAttachments.internalHeaderAttachments)
-	collectAndReplaceInlineAttachments(plugin, settings, fileExportProperties, linksAndAttachments.internalAttachments)
+	// Awaited: these copy the attachments out AND rewrite the links pointing at them.
+	// `convertAndCopy` writes `outputContent` to disk the moment this function resolves,
+	// so anything left un-awaited here would land in the file too late, or not at all.
+	await collectAndReplaceHeaderAttachments(plugin, settings, fileExportProperties, linksAndAttachments.internalHeaderAttachments)
+	await collectAndReplaceInlineAttachments(plugin, settings, fileExportProperties, linksAndAttachments.internalAttachments)
 
 	replaceLocalLinks(
 		fileExportProperties,

@@ -81,11 +81,16 @@ function stubPlugin(): BulkExporterPlugin {
 	} as unknown as BulkExporterPlugin;
 }
 
-/** Runs the real front-matter half of the export over one note. */
-function exportNote(
+/**
+ * Runs the real front-matter half of the export over one note.
+ *
+ * Awaited: the collectors save the attachment and only then rewrite the link that
+ * points at it, so their promise IS the "this note is finished" signal.
+ */
+async function exportNote(
 	markdown: string,
 	overrides: Partial<BulkExportSettings> = {}
-): ExportProperties {
+): Promise<ExportProperties> {
 	const settings = Object.assign({}, DEFAULT_SETTINGS, {
 		outputFolder,
 		assetPath: "assets",
@@ -105,13 +110,13 @@ function exportNote(
 		linksAndAttachments: parsed,
 	};
 	const plugin = stubPlugin();
-	collectAndReplaceHeaderAttachments(
+	await collectAndReplaceHeaderAttachments(
 		plugin,
 		settings,
 		exportProperties,
 		parsed.internalHeaderAttachments
 	);
-	collectAndReplaceInlineAttachments(
+	await collectAndReplaceInlineAttachments(
 		plugin,
 		settings,
 		exportProperties,
@@ -268,10 +273,10 @@ describe("link and attachment classification (the unescaped dot)", () => {
 });
 
 describe("rewriting the front matter of an exported note (issue #19)", () => {
-	test("the reported path is copied out and the link is rewritten", () => {
+	test("the reported path is copied out and the link is rewritten", async () => {
 		createVaultFile("images/2026-01-15-freecad-1/IMG-20260115051638714-1.jpg");
 
-		const result = exportNote(note(REPORTED_LINE));
+		const result = await exportNote(note(REPORTED_LINE));
 		const thumb = exportedFrontMatter(result).thumb;
 
 		expect(result.linksAndAttachments?.internalHeaderAttachments[0].status)
@@ -281,39 +286,39 @@ describe("rewriting the front matter of an exported note (issue #19)", () => {
 		expect(exportedAssets().length).toBe(1);
 	});
 
-	test("the rewritten value is still valid YAML - no orphan quote", () => {
+	test("the rewritten value is still valid YAML - no orphan quote", async () => {
 		createVaultFile("images/x.jpg");
 
-		const result = exportNote(note('feature: "../images/x.jpg"'));
+		const result = await exportNote(note('feature: "../images/x.jpg"'));
 		const feature = String(exportedFrontMatter(result).feature);
 
 		expect(feature).not.toContain('"');
 		expect(feature).toMatch(/^assets\/x-[0-9a-f]{32}\.jpg$/);
 	});
 
-	test("an UPPERCASE file name is rewritten", () => {
+	test("an UPPERCASE file name is rewritten", async () => {
 		createVaultFile("images/A.jpg");
 
-		const result = exportNote(note("thumb: images/A.jpg"));
+		const result = await exportNote(note("thumb: images/A.jpg"));
 
 		expect(String(exportedFrontMatter(result).thumb))
 			.toMatch(/^assets\/a-[0-9a-f]{32}\.jpg$/);
 	});
 
-	test("a path with a space in it is rewritten whole", () => {
+	test("a path with a space in it is rewritten whole", async () => {
 		createVaultFile("images/my photo.jpg");
 
-		const result = exportNote(note("thumb: ../images/my photo.jpg"));
+		const result = await exportNote(note("thumb: ../images/my photo.jpg"));
 		const thumb = String(exportedFrontMatter(result).thumb);
 
 		expect(thumb).toMatch(/^assets\/my-photo-[0-9a-f]{32}\.jpg$/);
 		expect(result.outputContent).not.toContain("../images/my ");
 	});
 
-	test("only the key that owns the image is touched, and the body is left alone", () => {
+	test("only the key that owns the image is touched, and the body is left alone", async () => {
 		createVaultFile("images/A.jpg");
 
-		const result = exportNote(
+		const result = await exportNote(
 			note("title: A note\nthumb: images/A.jpg\ntags:\n  - blog"),
 			{}
 		);
@@ -325,11 +330,11 @@ describe("rewriting the front matter of an exported note (issue #19)", () => {
 		expect(result.outputContent).toContain("\n---\nJust some body text.\n");
 	});
 
-	test("every image of a list valued key is rewritten", () => {
+	test("every image of a list valued key is rewritten", async () => {
 		createVaultFile("images/A.jpg");
 		createVaultFile("images/B.png");
 
-		const result = exportNote(note("gallery:\n  - images/A.jpg\n  - images/B.png"));
+		const result = await exportNote(note("gallery:\n  - images/A.jpg\n  - images/B.png"));
 		const gallery = exportedFrontMatter(result).gallery as Array<string>;
 
 		expect(gallery.length).toBe(2);
@@ -337,30 +342,30 @@ describe("rewriting the front matter of an exported note (issue #19)", () => {
 		expect(gallery[1]).toMatch(/^assets\/b-[0-9a-f]{32}\.png$/);
 	});
 
-	test("an image under a nested key is rewritten in place", () => {
+	test("an image under a nested key is rewritten in place", async () => {
 		createVaultFile("images/A.jpg");
 
-		const result = exportNote(note("cover:\n  src: images/A.jpg\n  alt: A photo"));
+		const result = await exportNote(note("cover:\n  src: images/A.jpg\n  alt: A photo"));
 		const cover = exportedFrontMatter(result).cover as Record<string, string>;
 
 		expect(cover.src).toMatch(/^assets\/a-[0-9a-f]{32}\.jpg$/);
 		expect(cover.alt).toBe("A photo");
 	});
 
-	test("CRLF line endings survive the rewrite", () => {
+	test("CRLF line endings survive the rewrite", async () => {
 		createVaultFile("images/A.jpg");
 
-		const result = exportNote("---\r\nthumb: images/A.jpg\r\n---\r\nBody.\r\n");
+		const result = await exportNote("---\r\nthumb: images/A.jpg\r\n---\r\nBody.\r\n");
 
 		expect(result.outputContent).toMatch(
 			/^---\r\nthumb: assets\/a-[0-9a-f]{32}\.jpg\r\n---\r\nBody\.\r\n$/
 		);
 	});
 
-	test("the 'copy' key is still left to the glob copier", () => {
+	test("the 'copy' key is still left to the glob copier", async () => {
 		createVaultFile("images/A.jpg");
 
-		const result = exportNote(note("copy: images/A.jpg"));
+		const result = await exportNote(note("copy: images/A.jpg"));
 
 		expect(String(exportedFrontMatter(result).copy)).toBe("images/A.jpg");
 		expect(exportedAssets()).toEqual([]);
@@ -368,12 +373,12 @@ describe("rewriting the front matter of an exported note (issue #19)", () => {
 });
 
 describe("the same image under two spellings is copied once", () => {
-	test("the target name comes from the resolved file, not from the link text", () => {
+	test("the target name comes from the resolved file, not from the link text", async () => {
 		// One real file. The front matter spells it lowercase, the body spells it
 		// the way it really is - and Obsidian resolves both to that one file.
 		createVaultFile("images/A.jpg");
 
-		const result = exportNote(
+		const result = await exportNote(
 			note("thumb: images/a.jpg", "Here it is: ![shot](images/A.jpg)\n"),
 			{ keepOriginalAttachmentFileNames: true }
 		);
