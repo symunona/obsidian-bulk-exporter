@@ -1,4 +1,4 @@
-import { App, PluginSettingTab, Setting, ToggleComponent } from "obsidian";
+import { App, Notice, PluginSettingTab, Setting, ToggleComponent } from "obsidian";
 
 import BulkExporterPlugin from "src/main";
 import {
@@ -6,6 +6,13 @@ import {
 	DEFAULT_SETTINGS,
 } from "src/models/bulk-export-settings";
 import { ConfirmModal } from "src/ui/confirm-modal";
+import { ImportSettingsModal } from "src/ui/import-settings-modal";
+import {
+	downloadSettings,
+	extendSettings,
+	overwriteSettings,
+	pickSettingsFile,
+} from "./settings-transfer";
 
 export class OutputSettingTab extends PluginSettingTab {
 	plugin: BulkExporterPlugin;
@@ -41,6 +48,34 @@ export class OutputSettingTab extends PluginSettingTab {
 			.setName("Bulk Exporter")
 			.setDesc(genericFragment);
 
+		new Setting(containerEl)
+			.setName("Export / Import Settings")
+			.setDesc("Want to transfer to another vault?")
+			.addButton((button) =>
+				button.setButtonText("Export").onClick(() => {
+					downloadSettings(this.plugin);
+				})
+			)
+			.addButton((button) =>
+				button.setButtonText("Import").onClick(() => {
+					pickSettingsFile((imported, fileName) => {
+						new ImportSettingsModal(this.plugin.app, {
+							fileName,
+							imported,
+							existingCount: this.plugin.settings.items.length,
+							overwriteCallback: () => {
+								overwriteSettings(this.plugin, imported);
+								this.applyImport(imported.items.length);
+							},
+							extendCallback: () => {
+								extendSettings(this.plugin, imported);
+								this.applyImport(imported.items.length);
+							},
+						}).open();
+					});
+				})
+			);
+
 		this.header = containerEl.createDiv({
 			cls: "bulk-export-settings-header",
 		});
@@ -71,6 +106,20 @@ export class OutputSettingTab extends PluginSettingTab {
 			this.selectSetting(newSetting);
 		});
 		this.selectSetting();
+	}
+
+	/**
+	 * Persist whatever the import just did to the settings, and rebuild the
+	 * whole tab, as the tab buttons changed.
+	 */
+	async applyImport(importedCount: number) {
+		await this.plugin.saveSettingsWithRefresh();
+		this.display();
+		new Notice(
+			`Imported ${importedCount} export setting${
+				importedCount > 1 ? "s" : ""
+			}`
+		);
 	}
 
 	selectSetting(setting?: BulkExportSettings) {

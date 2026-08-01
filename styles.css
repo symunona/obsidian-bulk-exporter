@@ -142,8 +142,12 @@ tr:hover .data-view-meta-key.undefined {background: var(--text-selection); opaci
 .bulk-export-confirm .footer{ text-align: right; padding-top: 20px; }
 .bulk-export-confirm button.yes { float: right }
 .bulk-export-confirm button.danger,
+.bulk-export-import-settings button.danger,
 .bulk-export-settings button.danger { background-color: var(--color-red); color: var(--text-on-accent);}
 .bulk-export-settings .is-disabled { opacity: 50%}
+
+.bulk-export-import-settings .footer{ display: flex; gap: 8px; justify-content: flex-end; padding-top: 20px; }
+.bulk-export-import-settings .footer button.cancel { margin-right: auto; }
 
 
 .bulk-export-stat-modal .link{ line-height: 24px; margin-bottom: 10px; }

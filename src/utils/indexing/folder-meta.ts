@@ -16,7 +16,7 @@ export class FolderMeta {
         // const startTime = new Date();
         this.resultsMap = {};
         // console.log('index pages', index.pages)
-        index.pages.forEach(file => {
+        index.pages.forEach((file: any) => {
             const folderName = dirname(file.path)
             this.resultsMap[folderName] = this.resultsMap[folderName] || {};
             const pathEntry = this.resultsMap[folderName];
