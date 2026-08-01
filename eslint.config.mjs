@@ -62,5 +62,12 @@ export default defineConfig(
 				...globals.jest,
 			},
 		},
+		rules: {
+			// `createEl` is an Obsidian helper that only exists inside the app.
+			// Under jest the test harness has to build it out of the real DOM
+			// primitive first, so the rule that forbids that primitive cannot
+			// apply to the code implementing it.
+			"obsidianmd/prefer-create-el": "off",
+		},
 	},
 );

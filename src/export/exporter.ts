@@ -17,6 +17,7 @@ import {
 	ExportProperties,
 } from "src/models/export-properties";
 import { ExportFailure, exportedLogEntry } from "./export-log";
+import type { AttachmentLink } from "./get-links-and-attachments";
 import { unsafeCharacterWarning } from "./unsafe-characters";
 import { dirname, normalize } from "path";
 import { runShellCommand } from "src/utils/shell-runner";
@@ -275,6 +276,8 @@ export async function exportSelection(
 	}
 
 	const failures: Array<ExportFailure> = [];
+	// Files that WERE exported, but reached the output missing an attachment.
+	const degraded: Array<ExportProperties> = [];
 
 	for (const fileIndex in fileList) {
 		const exportProperties = fileList[fileIndex];
@@ -301,6 +304,10 @@ export async function exportSelection(
 
 			outputPathMap[exportProperties.toRelativeToExportDirRoot] = outputPathMap[exportProperties.toRelativeToExportDirRoot] || []
 			outputPathMap[exportProperties.toRelativeToExportDirRoot].push(exportProperties)
+
+			if (attachmentsMissingFromOutput(exportProperties).length) {
+				degraded.push(exportProperties);
+			}
 		} catch (e) {
 			failures.push(collectExportFailure(exportProperties, e));
 			continue;
@@ -316,6 +323,8 @@ export async function exportSelection(
 	}
 
 	exportedLogEntry(outputPathMap, plugin, failures)
+
+	reportDegraded(degraded);
 
 	if (failures.length) {
 		new Notice(
@@ -338,6 +347,57 @@ export async function exportSelection(
 	);
 
 	return fileList;
+}
+
+/**
+ * The attachments of one exported file that did NOT reach the output - never
+ * resolved in the vault, or resolved and then not copyable.
+ *
+ * `assetNotFound` is the status both cases carry; see `saveAttachment` in
+ * get-markdown-attachments.ts for why they share one. It is the exported site's
+ * point of view either way: there is no file at the other end of that link.
+ */
+function attachmentsMissingFromOutput(
+	exportProperties: ExportProperties
+): Array<AttachmentLink> {
+	const parsed = exportProperties.linksAndAttachments;
+	if (!parsed) { return [] }
+	return parsed.internalAttachments
+		.concat(parsed.internalHeaderAttachments)
+		.filter((attachment) => attachment.status === "assetNotFound");
+}
+
+/**
+ * A file that exported WITH a hole in it is a partial success, and a partial
+ * success that says nothing is the failure mode this plugin keeps re-learning:
+ * the user gets a green "Exported to ..." and finds the broken image weeks
+ * later, on the published site.
+ *
+ * It is deliberately NOT folded into `ExportFailure` / the failure Notice. Those
+ * count files that are not in the output at all, which is a different question
+ * with a different answer ("re-run it" versus "go fix that asset"), and quietly
+ * inflating that count would make the one number the user reads mean two things.
+ * So: its own log lines, naming every file and every attachment, and its own
+ * Notice.
+ */
+function reportDegraded(degraded: Array<ExportProperties>) {
+	if (!degraded.length) { return }
+
+	warn(`${degraded.length} file(s) exported with attachment(s) missing from the output:`);
+	degraded.forEach((exportProperties) => {
+		attachmentsMissingFromOutput(exportProperties).forEach((attachment) => {
+			warn(
+				`  ${exportProperties.from}: ` +
+				`${attachment.normalizedOriginalPath || attachment.originalPath} - ` +
+				`${attachment.error || "not in the output"}`
+			);
+		});
+	});
+
+	new Notice(
+		`Bulk Export: ${degraded.length} file(s) exported with attachment(s) ` +
+		`missing from the output. See the export log for details.`
+	);
 }
 
 /**

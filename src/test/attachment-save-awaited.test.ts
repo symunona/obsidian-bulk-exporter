@@ -10,14 +10,20 @@
  * It used to be fired with `void` and never awaited, which cost two things:
  *
  * 1. A failed attachment copy rejected into nowhere. It became an unhandled
- *    rejection - never collected as an `ExportFailure`, never in the export log,
- *    never counted in the Notice. The user saw a clean, successful export that
- *    was quietly missing an image.
+ *    rejection - never recorded on the attachment, never in the export log,
+ *    never counted anywhere. The user saw a clean, successful export that was
+ *    quietly missing an image.
  *
  * 2. It was a landmine. Both call sites read `attachment.newPath` on the very next
  *    line, and that only worked because `saveAttachmentToLocation` happened to
  *    reach the assignment before its first `await`. One `await` inserted above that
  *    line and every attachment link rewrite would have stopped happening, silently.
+ *
+ * What the await is FOR has since been narrowed: a copy failure is caught per
+ * attachment (`saveAttachment`), recorded, and reported - the note still exports.
+ * The await is what makes that catch reachable at all, and what makes
+ * `attachment.newPath` a real dependency rather than an accidental one. These
+ * tests pin the awaiting; `export-degradation.test.ts` pins the degrading.
  *
  * These tests drive the real `exportSelection()` over a stub vault whose attachment
  * reads finish on a LATER MACROTASK - the same genuine async boundary the real
@@ -196,23 +202,24 @@ afterEach(() => {
 });
 
 describe("an attachment that cannot be copied", () => {
-	test("is reported as a failed file, not swallowed", async () => {
+	test("is not swallowed - it reaches the log, by name", async () => {
 		const { contents, fileList } = buildVault(outputFolder);
 
 		await exportSelection(fileList, settingsFor(outputFolder), pluginFor(contents));
 
-		const failures = reportedFailures();
-		expect(failures.map((failure) => failure.exportProperties.from)).toEqual([BAD_NOTE]);
-		expect(failures[0].message).toContain("could not read " + BAD_ASSET);
+		const warnings = mockLogged.filter((entry) => entry.startsWith("[warn]")).join("\n");
+		expect(warnings).toContain(BAD_NOTE);
+		expect(warnings).toContain(BAD_ASSET);
+		expect(warnings).toContain("could not read " + BAD_ASSET);
 	});
 
-	test("is named in the export log", async () => {
+	test("does not fail the note - a hole in a page beats a missing page", async () => {
 		const { contents, fileList } = buildVault(outputFolder);
 
 		await exportSelection(fileList, settingsFor(outputFolder), pluginFor(contents));
 
-		expect(mockLogged.filter((entry) => entry.startsWith("[error]")).join("\n"))
-			.toContain(BAD_NOTE);
+		expect(reportedFailures()).toEqual([]);
+		expect(exportedNotes()).toEqual(ALL_NOTES.slice().sort());
 	});
 
 	test("does not take the batch down with it", async () => {
@@ -226,7 +233,7 @@ describe("an attachment that cannot be copied", () => {
 
 		// Every other note is out, with its image alongside it. The notes AFTER the
 		// bad one are the point: they must not be collateral damage.
-		expect(exportedNotes()).toEqual(GOOD_NOTES);
+		expect(exportedNotes()).toEqual(expect.arrayContaining(GOOD_NOTES));
 		expect(exportedAssets().length).toBe(1);
 		expect(Object.keys(result).length).toBe(ALL_NOTES.length);
 		expect(mockLoggedFailures.length).toBe(1);
@@ -298,7 +305,12 @@ describe("the collector's promise is the 'this note is done' signal", () => {
 			.toContain("(assets/" + exportedAssets()[0] + ")");
 	});
 
-	test("a rejected save rejects the collector, so the caller can catch it", async () => {
+	/**
+	 * The await still has to SEE the rejection - that is what the catch inside
+	 * the collector is attached to. It just no longer forwards it: the failure
+	 * lands on the attachment instead of on the note.
+	 */
+	test("a rejected save is caught by the collector, not forwarded", async () => {
 		const contents = noteEmbedding(BAD_ASSET);
 		const parsed = getLinksAndAttachments(contents);
 		const exportProperties = exportPropertiesFor("note-1.md", outputFolder);
@@ -312,6 +324,11 @@ describe("the collector's promise is the 'this note is done' signal", () => {
 				exportProperties,
 				parsed.internalAttachments
 			)
-		).rejects.toThrow("could not read " + BAD_ASSET);
+		).resolves.toBeUndefined();
+
+		const attachment = parsed.internalAttachments[0];
+		expect(attachment.newPath).toBeUndefined();
+		expect(attachment.status).toBe("assetNotFound");
+		expect(attachment.error).toContain("could not read " + BAD_ASSET);
 	});
 });

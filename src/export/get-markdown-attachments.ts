@@ -36,6 +36,7 @@ import { normalizeLinkToForwardSlash } from "src/utils/forward-slash";
 import { replaceLinks } from "./replace-local-links";
 import { replaceFrontMatterValue } from "./front-matter";
 import replaceAll from "src/utils/replace-all";
+import { warn } from "src/utils/log";
 
 export const ATTACHMENT_URL_REGEXP = /!\[\[((.*?)\.(\w+))\]\]/g;
 export const MARKDOWN_ATTACHMENT_URL_REGEXP = /!\[(.*?)\]\(((.*?)\.(\w+))\)/g;
@@ -67,9 +68,9 @@ interface AdapterWithBasePath {
  * that line and every rewrite below would silently stop happening. Awaiting makes the
  * dependency real instead of accidental.
  *
- * It also puts the save back inside the per-file `try/catch` in `exportSelection`, so a
- * failed attachment copy is reported as a failed file rather than escaping as an
- * unhandled rejection nobody ever sees.
+ * It also means the save can no longer reject into nowhere as an unhandled rejection
+ * nobody ever sees - `saveAttachment` below turns it into a recorded, reported,
+ * per-attachment failure instead.
  * @see https://github.com/symunona/obsidian-bulk-exporter/issues/17
  *
  * Sequential, not `Promise.all`: on desktop - the only platform this plugin supports -
@@ -86,10 +87,15 @@ export async function collectAndReplaceHeaderAttachments(
 		// Is coming from the meta, and is it an ignore key like copy?
 		if (attachment.source === 'frontMatter' && META_KEY_IGNORE_LIST.indexOf(attachment.text) > -1) { continue; }
 
-		await saveAttachmentToLocation(plugin, settings, attachment, exportProperties)
+		await saveAttachment(plugin, settings, attachment, exportProperties)
 
 		// Replace the links in the header. `attachment.text` is the YAML key the
 		// path sits under, so only that one entry is rewritten - see front-matter.ts.
+		//
+		// No newPath - not found, or found and not copyable - leaves the YAML value
+		// exactly as the author wrote it. A YAML scalar has no link to strip, the
+		// value IS the text, so that is the only answer available here; it is what
+		// this path has always done for a missing asset.
 		if (attachment.newPath) {
 			exportProperties.outputContent = replaceFrontMatterValue(
 				exportProperties.outputContent,
@@ -113,7 +119,7 @@ export async function collectAndReplaceInlineAttachments(
 	attachments: AttachmentLink[]
 ) {
 	for (const attachment of attachments) {
-		await saveAttachmentToLocation(plugin, settings, attachment, exportProperties)
+		await saveAttachment(plugin, settings, attachment, exportProperties)
 
 		// I have experimented with this a lot.
 		// @see comments in getLinksAndAttachments.
@@ -125,32 +131,84 @@ export async function collectAndReplaceInlineAttachments(
 			continue
 		}
 
-		// No newPath means `saveAttachmentToLocation` never resolved the asset. This
-		// used to fall through to the same `replaceLinks` call with '' for the new
-		// path - guarded on the header side (see above), not here - so a broken embed
-		// was rewritten into a differently broken one: `![missing.png]()`, or
+		// No newPath means the asset is NOT in the output: `saveAttachmentToLocation`
+		// either never resolved it, or resolved it and then failed to copy it out.
+		// Those are two different causes with one consequence, and it is the
+		// consequence the link has to be written for - so both get the same answer
+		// here, and `error` (set by whichever branch produced it) says which it was.
+		//
+		// This used to fall through to the same `replaceLinks` call with '' for the
+		// new path - guarded on the header side (see above), not here - so a broken
+		// embed was rewritten into a differently broken one: `![missing.png]()`, or
 		// `![[|missing.png]]` with preserveWikiLinks on. An empty link target is not a
 		// decision, it is state read out of the branch that was supposed to set it.
 		//
-		// A missing attachment is the same situation as a note link that resolves to
-		// nothing, so it gets the same answer, from the same setting - see
-		// `replaceLocalLink` in replace-local-links.ts:
+		// An attachment that is not in the output is the same situation as a note link
+		// that resolves to nothing, so it gets the same answer, from the same setting -
+		// see `replaceLocalLink` in replace-local-links.ts:
 		//   keepLinksNotFound false -> drop the link, keep its text
 		//   keepLinksNotFound true  -> leave it pointing at the name as written
-		// Either way `status` stays "assetNotFound" (the export log paints that red)
-		// and `error` says what was done with it.
+		// Either way `status` stays "assetNotFound" (the export log paints that red).
 		if (settings.keepLinksNotFound) {
 			replaceLinks(
 				attachment.normalizedOriginalPath, attachment, settings, exportProperties)
-			attachment.error = "Asset not found! Kept pointing at the original name, " +
-				"due to the Keep Links Not Found setting."
+			attachment.error = `${attachment.error || ''} Kept pointing at the ` +
+				"original name, due to the Keep Links Not Found setting."
 		} else {
 			removeAttachmentLink(attachment, exportProperties)
-			attachment.error = "Asset not found! Removed the link, kept its text."
+			attachment.error = `${attachment.error || ''} Removed the link, kept its text.`
 		}
+		attachment.error = attachment.error.trim()
 		console.warn(
 			'[Bulk Exporter] Attachment not found!',
 			attachment.text, attachment.originalPath, attachment.error)
+	}
+}
+
+/**
+ * Copies one attachment out, and never throws.
+ *
+ * An attachment that cannot be copied - an unreadable image, a permission error on
+ * the asset folder - must not cost the whole note. For a static site export that is
+ * plainly the wrong trade: one dead image is a hole in a page, a skipped `.md` is a
+ * missing page. So the failure is recorded on the attachment and the note goes out
+ * without it, exactly as a missing asset already did.
+ *
+ * `newPath` is cleared because `saveAttachmentToLocation` assigns it BEFORE the copy
+ * it then fails at. Left set, the collectors would happily rewrite the link to point
+ * at a file that was never written - the one outcome worse than a broken link, since
+ * it looks fine right up until the page is loaded.
+ *
+ * `status` is "assetNotFound" and not "error" on purpose. From the exported site's
+ * side there is no difference - the asset is not there - and `error` already means
+ * something else in this codebase: `replaceLocalLinks` sets it on the link it is
+ * about to fail the whole file over, and `collectExportFailure` reads it back as
+ * exactly that. A degraded attachment did not fail the file, so it must not wear the
+ * marker for links that did.
+ *
+ * NOTE this deliberately catches ONLY the copy. Everything else in the export path -
+ * the link rewrite, the `.md` write itself - still throws through to the per-file
+ * guard in `exportSelection`, where a genuine bug belongs.
+ */
+async function saveAttachment(
+	plugin: BulkExporterPlugin,
+	settings: BulkExportSettings,
+	attachment: AttachmentLink,
+	exportProperties: ExportProperties
+) {
+	try {
+		await saveAttachmentToLocation(plugin, settings, attachment, exportProperties)
+	} catch (e) {
+		const message = e instanceof Error ? `${e.name}: ${e.message}` : String(e)
+		attachment.newPath = undefined
+		attachment.status = "assetNotFound"
+		attachment.error = `Could not copy asset: ${message}`
+		console.error(
+			'[Bulk Exporter] Could not copy attachment',
+			attachment.originalPath, 'of', exportProperties.from, e)
+		warn(
+			`Could not copy attachment "${attachment.originalPath}" of ` +
+			`${exportProperties.from}: ${message}`)
 	}
 }
 

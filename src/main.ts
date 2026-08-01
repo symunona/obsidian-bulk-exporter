@@ -1,10 +1,18 @@
-import { Plugin } from "obsidian";
+import { Notice, Plugin } from "obsidian";
 import { BulkExporterView, META_DATA_VIEW_TYPE } from "src/view";
 import { Exporter } from "./export/exporter";
 import { BulkExportSettingsList } from "./models/bulk-export-settings";
 import { OutputSettingTab } from "./settings/export-settings-tab";
 import { parseSavedSettingsData } from "./utils/data-parser";
+import { error } from "./utils/log";
 import { debounce } from "underscore";
+
+/** Turns whatever was thrown into something worth showing a human. */
+function describeThrown(thrown: unknown): string {
+	return thrown instanceof Error
+		? `${thrown.name}: ${thrown.message}`
+		: String(thrown);
+}
 
 
 export default class BulkExporterPlugin extends Plugin {
@@ -36,7 +44,15 @@ export default class BulkExporterPlugin extends Plugin {
 			id: "bulk-export",
 			name: "Bulk export",
 			callback: () => {
-				void this.exporter.searchAndExportAll();
+				// A command callback cannot be async, so the export runs
+				// detached - but detached must not mean unwatched. Without this
+				// `.catch` a rejection here (a broken dataview query, a
+				// read-only output folder) became an unhandled rejection and the
+				// user saw a preview pane open on a stale list, no error, no
+				// hint that nothing had been written.
+				this.exporter.searchAndExportAll().catch((e: unknown) => {
+					this.reportFailure("Bulk export failed", e, true);
+				});
 				void this.activateView();
 			},
 		});
@@ -48,7 +64,13 @@ export default class BulkExporterPlugin extends Plugin {
 				// If the dataview plugin was not loaded when this inited,
 				// let's create the initial search! Wait until Obsidian is fully loaded.
 				if (!this.inited && document.querySelector('.mod-root')) {
-					void this.exporter.searchAll();
+					// Same story as the command above, except this one fires on
+					// its own during startup: report it to the log and the
+					// console, but no Notice - the user did not ask for
+					// anything, and a popup on every vault open would be noise.
+					this.exporter.searchAll().catch((e: unknown) => {
+						this.reportFailure("Initial export search failed", e, false);
+					});
 					this.inited = true;
 				} else {
 					// Check files
@@ -56,6 +78,20 @@ export default class BulkExporterPlugin extends Plugin {
 				}
 			})
 		);
+	}
+
+	/**
+	 * Somewhere a human can actually see it: the log pane (which buffers until
+	 * it is opened, see utils/log.ts), the developer console, and - when the
+	 * user asked for the thing that broke - a Notice.
+	 */
+	reportFailure(what: string, thrown: unknown, notify: boolean) {
+		const message = describeThrown(thrown);
+		console.error(`[Bulk Exporter] ${what}`, thrown);
+		error(`${what}: ${message}`);
+		if (notify) {
+			new Notice(`Bulk Exporter: ${what}. ${message}`);
+		}
 	}
 
 	onunload() {
