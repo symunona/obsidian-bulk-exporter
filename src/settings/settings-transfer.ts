@@ -15,7 +15,7 @@ import {
  * Per export set state that only makes sense in the vault it was created in:
  * the export cache and the open/closed state of the preview groups.
  */
-function stripCache(setting: BulkExportSettings): BulkExportSettings {
+function stripCache(setting: Partial<BulkExportSettings>): BulkExportSettings {
 	return Object.assign({}, DEFAULT_SETTINGS, setting, {
 		lastExport: {},
 		groupOpenMap: {},
@@ -46,10 +46,12 @@ export function parseImportedSettings(raw: string): BulkExportSettingsList {
 
 	// Accept a single export set as well: that's how the settings looked
 	// before multiple export sets were a thing.
-	const items = parsed && parsed.items instanceof Array ? parsed.items : [parsed];
+	const items: unknown[] =
+		parsed && parsed.items instanceof Array ? parsed.items : [parsed];
 
 	const valid = items.filter(
-		(item: any) => item && typeof item === "object" && !(item instanceof Array)
+		(item): item is Partial<BulkExportSettings> =>
+			typeof item === "object" && item !== null && !(item instanceof Array)
 	);
 	if (!valid.length) {
 		throw new Error("No export settings found in this file.");

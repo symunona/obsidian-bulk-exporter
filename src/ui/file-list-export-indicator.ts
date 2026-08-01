@@ -1,3 +1,5 @@
+import type { Literal } from "obsidian-dataview";
+
 import { getIcon } from "src/obsidian-api-helpers/get-icon";
 import BulkExporterPlugin from "src/main";
 import { ExportMap, ExportProperties } from "src/models/export-properties";
@@ -105,7 +107,7 @@ export class FileListItemWrapper {
 		element: HTMLElement,
 		path: string,
 		alreadyExported: ExportProperties,
-		frontMatter: { [key: string]: any },
+		frontMatter: Record<string, Literal>,
 		settings: BulkExportSettings
 	) {
 		let iconSpanAddedAlready = element.querySelector(".export-plugin-icon");

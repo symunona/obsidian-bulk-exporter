@@ -4,6 +4,7 @@
  */
 
 import { Notice } from "obsidian";
+import type { Literal } from "obsidian-dataview";
 import { revealInFolder } from "../obsidian-api-helpers/file-explorer";
 import { getIcon } from "../obsidian-api-helpers/get-icon";
 import { createLink, isHttpUrl } from "./url";
@@ -30,7 +31,7 @@ export class ExportTableRender {
 	groupMap: ExportGroupMap
 	exportMap: ExportMap
 	metaKeysToShow: { [key: string]: Array<string> }
-	fileMapByAbsolutePath: { [key: string]: Array<any> }
+	fileMapByAbsolutePath: ExportGroupMap
 	goToFilter: CallbackFunction
 	metaFields: Array<string>
 	metaFieldsWithoutFileName: Array<string>
@@ -262,7 +263,7 @@ export class ExportTableRender {
 	renderMetaCell(
 		fileItemRow: HTMLElement,
 		metaKey: string,
-		value: any
+		value: Literal | undefined
 	) {
 		const td = fileItemRow.createEl('td', { cls: 'data-view-meta-key' })
 		if (metaKey === 'tags' && value instanceof Array) {

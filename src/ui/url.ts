@@ -2,7 +2,7 @@
  * @param str
  * @returns
  */
-export function isHttpUrl(str: any): boolean {
+export function isHttpUrl(str: unknown): boolean {
     if (typeof(str) === 'string') {
         return str.startsWith('http://') || str.startsWith('https://')
     }
