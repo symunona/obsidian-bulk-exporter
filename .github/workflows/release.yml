@@ -12,6 +12,8 @@ on:
 # Only the release upload needs write access; nothing else here touches the repo.
 permissions:
   contents: write
+  id-token: write      # provenance signing
+  attestations: write  # attaching attestations to the release
 
 jobs:
   release:
@@ -69,6 +71,16 @@ jobs:
             test -s "$f" || { echo "::error::missing or empty $f"; exit 1; }
           done
           ls -l main.js manifest.json styles.css
+
+      # Provenance attestations: proves the artifacts were built by this
+      # workflow from this tag. Community plugin review asks for these.
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3.0.0
+        with:
+          subject-path: |
+            main.js
+            manifest.json
+            styles.css
 
       # main.js / manifest.json / styles.css must be individual assets on the
       # release - Obsidian downloads them by name, a zip is not accepted.
