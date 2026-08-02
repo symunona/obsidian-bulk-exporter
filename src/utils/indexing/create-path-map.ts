@@ -190,6 +190,10 @@ function getTargetPaths(
 	Object.assign(fileMetaData, { d: getDateKeys });
 
 	// Serious black magic here: use the outputFormat string to evaluate.
+	// NOTE: the dynamic code execution here is deliberate and permanent. The
+	// `${...}` output path template is the plugin's headline feature, and the
+	// community review flags it as "Dynamic Code Execution" by design. It only
+	// ever runs on the user's own format string with their own note metadata.
 	try {
 		const scopedEval = new ScopedEval();
 		const targetPath: unknown = scopedEval.eval(
