@@ -190,6 +190,26 @@ If the link is to a non-exported note, it is removed (the text is left in).
 If you want other files to be exported with your markdown, just add a `copy` metadata parameter.
 It eats [any glob](https://www.npmjs.com/package/glob) formatted regular expression you give it, using relative paths compared to where your markdown file is.
 
+## Security notes (review warnings explained)
+
+The automated community review flags a few things. All of them are deliberate,
+and here is why:
+
+- **Direct filesystem access (`fs`)** — the whole point of the plugin is to write
+  the exported files *outside* your vault, to a folder you pick. The Obsidian
+  vault API cannot do that, so plain `fs` does.
+- **Shell execution (`child_process`)** — only used for the optional
+  *post-export shell script* setting: a command *you* type in yourself, run
+  after an export finishes. Nothing is executed otherwise.
+- **Dynamic code execution (`eval`)** — the output path template (`${blog}/${slug}`)
+  is a tiny JS expression evaluated against your note's metadata. Cheap and
+  generic: any metadata key, any ternary, any folder structure, with no
+  special templating language to learn. It only ever runs on *your own* format
+  string — **only paste here things you understand!**
+- **Clipboard access** — one convenience button in the export preview: when a
+  metadata value is a nested object, clicking its cell copies the raw JSON so
+  you can inspect it. Nothing is read from the clipboard.
+
 ## Moving settings to another vault
 
 The top of the settings page has **Export** and **Import** buttons. Export writes every

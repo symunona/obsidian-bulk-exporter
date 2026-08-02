@@ -276,6 +276,15 @@ export class OutputSettingTab extends PluginSettingTab {
 		};
 		showOutputFormatWarning(settings.outputFormat || "");
 
+		// The output format is evaluated as a JS expression (see README's
+		// security notes). That power is the feature, but it also means a
+		// blindly pasted snippet from the internet runs as code. Standing
+		// caution, always visible, right under the box it applies to.
+		outputFormatSetting.descEl.createDiv({
+			text: "This is evaluated as JavaScript on your notes' metadata. Only paste here things you understand!",
+			cls: "bulk-export-settings-warning mod-warning",
+		});
+
 		new Setting(containerEl)
 			.setName("Empty target folder on each export")
 			.setDesc(
