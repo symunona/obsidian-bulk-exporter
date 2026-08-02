@@ -266,11 +266,11 @@ tr:hover .data-view-meta-key.undefined {background: var(--text-selection); opaci
 }
 
 .no-decoration {
-	text-decoration-line: none;
+	text-decoration: none;
 }
 
 .no-decoration:hover {
-	text-decoration-line: none;
+	text-decoration: none;
 }
 
 .text-xxs {
