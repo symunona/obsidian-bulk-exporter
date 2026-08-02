@@ -5,6 +5,7 @@ import {
 	BulkExportSettings,
 	DEFAULT_SETTINGS,
 } from "src/models/bulk-export-settings";
+import { FolderSuggest } from "src/settings/folder-suggest";
 import { ConfirmModal } from "src/ui/confirm-modal";
 import { ImportSettingsModal } from "src/ui/import-settings-modal";
 import { outputFormatWarning } from "src/utils/indexing/create-path-map";
@@ -188,15 +189,17 @@ export class OutputSettingTab extends PluginSettingTab {
 			.setDesc(
 				"Which folder do you want to export converted Markdown files with their assets?"
 			)
-			.addText((text) =>
+			.addTextArea((text) => {
+				text.inputEl.rows = 2;
 				text
 					.setPlaceholder(DEFAULT_SETTINGS.outputFolder)
 					.setValue(settings.outputFolder)
 					.onChange(async (value) => {
 						settings.outputFolder = value;
 						await this.plugin.saveSettingsWithRefresh();
-					})
-			);
+					});
+				new FolderSuggest(this.app, text.inputEl);
+			});
 
 		const linkToDataViewDocs = createEl("a", {
 			href: "https://blacksmithgu.github.io/obsidian-dataview/queries/data-commands/",
@@ -246,7 +249,12 @@ export class OutputSettingTab extends PluginSettingTab {
 			.setDesc(exportFileNameInfoFragment)
 			// Textarea, not a text field: these are JS expressions that easily
 			// run longer than a one-line input can show.
-			.addTextArea((text) =>
+			.addTextArea((text) => {
+				// Taller than default: these expressions easily run longer
+				// than one line. rows alone is overridden by Obsidian's CSS,
+				// so set an explicit height too.
+				text.inputEl.rows = 5;
+				text.inputEl.setCssProps({ height: "auto" });
 				text
 					.setPlaceholder("${blog}/${slug}")
 					.setValue(settings.outputFormat)
@@ -256,8 +264,8 @@ export class OutputSettingTab extends PluginSettingTab {
 						settings.outputFormat = value.replace(/[\r\n]+/g, "");
 						showOutputFormatWarning(settings.outputFormat);
 						await this.plugin.saveSettingsWithRefresh();
-					})
-			);
+					});
+			});
 
 		// A bad output format used to be completely silent: `food/` exported
 		// exactly nothing, and a format with no ${...} in it wrote every note
@@ -497,7 +505,9 @@ export class OutputSettingTab extends PluginSettingTab {
 			.setDesc(
 				"Place here anything you want to run after the export is done. Uses child_process.spawn."
 			)
-			.addText((text) =>
+			// Textarea: more than a one-liner fits here comfortably.
+			.addTextArea((text) => {
+				text.inputEl.rows = 3;
 				text
 					.setPlaceholder("Shell script path")
 					.setValue(settings.shell)
@@ -505,8 +515,8 @@ export class OutputSettingTab extends PluginSettingTab {
 						settings.shell = value;
 						// TODO: validate! Can I validate?
 						await this.plugin.saveSettingsWithRefresh();
-					})
-			);
+					});
+			});
 
 		if (this.plugin.settings.items.length > 1) {
 			containerEl.createEl("hr");
