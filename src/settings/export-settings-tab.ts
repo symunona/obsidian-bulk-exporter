@@ -19,10 +19,10 @@ import {
 export class OutputSettingTab extends PluginSettingTab {
 	plugin: BulkExporterPlugin;
 
-	currentSetting: BulkExportSettings;
-	header: HTMLDivElement;
-	tabs: HTMLDivElement;
-	buttons: HTMLButtonElement[];
+	currentSetting!: BulkExportSettings;
+	header!: HTMLDivElement;
+	tabs!: HTMLDivElement;
+	buttons!: HTMLButtonElement[];
 
 	constructor(app: App, plugin: BulkExporterPlugin) {
 		super(app, plugin);
@@ -35,24 +35,22 @@ export class OutputSettingTab extends PluginSettingTab {
 		containerEl.empty();
 		containerEl.classList.add("bulk-export-settings");
 
+		// No top-level heading with the plugin name: the settings tab
+		// header already shows it. A plain info paragraph instead.
 		const linkToIssues = createEl("a", {
 			href: "https://github.com/symunona/obsidian-bulk-exporter/issues",
 			text: "GitHub issue tracker",
 		});
-		const genericInfo = createSpan({
-			text: "Export a certain subset of your notes, based on whether they match a DataView query. Bug reports and Feature Requests are welcome at ",
+		const genericInfo = containerEl.createDiv({
+			cls: "bulk-export-settings-intro",
+			text: "Export a certain subset of your notes, based on whether they match a Dataview query. Bug reports and feature requests are welcome at ",
 		});
 		genericInfo.append(linkToIssues);
-		const genericFragment = createFragment();
-		genericFragment.append(genericInfo);
-
-		new Setting(containerEl)
-			.setName("Bulk exporter")
-			.setDesc(genericFragment);
+				new Setting(containerEl).setName("Manage").setHeading();
 
 		new Setting(containerEl)
 			.setName("Export / import settings")
-			.setDesc("Want to transfer to another vault?")
+			.setDesc("Transfer your export sets to another vault.")
 			.addButton((button) =>
 				button.setButtonText("Export").onClick(() => {
 					downloadSettings(this.plugin);
@@ -171,6 +169,7 @@ export class OutputSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("Name of the export set")
+			.setDesc("Shown on the tab above and in the export view.")
 			.addText((text) =>
 				text
 					.setPlaceholder("Default")
@@ -187,7 +186,7 @@ export class OutputSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Export target folder")
 			.setDesc(
-				"Which folder do you want to export converted Markdown files with their assets?"
+				"Folder to export the converted Markdown files and their assets into."
 			)
 			.addTextArea((text) => {
 				text.inputEl.rows = 2;
@@ -359,7 +358,7 @@ export class OutputSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("Visible columns")
-			.setDesc("Same as clicking on the eye icon")
+			.setDesc("Same as clicking on the eye icon.")
 			.addText((text) =>
 				text
 					.setPlaceholder("*")
@@ -378,7 +377,7 @@ export class OutputSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Normalize spaces in links")
 			.setDesc(
-				"If true, spaces in local links will be URL escaped (e.g. %20 for spaces)"
+				"If true, spaces in local links will be URL escaped (e.g. %20 for spaces)."
 			)
 			.addToggle((text) =>
 				text
@@ -405,7 +404,7 @@ export class OutputSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("Keep links not exported")
-			.setDesc("For e.g. You want to export them in another batch.")
+			.setDesc("For example when you want to export them in another batch.")
 			.addToggle((text) =>
 				text
 					.setValue(settings.keepLinksPrivate)
@@ -418,7 +417,7 @@ export class OutputSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Convert wiki links to '[]()' styled standard links")
 			.setDesc(
-				"If true, all links will be the standard unified format."
+				"If true, all links will be converted to the standard unified format."
 			)
 			.addToggle((text) =>{
 				text
@@ -503,7 +502,7 @@ export class OutputSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Run script after export")
 			.setDesc(
-				"Place here anything you want to run after the export is done. Uses child_process.spawn."
+				"Command to run after the export is done. Uses child_process.spawn."
 			)
 			// Textarea: more than a one-liner fits here comfortably.
 			.addTextArea((text) => {
@@ -519,26 +518,31 @@ export class OutputSettingTab extends PluginSettingTab {
 			});
 
 		if (this.plugin.settings.items.length > 1) {
-			containerEl.createEl("hr");
-			const deleteButton = containerEl.createEl("button", {
-				text: "Delete this export settings",
-				cls: "danger",
-			});
-			deleteButton.addEventListener("click", () => {
-				new ConfirmModal(this.plugin.app, {
-					okClass: "danger",
-					okText: "Delete",
-					okCallback: () => {
-						this.plugin.settings.items.splice(
-							this.plugin.settings.selected,
-							1
-						);
-						void this.plugin.saveSettingsWithRefresh();
-						this.buttons[this.plugin.settings.selected].remove();
-						this.selectSetting();
-					},
-				}).open();
-			});
+			new Setting(containerEl)
+				.setName("Delete this export set")
+				.setDesc("Remove the currently selected export set.")
+				.addButton((button) =>
+					button
+						.setButtonText("Delete")
+						.setWarning()
+						.onClick(() => {
+							new ConfirmModal(this.plugin.app, {
+								okClass: "danger",
+								okText: "Delete",
+								okCallback: () => {
+									this.plugin.settings.items.splice(
+										this.plugin.settings.selected,
+										1
+									);
+									void this.plugin.saveSettingsWithRefresh();
+									this.buttons[
+										this.plugin.settings.selected
+									].remove();
+									this.selectSetting();
+								},
+							}).open();
+						})
+				);
 		}
 	}
 }

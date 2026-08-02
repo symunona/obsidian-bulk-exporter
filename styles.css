@@ -134,6 +134,7 @@ tr:hover .data-view-meta-key.undefined {background: var(--text-selection); opaci
     to { transform: rotate(359deg);}
   }
 
+.bulk-export-settings .bulk-export-settings-intro { color: var(--text-muted); margin-bottom: 10px; }
 .bulk-export-settings .bulk-export-settings-header{ margin-top: 20px; margin-bottom: 15px; border-bottom: 1px solid var(--color-base-50)}
 
 /* Obsidian's default setting control is ~180px wide, which is unusable for
