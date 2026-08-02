@@ -3,6 +3,10 @@
  * app. This is just enough of it for the pure logic to be testable in jest.
  */
 import type { App } from "obsidian";
+import { load } from "js-yaml";
+
+// The real parseYaml is js-yaml under the hood too.
+export const parseYaml = load;
 
 export class Notice {
 	constructor(public message: string) {}

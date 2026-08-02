@@ -6,14 +6,14 @@
  * mangled anything with an uppercase letter, a quote, or a space in it, and it
  * could not see list values at all.
  *
- * `js-yaml` does the parsing here instead, but the note is NOT re-serialized:
+ * Obsidian's own `parseYaml` does the parsing here instead, but the note is NOT re-serialized:
  * an export must not reformat a user's front matter. Instead every top level key
  * keeps the exact slice of text it came from, so a value can be swapped in place
  * inside that one key and nothing else in the document moves.
  *
  * @see https://github.com/symunona/obsidian-bulk-exporter/issues/19
  */
-import { load } from "js-yaml";
+import { parseYaml } from "obsidian";
 import replaceAll from "../utils/replace-all";
 
 /**
@@ -128,7 +128,7 @@ function toKeyBlock(raw: RawBlock): FrontMatterKeyBlock {
     const empty = Object.assign({ key: '', values: [], valueSpans: [] }, raw)
     let parsed: unknown
     try {
-        parsed = load(raw.text)
+        parsed = parseYaml(raw.text)
     } catch (e) {
         console.warn(
             `[Bulk Exporter] Skipping a front matter entry that is not valid YAML: ` +
@@ -203,7 +203,7 @@ function scanLineValue(line: string): FrontMatterValueSpan | null {
 
     let value: unknown
     try {
-        value = load(line.substring(at, end))
+        value = parseYaml(line.substring(at, end))
     } catch {
         // Not a scalar this line can explain on its own - a block scalar header,
         // an anchor, half of a multi line string. Leave it unclaimed.
