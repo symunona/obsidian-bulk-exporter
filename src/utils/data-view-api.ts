@@ -30,6 +30,10 @@ export interface DataviewLikeApi {
     query(source: string): Promise<DataviewQuerySuccess | DataviewQueryFailure>;
 }
 
+export function isDataviewAvailable(): boolean {
+    return !!getAPI();
+}
+
 export function getDataViewApi(): DataviewLikeApi {
     const dataViewApi = getAPI() as DataviewLikeApi | undefined
     if (!dataViewApi) {

@@ -290,3 +290,13 @@ tr:hover .data-view-meta-key.undefined {background: var(--text-selection); opaci
 .mb-20 {
 	margin-bottom: 5rem; /* 80px */
 }
+
+.dataview-missing {
+	padding: 12px;
+}
+.dataview-missing h4 {
+	margin-top: 0;
+}
+.dataview-missing button {
+	margin-top: 8px;
+}

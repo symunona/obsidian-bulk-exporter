@@ -10,6 +10,7 @@ import { ExportMap } from "./models/export-properties";
 import { BulkExportSettings } from "./models/bulk-export-settings";
 import { ButtonWithLoader } from "./ui/button-with-loader";
 import { Select } from "./ui/select";
+import { isDataviewAvailable } from "./utils/data-view-api";
 
 export const META_DATA_VIEW_TYPE = "bulk-exporter-preview";
 
@@ -59,6 +60,11 @@ export class BulkExporterView extends ItemView {
 		const container = this.containerEl.children[1];
 		container.empty();
 		container.classList.add("meta-data-view");
+
+		if (!isDataviewAvailable()) {
+			this.renderDataviewMissing(container);
+			return;
+		}
 
 		this.header = container.createDiv();
 
@@ -140,6 +146,28 @@ export class BulkExporterView extends ItemView {
 		}
 
 		await this.refresh();
+	}
+
+	/**
+	 * Shown instead of the whole UI when the Dataview plugin is not installed
+	 * or not enabled yet. Without it every query path threw "Dataview is not
+	 * loaded yet!" into the console and the pane looked broken for no reason.
+	 */
+	renderDataviewMissing(container: Element) {
+		const box = container.createDiv({ cls: "dataview-missing" });
+		box.createEl("h4", { text: "Dataview plugin required" });
+		box.createEl("p", {
+			text: "Bulk Exporter builds its file list with Dataview queries, " +
+				"but the Dataview community plugin is not installed or not enabled.",
+		});
+		const steps = box.createEl("ol");
+		steps.createEl("li", { text: "Open Settings → Community plugins." });
+		steps.createEl("li", { text: "Install \"Dataview\" (or enable it if already installed)." });
+		steps.createEl("li", { text: "Come back here and press Retry." });
+		const retry = box.createEl("button", { text: "Retry" });
+		retry.addEventListener("click", () => {
+			void this.onOpen();
+		});
 	}
 
 	async refresh() {

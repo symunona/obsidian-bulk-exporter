@@ -5,6 +5,7 @@ import { BulkExportSettingsList } from "./models/bulk-export-settings";
 import { OutputSettingTab } from "./settings/export-settings-tab";
 import { parseSavedSettingsData } from "./utils/data-parser";
 import { error } from "./utils/log";
+import { isDataviewAvailable } from "./utils/data-view-api";
 import { debounce } from "underscore";
 
 /** Turns whatever was thrown into something worth showing a human. */
@@ -64,6 +65,9 @@ export default class BulkExporterPlugin extends Plugin {
 				// If the dataview plugin was not loaded when this inited,
 				// let's create the initial search! Wait until Obsidian is fully loaded.
 				if (!this.inited && document.querySelector('.mod-root')) {
+					if (!isDataviewAvailable()) {
+						return;
+					}
 					// Same story as the command above, except this one fires on
 					// its own during startup: report it to the log and the
 					// console, but no Notice - the user did not ask for
