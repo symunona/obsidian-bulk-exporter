@@ -1,7 +1,6 @@
 import { FullIndex, PageMetadata } from "obsidian-dataview";
 import { dirname } from "path";
 import { ExportMap } from "src/models/export-properties";
-import _ from "underscore";
 
 
 const MAX_ENUM_LENGTH = 50;
@@ -62,12 +61,12 @@ export class FolderMeta {
 
                 appendIfQualify(existingValues, value);
 
-                if (_.isArray(value)) {
+                if (Array.isArray(value)) {
                     value.forEach((subValue: unknown) => {
                         appendIfQualify(existingValues, subValue);
                     });
                 }
-                pathEntry[attributeKey] = _.uniq(existingValues);
+                pathEntry[attributeKey] = [...new Set(existingValues)];
             });
         });
     }
@@ -89,12 +88,12 @@ export function getMetaFieldsAndValues(listOfFiles: Array<PageMetadata>, index: 
 
             appendIfQualify(existingValues, value);
 
-            if (_.isArray(value)) {
+            if (Array.isArray(value)) {
                 value.forEach((subValue: unknown) => {
                     appendIfQualify(existingValues, subValue);
                 });
             }
-            resultsMap[attributeKey] = _.uniq(existingValues);
+            resultsMap[attributeKey] = [...new Set(existingValues)];
         });
     });
     return resultsMap
@@ -121,22 +120,22 @@ export function getMetaFields(mapOfFiles: ExportMap) {
 
             appendIfQualify(existingValues, value);
 
-            if (_.isArray(value)) {
+            if (Array.isArray(value)) {
                 value.forEach((subValue: unknown) => {
                     appendIfQualify(existingValues, subValue);
                 });
             }
-            resultsMap[attributeKey] = _.uniq(existingValues);
+            resultsMap[attributeKey] = [...new Set(existingValues)];
         });
     });
     return resultsMap
 }
 
 function appendIfQualify(array: Array<string>, value: unknown) {
-    if (_.isNumber(value)) {
+    if (typeof value === "number") {
         array.push(value.toString());
     }
-    if (_.isString(value) && value.length < MAX_ENUM_LENGTH) {
+    if (typeof value === "string" && value.length < MAX_ENUM_LENGTH) {
         array.push(value);
     }
 }

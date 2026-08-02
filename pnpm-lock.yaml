@@ -11,9 +11,6 @@ importers:
       '@types/diff':
         specifier: ^5.2.1
         version: 5.2.3
-      '@types/underscore':
-        specifier: ^1.11.4
-        version: 1.13.0
       diff:
         specifier: ^5.2.0
         version: 5.2.2
@@ -29,9 +26,6 @@ importers:
       ts-md5:
         specifier: ^1.3.1
         version: 1.3.1
-      underscore:
-        specifier: ^1.13.6
-        version: 1.13.8
     devDependencies:
       '@eslint/js':
         specifier: ^9.39.4
@@ -691,9 +685,6 @@ packages:
 
   '@types/tough-cookie@4.0.5':
     resolution: {integrity: sha512-/Ad8+nIOV7Rl++6f1BdKxFSMgmoqEoYbHRpPcx3JEfv8VRsQe9Z4mCXeJBzxs7mbHY/XOZZuXlRNfhpVPbs6ZA==}
-
-  '@types/underscore@1.13.0':
-    resolution: {integrity: sha512-L6LBgy1f0EFQZ+7uSA57+n2g/s4Qs5r06Vwrwn0/nuK1de+adz00NWaztRQ30aEqw5qOaWbPI8u2cGQ52lj6VA==}
 
   '@types/yargs-parser@21.0.3':
     resolution: {integrity: sha512-I4q9QU9MQv4oEOz4tAHJtNz1cwuLxn2F3xcc2iV5WdqLPpUnj30aUuxt1mAxYTG+oe8CZMV/+6rU4S4gRDzqtQ==}
@@ -2745,9 +2736,6 @@ packages:
     resolution: {integrity: sha512-nWJ91DjeOkej/TA8pXQ3myruKpKEYgqvpw9lz4OPHj/NWFNluYrjbz9j01CJ8yKQd2g4jFoOkINCTW2I5LEEyw==}
     engines: {node: '>= 0.4'}
 
-  underscore@1.13.8:
-    resolution: {integrity: sha512-DXtD3ZtEQzc7M8m4cXotyHR+FAS18C64asBYY5vqZexfYryNNnDc02W4hKg3rdQuqOYas1jkseX0+nZXjTXnvQ==}
-
   undici-types@5.26.5:
     resolution: {integrity: sha512-JlCMO+ehdEIKqlFxk6IfVoAUVmgz7cU7zD/h9XZ0qzeosSHmUJVOzSQvvYSYWXkFXC+IfLKSIffhv0sVZup6pA==}
 
@@ -3577,8 +3565,6 @@ snapshots:
       '@types/estree': 1.0.9
 
   '@types/tough-cookie@4.0.5': {}
-
-  '@types/underscore@1.13.0': {}
 
   '@types/yargs-parser@21.0.3': {}
 
@@ -6223,8 +6209,6 @@ snapshots:
       has-bigints: 1.1.0
       has-symbols: 1.1.0
       which-boxed-primitive: 1.1.1
-
-  underscore@1.13.8: {}
 
   undici-types@5.26.5: {}
 

@@ -14,7 +14,6 @@ import { getGroups } from "src/export/exporter";
 import { ExportGroupMap, ExportMap, ExportProperties } from "src/models/export-properties";
 import { getMetaFields } from "src/utils/indexing/folder-meta";
 import BulkExporterPlugin from "src/main";
-import { without } from "underscore";
 import { HeaderFieldSelectorModal } from "./header-selector-modal";
 import { BulkExportSettings } from "src/models/bulk-export-settings";
 import openSettingsPage from "src/obsidian-api-helpers/open-settings-page";
@@ -65,7 +64,7 @@ export class ExportTableRender {
 			this.metaFields = ['fileName', this.settings.isPublishedField].concat(Object.keys(this.metaKeysToShow))
 		}
 
-		this.metaFieldsWithoutFileName = without(this.metaFields, 'fileName')
+		this.metaFieldsWithoutFileName = this.metaFields.filter((field) => field !== 'fileName')
 
 		this.render()
 	}

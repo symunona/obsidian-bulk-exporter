@@ -32,7 +32,6 @@ import type { SMarkdownPage } from "obsidian-dataview/lib/data-model/serialized/
 import type { Link } from "obsidian-dataview/lib/data-model/value";
 import type { Result } from "obsidian-dataview/lib/api/result";
 import { collectAssetsReplaceLinks } from "./collect-assets";
-import { sortBy } from "underscore";
 import { BulkExportSettings } from "src/models/bulk-export-settings";
 import { rmDirContent } from "src/utils/delete-folder-content";
 
@@ -245,7 +244,9 @@ export function getGroups(
 	})
 
 	Object.keys(ret).forEach((pathGroup) => {
-		ret[pathGroup] = sortBy(ret[pathGroup], 'newFileName')
+		ret[pathGroup] = ret[pathGroup].slice().sort((a, b) =>
+			a.newFileName < b.newFileName ? -1 : a.newFileName > b.newFileName ? 1 : 0
+		)
 	})
 	return ret
 }

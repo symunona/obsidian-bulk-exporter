@@ -6,7 +6,7 @@ import { OutputSettingTab } from "./settings/export-settings-tab";
 import { parseSavedSettingsData } from "./utils/data-parser";
 import { error } from "./utils/log";
 import { isDataviewAvailable } from "./utils/data-view-api";
-import { debounce } from "underscore";
+import { debounce } from "./utils/debounce";
 
 /** Turns whatever was thrown into something worth showing a human. */
 function describeThrown(thrown: unknown): string {

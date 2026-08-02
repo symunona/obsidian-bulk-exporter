@@ -1,7 +1,6 @@
 import BulkExporterPlugin from "src/main";
 import { ExportMap, ExportProperties } from "src/models/export-properties";
 import { collectAndReplaceHeaderAttachments, collectAndReplaceInlineAttachments } from "./get-markdown-attachments";
-import { isArray, isString } from "underscore";
 import { GlobMap, copyGlob } from "./globCopy";
 import { getLinksAndAttachments } from "./get-links-and-attachments";
 import { replaceLocalLinks } from "./replace-local-links";
@@ -61,13 +60,13 @@ export async function collectAssetsReplaceLinks(
 		// package-root re-exports), so `copy` needs an honest cast here: per the plugin's
 		// own docs/usage, a `copy` front-matter key is always a glob string or an array of
 		// them.
-		if (isArray(frontMatterData.copy)) {
+		if (Array.isArray(frontMatterData.copy)) {
 			const globPatterns = frontMatterData.copy as string[];
 			for (let i = 0; i < globPatterns.length; i++) {
 				const globPattern = globPatterns[i]
 				filesCopied[globPattern] = await copyGlob(fileExportProperties, globPattern, plugin)
 			}
-		} else if (isString(frontMatterData.copy)) {
+		} else if (typeof frontMatterData.copy === 'string') {
 			const globPattern = frontMatterData.copy;
 			filesCopied[globPattern] = await copyGlob(fileExportProperties, globPattern, plugin)
 		}
