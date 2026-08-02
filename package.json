@@ -49,7 +49,6 @@
 	"dependencies": {
 		"@types/diff": "^5.2.1",
 		"@types/underscore": "^1.11.4",
-		"crypto-js": "^4.1.1",
 		"diff": "^5.2.0",
 		"glob": "^10.3.3",
 		"obsidian-markdown-export": "github:bingryan/obsidian-markdown-export-plugin",
