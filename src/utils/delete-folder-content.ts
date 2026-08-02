@@ -1,6 +1,6 @@
 import { existsSync, lstatSync, readdirSync, rmSync, unlinkSync } from "fs";
 import { join } from "path";
-import { globSync } from 'glob'
+import { globSync } from 'tinyglobby'
 import { log } from "./log";
 
 export function rmDirContent(directoryPath: string, ignorePattern: string) {

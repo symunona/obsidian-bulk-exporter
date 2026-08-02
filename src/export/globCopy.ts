@@ -8,7 +8,7 @@
 
 import { ExportProperties } from "src/models/export-properties"
 
-import { globSync } from 'glob'
+import { globSync } from 'tinyglobby'
 import { join, parse } from "path"
 import { cpSync, existsSync, mkdirSync, statSync } from "fs"
 import { Plugin } from "obsidian"
