@@ -139,7 +139,7 @@ function toKeyBlock(raw: RawBlock): FrontMatterKeyBlock {
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
         return empty
     }
-    const entries = Object.entries(parsed as Record<string, unknown>)
+    const entries = Object.entries(parsed)
     if (entries.length !== 1) {
         return empty
     }
@@ -265,7 +265,7 @@ function collectStrings(value: unknown, found: Array<string> = []): Array<string
     } else if (Array.isArray(value)) {
         value.forEach((item) => collectStrings(item, found))
     } else if (value && typeof value === 'object') {
-        Object.values(value as Record<string, unknown>).forEach(
+        Object.values(value).forEach(
             (item) => collectStrings(item, found))
     }
     return found
