@@ -23,7 +23,7 @@
  * name was expanded by `String.replace` into the text it had just matched.
  */
 import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "fs";
-import { load } from "js-yaml";
+import { parseYaml } from "obsidian";
 import { tmpdir } from "os";
 import { basename, dirname, join } from "path";
 import { getLinksAndAttachments } from "../export/get-links-and-attachments";
@@ -115,7 +115,7 @@ function exportedFrontMatter(
 ): Record<string, unknown> {
 	const match = exportProperties.outputContent.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n/);
 	if (!match) { throw new Error("The export lost the front matter entirely.") }
-	return load(match[1]) as Record<string, unknown>;
+	return parseYaml(match[1]) as Record<string, unknown>;
 }
 
 function exportedAssets(): Array<string> {

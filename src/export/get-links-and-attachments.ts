@@ -245,8 +245,8 @@ function encodeLinkTarget(target: string): string {
  * matched a `toLocaleLowerCase()` copy of the value and then kept a slice of that
  * copy as the "original path". Nothing in the real document ever matched that
  * lowercased text again, so an image whose name had a capital letter in it was
- * copied but never re-linked. `js-yaml` also hands over the value without its
- * quotes, whole across spaces, and can see list values.
+ * copied but never re-linked. A real YAML parse also hands over the value without
+ * its quotes, whole across spaces, and can see list values.
  *
  * The value is classified by what it POINTS AT (`normalizeUrl`), so a value
  * written as a wiki link - `banner: "[[my-banner.png]]"`, the Banners plugin

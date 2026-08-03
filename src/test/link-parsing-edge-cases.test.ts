@@ -24,7 +24,7 @@
  * @see https://github.com/symunona/obsidian-bulk-exporter/issues/14
  */
 import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "fs";
-import { load } from "js-yaml";
+import { parseYaml } from "obsidian";
 import { tmpdir } from "os";
 import { basename, dirname, join } from "path";
 import {
@@ -605,7 +605,7 @@ describe("exporting a note with a wiki-link banner", () => {
 			'---\nbanner: "[[my-banner.png]]"\n---\nBody text.\n');
 		const match = result.outputContent.match(/^---\n([\s\S]*?)\n---\n/);
 		if (!match) { throw new Error("The export lost the front matter entirely.") }
-		const frontMatter = load(match[1]) as Record<string, unknown>;
+		const frontMatter = parseYaml(match[1]) as Record<string, unknown>;
 
 		expect(String(frontMatter.banner))
 			.toMatch(/^assets\/my-banner-[0-9a-f]{32}\.png$/);

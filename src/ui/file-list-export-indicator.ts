@@ -84,7 +84,8 @@ export class FileListItemWrapper {
 
 		// Iterate over all the file explorers present
 		fileExplorers.forEach((fileExplorer) => {
-			const fileExplorerFileItems = (fileExplorer.view as FileExplorerView).fileItems;
+			const fileExplorerFileItems = (fileExplorer.view as FileExplorerView)?.fileItems;
+			if (!fileExplorerFileItems) return;
 
 			const fileExplorerFileItem =
 				fileExplorerFileItems[exportProperties.from];
